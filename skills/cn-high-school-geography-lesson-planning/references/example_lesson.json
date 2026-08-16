@@ -1,0 +1,340 @@
+{
+  "shared": {
+    "grade": "高一",
+    "course_module": "必修模块（结构示例）",
+    "subject": "地理",
+    "duration": 45,
+    "standard_code": "示例占位",
+    "standard_text": "【结构示例：正式生成时必须替换为已经核验的现行课标原文。】",
+    "primary_competencies": [
+      "综合思维",
+      "地理实践力"
+    ],
+    "course_info": {
+      "type": "table",
+      "headers": ["项目", "内容"],
+      "rows": [
+        ["课程名称", "不同城市下垫面的气温变化"],
+        ["授课学时", "1课时（45分钟）"],
+        ["开课年级或模块", "高一·必修模块（结构示例）"],
+        ["教材目次", "未指定教材版本；正式生成时按教师提供信息填写"]
+      ]
+    },
+    "curriculum_standard_analysis": {
+      "type": "group",
+      "blocks": [
+        {"type": "paragraph", "text": "本课对应的课标要求强调学生基于地理资料解释不同下垫面对气温的影响，并能够在具体情境中评价改善方案。其中，“解释”要求学生不只描述气温差异，还要建立下垫面性质、热量吸收或释放与气温响应之间的因果关系；“评价”则要求学生说明措施的适用条件和限制。"},
+        {"type": "paragraph", "text": "据此，本课先提供可比较的气温数据，引导学生形成机制解释，再使用未练习过的新区情境检验迁移，教学目标和评价证据都围绕这两种行为展开。"}
+      ]
+    },
+    "textbook_analysis": {
+      "type": "group",
+      "blocks": [
+        {"type": "paragraph", "text": "在未指定教材版本的情况下，本课按城市环境与下垫面影响局地气温的通行知识逻辑组织内容：学生先识别不同地表的气温差异，再解释地表能量吸收与释放机制，最后迁移到城市热环境改善。教材通常能够提供基本概念和结论，但仅阅读结论不足以支持机制理解。"},
+        {"type": "paragraph", "text": "因此，本课不复述教材文字，而是补充一组教学模拟数据，让学生先从数据中形成现象证据，再建构因果解释，并用新情境检验能否迁移。正式生成时应根据教师提供的教材版本补充准确的单元位置和前后联系。"}
+      ]
+    },
+    "learner_analysis": {
+      "type": "group",
+      "blocks": [
+        {"type": "paragraph", "text": "学生已经能够读取折线图并用数值描述昼夜变化，因此可以直接从两类下垫面的气温数据进入学习；但他们可能停留在“建筑区更热”的现象描述，尚不能用地表能量交换解释差异，也容易把同时出现的现象直接写成因果关系。"},
+        {"type": "paragraph", "text": "由于本结构示例没有真实前测材料，上述判断属于教师经验预判。本课先检查学生能否引用数据，再提供“地表性质→热量变化→气温响应”的因果链支架，并根据课堂作答决定是否增加机制追问。"}
+      ]
+    },
+    "learning_objectives": {
+      "type": "table",
+      "headers": ["教学目标", "主要素养", "评价目标与证据"],
+      "rows": [
+        ["引用至少两个具体数值描述不同下垫面的气温差异", "综合思维", "检查描述是否包含正确数值、比较对象和变化特征"],
+        ["用完整因果链解释下垫面影响气温的机制", "综合思维", "因果链包含地表性质、热量吸收或释放和气温响应"],
+        ["在新区情境中评价一项改善措施", "地理实践力", "方案说明适用地点、作用机制和至少一项限制"]
+      ]
+    },
+    "key_and_difficult_points": {
+      "type": "group",
+      "blocks": [
+        {"type": "labeled", "label": "教学重点", "text": "本课的教学重点是建立下垫面性质、热量变化与气温响应之间的关系，这是落实课标机制解释要求和理解城市热环境的认知主线。教学中通过气温数据比较和因果链绘制落实；学生能够用包含三个关键环节且方向正确的因果链解释差异，即视为达到重点。"},
+        {"type": "labeled", "label": "教学难点", "text": "本课的教学难点是避免把同时出现的现象直接判断为因果关系，因为学生容易跳过地表能量交换这一中间过程。教学中通过追问能量过程和新区材料迁移提供支架；学生能够解释新情境并让改善措施对应机制，说明难点得到突破。"}
+      ]
+    },
+    "methods_and_resources": {
+      "type": "table",
+      "headers": ["类别", "内容", "选择理由与使用环节"],
+      "rows": [
+        ["主要方法", "证据驱动的问题式学习", "先读取数据再解释机制，贯穿读取证据和建构机制阶段"],
+        ["数据资源", "不同下垫面气温教学模拟数据", "用于形成可比较证据；明确标注为教学模拟数据"],
+        ["表达工具", "因果链和方案评价框架", "分别支持机制解释和新情境迁移，不替学生预填结论"]
+      ]
+    },
+    "board_design_suggestions": {
+      "type": "list",
+      "items": [
+        "以核心问题统领板书，只保留两类下垫面的关键差异。",
+        "用“地表性质→热量吸收或释放→气温响应”呈现机制主线。",
+        "随课堂推理逐步补充因果链，最后在旁侧记录方案及适用条件。"
+      ]
+    },
+    "prerequisite": "能够读取折线图，并用数值描述昼夜变化。",
+    "lesson_question": {
+      "student": {
+        "type": "callout",
+        "kind": "student-task",
+        "label": "核心问题",
+        "text": "为什么同一座城市不同地表的气温变化不同？"
+      }
+    },
+    "launch_notes": {
+      "teacher": [
+        {"type": "labeled", "label": "关键问题", "text": "两类下垫面的气温差异可能与哪些地表性质有关，怎样检验？"},
+        {"type": "labeled", "label": "教师活动", "text": "呈现同一城市两类下垫面的气温差异，要求学生先提出能够用数据检验的猜想。"},
+        {"type": "labeled", "label": "学习成果", "text": "学生形成关于下垫面性质与气温差异的初步假设。"},
+        {"type": "labeled", "label": "评价与反馈", "text": "检查猜想是否指向可观察变量；对只表达感受的回答追问“需要什么数据证明”。"},
+        {"type": "labeled", "label": "设计理由", "text": "先暴露学生原有解释，为后续用数据修正认识建立起点。"}
+      ],
+      "student": "观察两类下垫面的气温差异，联系已有经验提出初步猜想，并说明需要哪些数据进行检验。"
+    },
+    "temperature_data": {
+      "type": "data_table",
+      "headers": [
+        "时刻",
+        "密集建筑区（℃）",
+        "城市公园（℃）"
+      ],
+      "rows": [
+        ["08:00", "24.1", "23.8"],
+        ["12:00", "31.6", "28.7"],
+        ["16:00", "33.2", "29.4"],
+        ["20:00", "29.8", "26.1"]
+      ]
+    },
+    "task_1": {
+      "teacher": [
+        {"type": "labeled", "label": "关键问题", "text": "两类地表的气温差异在何时最明显，哪些数据能够证明？"},
+        {"type": "labeled", "label": "教师活动", "text": "要求学生先写差值和峰值时刻，再用完整句描述变化。"},
+        {"type": "labeled", "label": "学习成果", "text": "一段包含比较对象、变化特征和至少两个具体数值的地理描述。"},
+        {"type": "labeled", "label": "评价与反馈", "text": "检查数值、单位和比较方向；缺少证据时要求学生返回数据表补充。"},
+        {"type": "labeled", "label": "设计理由", "text": "让学生先建立可核验的现象证据，避免直接套用城市热岛结论。"}
+      ],
+      "student": "两类地表的气温差异在何时最明显？读取表格，描述其变化，并用两个具体数值支持结论。"
+    },
+    "task_2": {
+      "teacher": [
+        {"type": "labeled", "label": "关键问题", "text": "任务1发现的差异如何由地表性质和能量过程造成？"},
+        {"type": "labeled", "label": "教师活动", "text": "追问每条因果链中的地表性质、能量变化和气温响应。"},
+        {"type": "labeled", "label": "学习成果", "text": "一条方向正确、包含三个关键环节的机制因果链。"},
+        {"type": "labeled", "label": "评价与反馈", "text": "发现因果跳跃时追问中间能量过程，并要求学生用数据检验解释。"},
+        {"type": "labeled", "label": "设计理由", "text": "把气温差异从现象描述推进到地表能量交换机制。"}
+      ],
+      "student": "根据任务1的数据结论，用“地表性质→吸收或释放热量→气温变化”的因果链解释两地差异。"
+    },
+    "task_3": {
+      "teacher": [
+        {"type": "labeled", "label": "关键问题", "text": "任务2形成的机制能够支持哪些改善措施，其适用条件是什么？"},
+        {"type": "labeled", "label": "教师活动", "text": "不要把单一措施写成万能答案；要求学生说明适用地点与限制。"},
+        {"type": "labeled", "label": "学习成果", "text": "两项包含适用地点、作用机制和限制条件的改善建议。"},
+        {"type": "labeled", "label": "评价与反馈", "text": "检查每项措施是否回应能量机制；只罗列措施时要求补写作用过程。"},
+        {"type": "labeled", "label": "设计理由", "text": "让学生把机制理解迁移到有条件的城市环境决策。"}
+      ],
+      "student": "运用任务2形成的因果链，从增加绿地、改善通风和调整建筑材料中选择两项，说明适用地点、作用机制和可能限制。"
+    },
+    "vocabulary": {
+      "type": "table",
+      "rows": [
+        ["下垫面", "与大气直接接触并发生能量、水分交换的地表。"],
+        ["热容量", "物体温度变化时吸收或释放热量的能力。"],
+        ["城市热岛", "城市气温高于周边地区的现象。"]
+      ]
+    },
+    "anticipated_difficulties": {
+      "type": "table",
+      "headers": ["学生表现", "形成原因", "教师动作"],
+      "rows": [
+        ["只说建筑区更热，不引用数值", "没有把图表信息当作证据", "要求圈出差值最大的时刻并补写数值"],
+        ["把人口多直接写成升温原因", "跳过能量交换机制", "追问人口活动通过什么过程改变热量收支"],
+        ["提出多种措施但不说明机制", "把治理措施当作记忆清单", "要求每项措施补写影响的能量过程"]
+      ]
+    },
+    "look_fors": {
+      "type": "table",
+      "headers": ["可观察行为", "为何重要", "教师下一步"],
+      "rows": [
+        ["引用两个时刻的气温数据描述差异", "证明学生能从数据获得证据", "追问差值最大时刻及原因"],
+        ["因果链包含地表性质和热量变化", "证明解释达到机制层面", "要求检验链条中缺失的环节"],
+        ["治理建议写明适用地点和限制", "证明学生能够评价方案", "引导比较短期与长期效果"]
+      ]
+    },
+    "exit_ticket": {
+      "teacher": [
+        {"type": "labeled", "label": "关键问题", "text": "新区硬化地表夜间降温较慢的原因是什么，应如何改善？"},
+        {"type": "labeled", "label": "教师活动", "text": "独立发放新区情境检测，不提供课堂案例中的提示语。"},
+        {"type": "labeled", "label": "学习成果", "text": "一段包含机制解释和针对性措施的独立作答。"},
+        {"type": "labeled", "label": "评价与反馈", "text": "按机制链完整度和措施匹配度分层，确定下节课的补救或拓展任务。"},
+        {"type": "labeled", "label": "设计理由", "text": "使用新材料检验学生能否迁移，而不是重复课堂结论。"}
+      ],
+      "student": {
+        "type": "callout",
+        "kind": "student-task",
+        "label": "课堂检测",
+        "text": "某新区有大面积深色硬化地表，夜间气温下降较慢。解释这一现象，并提出一项有针对性的改善措施。答案必须包含一条机制证据链。"
+      }
+    },
+    "exit_sort": {
+      "type": "cards",
+      "items": [
+        {"title": "达到目标", "text": "解释硬化地表的热量吸收与释放过程，并让措施对应这一机制。"},
+        {"title": "接近目标", "text": "能描述现象并提出措施，但机制链缺少一个关键环节。"},
+        {"title": "需要跟进", "text": "只复述现象或罗列措施，没有机制解释。"}
+      ]
+    }
+  },
+  "documents": [
+    {
+      "id": "教学设计",
+      "audience": "teacher",
+      "eyebrow": "高一地理 · 结构示例",
+      "title": "不同城市下垫面的气温变化",
+      "meta": "45分钟 · 教学模拟数据",
+      "sections": [
+        {
+          "heading": "课程基本信息",
+          "blocks": [
+            {"type": "from_shared", "key": "course_info"},
+            {"type": "labeled", "label": "课程主线", "text": "读取下垫面气温数据，解释能量差异，再评价改善方案。"},
+            {"type": "labeled", "label": "时间结构", "text": "现象启动5分钟→读取证据12分钟→建构机制18分钟→方案迁移7分钟→课堂检测3分钟。"},
+            {"type": "list", "label": "材料", "items": ["学生学习材料，每人1份", "投影设备或黑板"]}
+          ]
+        },
+        {
+          "heading": "课标分析",
+          "blocks": [
+            {"type": "from_shared", "key": "standard"},
+            {"type": "from_shared", "key": "curriculum_standard_analysis"}
+          ]
+        },
+        {
+          "heading": "教材分析",
+          "blocks": [
+            {"type": "from_shared", "key": "textbook_analysis"}
+          ]
+        },
+        {
+          "heading": "学情分析",
+          "blocks": [
+            {"type": "from_shared", "key": "learner_analysis"},
+            {"type": "from_shared", "key": "anticipated_difficulties"}
+          ]
+        },
+        {
+          "heading": "教学目标与评价目标",
+          "blocks": [
+            {"type": "from_shared", "key": "lesson_question"},
+            {"type": "labeled", "label": "大概念", "text": "不同地表通过改变能量吸收和释放过程影响局地气温。"},
+            {"type": "from_shared", "key": "learning_objectives"}
+          ]
+        },
+        {
+          "heading": "教学重点与教学难点",
+          "blocks": [
+            {"type": "from_shared", "key": "key_and_difficult_points"}
+          ]
+        },
+        {
+          "heading": "教学方法与教学资源",
+          "blocks": [
+            {"type": "from_shared", "key": "methods_and_resources"}
+          ]
+        },
+        {
+          "heading": "教学过程",
+          "blocks": [
+            {"type": "phase_header", "name": "现象启动", "minutes": 5},
+            {"type": "from_shared", "key": "lesson_question"},
+            {"type": "from_shared", "key": "launch_notes"},
+            {"type": "phase_header", "name": "读取证据", "minutes": 12},
+            {"type": "from_shared", "key": "temperature_data"},
+            {"type": "from_shared", "key": "task_1"},
+            {"type": "phase_header", "name": "建构机制", "minutes": 18},
+            {"type": "from_shared", "key": "task_2"},
+            {"type": "phase_header", "name": "方案迁移", "minutes": 7},
+            {"type": "from_shared", "key": "task_3"},
+            {"type": "phase_header", "name": "课堂检测", "minutes": 3},
+            {"type": "from_shared", "key": "exit_ticket"},
+            {"type": "from_shared", "key": "exit_sort"}
+          ]
+        },
+        {
+          "heading": "板书设计建议",
+          "blocks": [
+            {"type": "from_shared", "key": "board_design_suggestions"}
+          ]
+        },
+        {
+          "heading": "设计说明",
+          "blocks": [
+            {"type": "labeled", "label": "保留数据先于解释", "text": "学生必须先形成证据，再建构机制。"},
+            {"type": "labeled", "label": "保留新情境检测", "text": "新区材料检验机制能否迁移，而不是重复课堂数据。"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "学生学习材料",
+      "audience": "student",
+      "eyebrow": "高一地理 · 学生学习材料",
+      "title": "不同城市下垫面的气温变化",
+      "meta": "姓名：____________________  日期：____________",
+      "sections": [
+        {
+          "heading": "核心问题",
+          "blocks": [{"type": "from_shared", "key": "lesson_question"}]
+        },
+        {
+          "heading": "读取证据",
+          "blocks": [
+            {"type": "callout", "kind": "student-note", "label": "资料说明", "text": "下表为教学模拟数据。"},
+            {"type": "from_shared", "key": "temperature_data"},
+            {"type": "group", "blocks": [{"type": "from_shared", "key": "task_1", "label": "1"}, {"type": "answer_box", "ruled": true}]}
+          ]
+        },
+        {
+          "heading": "解释机制",
+          "blocks": [
+            {"type": "group", "blocks": [{"type": "from_shared", "key": "task_2", "label": "2"}, {"type": "answer_box", "height_pt": 130}]},
+            {"type": "group", "blocks": [{"type": "from_shared", "key": "task_3", "label": "3"}, {"type": "answer_box", "ruled": true}]}
+          ]
+        },
+        {
+          "heading": "课堂检测",
+          "blocks": [{"type": "group", "blocks": [{"type": "from_shared", "key": "exit_ticket"}, {"type": "answer_box", "ruled": true}]}]
+        }
+      ]
+    },
+    {
+      "id": "课堂观察记录表",
+      "audience": "teacher",
+      "eyebrow": "高一地理 · 课堂观察",
+      "title": "不同城市下垫面的气温变化",
+      "sections": [
+        {
+          "heading": "使用方法",
+          "blocks": [{"type": "paragraph", "text": "在读取证据和建构机制阶段记录学生使用的数据与因果链。课后按课堂检测标准确定下一步教学。"}]
+        },
+        {
+          "heading": "观察要点",
+          "blocks": [
+            {"type": "from_shared", "key": "look_fors"},
+            {"type": "fill_table", "headers": ["学生", "观察到的证据", "下一步动作"], "blank_rows": 8, "row_height_pt": 30}
+          ]
+        },
+        {
+          "heading": "典型困难",
+          "blocks": [{"type": "from_shared", "key": "anticipated_difficulties"}]
+        },
+        {
+          "heading": "课堂检测分层",
+          "blocks": [{"type": "from_shared", "key": "exit_ticket"}, {"type": "from_shared", "key": "exit_sort"}]
+        }
+      ]
+    }
+  ]
+}

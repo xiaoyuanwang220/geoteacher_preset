@@ -1,0 +1,33 @@
+# Local backups and transient download workspaces
+.backups/
+.tmp-*/
+
+# Generated outputs (keep the directory contract)
+outputs/*
+!outputs/README.md
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node dependencies and build caches
+node_modules/
+.pnpm-store/
+
+# Local configuration and credentials
+.env
+.env.*
+*.pem
+*.key
+
+# Download archives; extracted source may remain versioned
+deepseek-harness-skills-master.zip
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

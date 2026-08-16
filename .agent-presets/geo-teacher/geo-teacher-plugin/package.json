@@ -1,0 +1,7 @@
+{
+  "name": "geo-teacher-agent",
+  "version": "1.0.0",
+  "description": "高中地理教师辅助 Agent（持久化标准 Cordis 插件）：考点树、真题分析、命题蓝图、出题",
+  "type": "module",
+  "main": "index.js"
+}

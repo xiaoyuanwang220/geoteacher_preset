@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>地理教师辅助 Agent</title>
+<style>
+  :root { --bg:#ffffff; --panel:#f5f5f7; --text:#1a1a1a; --muted:#888; --border:#e2e2e8; --accent:#2f6feb; --warn:#d97706; --ok:#16a34a; --hover:#ececf1; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --panel:#1f1f26; --text:#e8e8ec; --muted:#8a8a95; --border:#2c2c36; --accent:#4c8dff; --warn:#f0a53a; --ok:#34c759; --hover:#2a2a33; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+  #app { max-width:860px; margin:0 auto; padding:16px; }
+  header { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--panel); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+  header .title { font-weight:700; font-size:16px; }
+  header .status { margin-left:auto; font-size:12px; color:var(--ok); }
+  .bar { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .btn { background:transparent; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:5px 12px; cursor:pointer; font-size:13px; }
+  .btn:hover { background:var(--hover); }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .crumb { font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hint { color:var(--muted); font-size:12px; }
+  .tree ul { list-style:none; padding-left:0; margin:2px 0; }
+  .tree li { margin:0; }
+  .node { cursor:pointer; padding:4px 8px; border-radius:6px; }
+  .node:hover { background:var(--hover); }
+  .node .lvl { color:var(--muted); margin-right:4px; }
+  .index-card { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--panel); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; cursor:pointer; }
+  .index-card:hover { border-color:var(--accent); }
+  .badge { flex-shrink:0; padding:2px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#fff; }
+  .badge.choice { background:var(--accent); }
+  .badge.comp { background:var(--warn); }
+  .idx-label { flex:1; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .idx-arrow { color:var(--muted); font-size:18px; }
+  .qcard { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .qfile { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .material { white-space:pre-wrap; line-height:1.7; margin-bottom:8px; }
+  .qitem { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
+  .stem { font-weight:600; line-height:1.7; margin-bottom:4px; }
+  .option { padding-left:16px; line-height:1.7; }
+  .mini { background:transparent; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:4px 10px; cursor:pointer; font-size:12px; margin-top:6px; }
+  .mini:hover { background:var(--hover); }
+  .analysis { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-top:12px; }
+  .tabs { display:flex; gap:6px; align-items:center; margin-bottom:10px; }
+  .tab { background:transparent; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:4px 12px; cursor:pointer; font-size:12px; }
+  .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .kp { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:6px 10px; margin-bottom:6px; }
+  .kp .role { font-weight:700; color:var(--accent); }
+  .fact { line-height:1.7; margin-bottom:2px; }
+  .hint { color:var(--muted); }
+  .export-msg { margin-top:8px; font-size:12px; word-break:break-all; color:var(--ok); }
+  .loading { color:var(--muted); padding:8px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="title">🗺️ 地理教师辅助 Agent</span>
+    <span class="status">● 运行中</span>
+  </header>
+  <div class="bar" id="bar"></div>
+  <main id="content"><div class="loading">加载中...</div></main>
+</div>
+<script>
+'use strict';
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(action, params) {
+  const qs = new URLSearchParams(params || {}).toString();
+  const r = await fetch('/geo-teacher/api/' + action + (qs ? '?' + qs : ''));
+  return r.json();
+}
+
+let view = 'tree';
+let taxonomy = [];
+let selectedName = '';
+let indexList = [];
+let detail = null;
+let analyze = null;
+let tab = 'analysis';
+let exportInfo = null;
+
+function renderBar() {
+  const bar = el('bar');
+  if (view === 'tree') { bar.innerHTML = '<span class="hint">点击考点查看关联真题；题目分析后可用对话出题</span>'; }
+  else if (view === 'list') { bar.innerHTML = '<button class="btn" onclick="goTree()">← 返回考点</button><span class="crumb"></span><span class="hint">共 ' + indexList.length + ' 个题组</span>'; bar.querySelector('.crumb').textContent = selectedName; }
+  else { bar.innerHTML = '<button class="btn" onclick="goList()">← 返回列表</button><span class="crumb"></span>'; bar.querySelector('.crumb').textContent = detail && detail.group ? detail.group.label : ''; }
+}
+function goTree() { view = 'tree'; render(); }
+function goList() { view = 'list'; render(); }
+
+async function render() {
+  renderBar();
+  const content = el('content');
+  if (view === 'tree') {
+    content.innerHTML = '<div class="loading">加载考点树...</div>';
+    if (!taxonomy.length) taxonomy = await api('taxonomy');
+    content.innerHTML = renderTree(taxonomy);
+  } else if (view === 'list') {
+    content.innerHTML = indexList.length
+      ? indexList.map((item, i) =>
+          '<div class="index-card" onclick="openDetail(' + i + ')">' +
+          '<span class="badge ' + (item.group.typeLabel === '选择题' ? 'choice' : 'comp') + '">' + esc(item.group.typeLabel) + '</span>' +
+          '<span class="idx-label">' + esc(item.group.label) + '</span>' +
+          '<span class="idx-arrow">›</span></div>').join('')
+      : '<div class="hint">未找到关联真题</div>';
+  } else {
+    if (!detail) { content.innerHTML = '<div class="loading">加载中...</div>'; return; }
+    content.innerHTML = renderDetail();
+  }
+}
+function renderTree(nodes) {
+  let html = '<div class="tree">';
+  const walk = (list) => {
+    html += '<ul>';
+    for (const n of list) {
+      const mark = n.level === 'domain' ? '▣' : n.level === 'theme' ? '▤' : '▪';
+      html += '<li><div class="node" onclick="pickNode(\'' + esc(n.id) + '\',\'' + esc(n.name).replace(/'/g, '\\\'') + '\')"><span class="lvl">' + mark + '</span>' + esc(n.name) + '</div>';
+      if (n.children && n.children.length) walk(n.children);
+      html += '</li>';
+    }
+    html += '</ul>';
+  };
+  walk(nodes);
+  return html + '</div>';
+}
+async function pickNode(id, name) {
+  selectedName = name;
+  indexList = [];
+  detail = null; analyze = null; exportInfo = null;
+  view = 'list';
+  renderBar();
+  el('content').innerHTML = '<div class="loading">检索中...</div>';
+  indexList = await api('questions', { kp: id });
+  render();
+}
+async function openDetail(i) {
+  detail = null; analyze = null; exportInfo = null;
+  view = 'detail';
+  renderBar();
+  el('content').innerHTML = '<div class="loading">加载题目...</div>';
+  const item = indexList[i];
+  detail = await api('detail', { qid: item.questionIds[0] });
+  render();
+}
+function renderDetail() {
+  if (!detail || detail.status !== 'success') return '<div class="hint">' + esc(detail && detail.message || '加载失败') + '</div>';
+  let html = '<div class="qcard"><div class="qfile">' + esc(detail.file) + '</div>';
+  if (detail.material) html += '<div class="material">' + esc(detail.material) + '</div>';
+  html += (detail.questions || []).map((q, qi) =>
+    '<div class="qitem"><div class="stem">' + esc(q.stem) + '</div>' +
+    (q.options || []).map(o => '<div class="option">' + esc(o) + '</div>').join('') +
+    '<button class="mini" onclick="doAnalyze(\'' + esc(q.questionId).replace(/'/g, '\\\'') + '\')">🔍 为什么这样考 · 命题蓝图</button></div>'
+  ).join('');
+  html += '</div>';
+  html += renderAnalyze();
+  return html;
+}
+async function doAnalyze(qid) {
+  analyze = null; exportInfo = null; tab = 'analysis';
+  const prev = el('content');
+  await (async () => { analyze = await api('analyze', { qid }); render(); })();
+}
+function renderAnalyze() {
+  if (!analyze) return '';
+  if (analyze.status !== 'success') return '<div class="analysis"><span class="hint">' + esc(analyze.message || '分析失败') + '</span></div>';
+  const a = analyze.analysis, b = analyze.blueprint;
+  let html = '<div class="analysis"><div class="tabs">' +
+    '<button class="tab' + (tab === 'analysis' ? ' active' : '') + '" onclick="setTab(\'analysis\')">真题分析</button>' +
+    '<button class="tab' + (tab === 'blueprint' ? ' active' : '') + '" onclick="setTab(\'blueprint\')">命题蓝图</button>' +
+    '<button class="mini" style="margin-left:auto" onclick="doExport()">⬇ 导出 Markdown</button></div>';
+  if (tab === 'analysis') {
+    html += '<div style="font-weight:700;margin-bottom:6px">① 考什么</div>';
+    html += (a.examPoints || []).map(kp => '<div class="kp"><span class="role">[' + esc(kp.role) + '] 权重 ' + esc(kp.weight) + '</span><div>' + esc(kp.domain) + ' → ' + esc(kp.theme) + ' → ' + esc(kp.knowledgeUnit) + '</div>' + (kp.evidence ? '<div class="hint">证据：' + esc(kp.evidence) + '</div>' : '') + '</div>').join('');
+    html += '<div style="font-weight:700;margin:10px 0 6px">② 怎么考</div>' +
+      '<div class="fact">题型：' + esc(a.questionType) + '　|　设问：' + esc(a.stemMode) + '</div>' +
+      '<div class="fact">情境类型：' + esc((a.contextTypes || []).join('、')) + '</div>' +
+      '<div style="font-weight:700;margin:10px 0 6px">③ 为什么这样考</div>' +
+      '<div class="fact">素养立意：' + esc((a.literacy || []).join('、')) + '</div>' +
+      '<div class="fact">能力层次：' + esc(a.abilityLevel) + '　|　难度定位：' + esc(a.difficulty) + '</div>';
+    if ((a.distractors || []).length) {
+      html += '<div class="hint" style="margin:6px 0 2px">干扰项设计逻辑（规则提取）：</div>' + a.distractors.map(d => '<div class="hint">· ' + esc(d.option) + '：' + esc(d.reason) + '</div>').join('');
+    }
+    if ((a.extraTags || []).length) html += '<div class="hint" style="margin-top:6px">情境标签：' + esc(a.extraTags.join('、')) + '</div>';
+  } else {
+    html += '<div style="font-weight:700;margin-bottom:6px">① 考点锁定</div>' +
+      '<div class="fact">' + esc(b.corePoint.domain) + ' → ' + esc(b.corePoint.theme) + ' → ' + esc(b.corePoint.knowledgeUnit) + '（权重 ' + esc(b.corePoint.weight) + '）</div>' +
+      '<div style="font-weight:700;margin:10px 0 6px">② 情境换新</div><div class="fact">' + esc(b.contextSuggestion) + '</div>';
+    if ((b.alternativeContexts || []).length) {
+      html += '<div class="hint" style="margin:6px 0 2px">同考点可参考情境：</div>' + b.alternativeContexts.slice(0, 5).map(alt => '<div class="hint">· ' + esc(alt.file) + '：材料「' + esc(alt.material) + '」设问「' + esc(alt.stem) + '」</div>').join('');
+    }
+    html += '<div style="font-weight:700;margin:10px 0 6px">③ 设问设计</div>' +
+      '<div class="fact">保留角度（仿写）：' + esc(b.stemTemplate) + '</div>' +
+      '<div class="fact">换角度（迁移）：' + esc(b.alternativeAngle) + '</div>';
+    if (b.optionDesign) {
+      html += '<div style="font-weight:700;margin:10px 0 6px">④ 选项设计（选择题）</div><div class="fact">正确项：' + esc(b.optionDesign.correct) + '</div><div class="hint" style="margin:4px 0 2px">干扰项：</div>' + b.optionDesign.distractors.map(d => '<div class="hint">· ' + esc(d) + '</div>').join('');
+    }
+    html += '<div style="font-weight:700;margin:10px 0 6px">⑤ 素养与难度目标</div><div class="fact">素养：' + esc((b.literacy || []).join('、')) + '　|　难度：' + esc(b.difficulty) + '</div>';
+  }
+  if (exportInfo) html += '<div class="export-msg">' + esc(exportInfo.status === 'success' ? '已导出：' + exportInfo.path : exportInfo.message) + '</div>';
+  return html + '</div>';
+}
+function setTab(t) { tab = t; render(); }
+async function doExport() {
+  if (!analyze || !analyze.analysis) return;
+  exportInfo = null;
+  await (async () => { exportInfo = await api('export', { qid: analyze.analysis.questionId }); render(); })();
+}
+boot();
+async function boot() {
+  try { taxonomy = await api('taxonomy'); } catch (e) {}
+  render();
+}
+</script>
+</body>
+</html>
