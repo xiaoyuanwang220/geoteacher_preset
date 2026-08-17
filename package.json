@@ -1,0 +1,25 @@
+{
+  "name": "geo-teacher-agent",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "DeepSeek Harness (DSH) agent-preset plugins (dsh plugins) for a high-school geography teacher assistant: anti-leak question-explaining pipeline (solve/judge/explain) + provider-agnostic vision transcription with graceful degradation. MIT.",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "agent-preset",
+    "cordis",
+    "education",
+    "geography",
+    "question-solving",
+    "vision"
+  ],
+  "scripts": {
+    "verify:geo": "node scripts/geo-verify.mjs",
+    "test": "node scripts/geo-verify.mjs --source"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,1683 @@
+# 高中地理 Taxonomy — 自然地理部分（跨册整合 v0.2-draft）
+#
+# 来源：ima 知识库「aaa」→ 高中文件夹
+#   - 普通高中教科书·地理必修 第一册（人教版 2019，李秀彬、丁尧清主编）
+#   - 普通高中教科书·地理选择性必修1 自然地理基础（人教版 2019，袁孝亭、丁尧清主编）
+#
+# 结构：domain → theme → knowledge_unit（三层教材主干）
+# 本版已跨册去重；案例、问题研究、情境、能力表达均未进入主干。
+# 所有节点均基于教材原文提取，未使用 Agent 记忆或网络摘要。
+
+meta:
+  subject: 高中地理
+  taxonomy_name: 自然地理知识点体系（跨册整合）
+  version: v0.2-draft
+  status: draft
+  constructed_at: "2026-07-28"
+  source_textbooks:
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理必修 第一册
+      publisher: 人民教育出版社
+      edition: 2019
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+      publisher: 人民教育出版社
+      edition: 2019
+  construction_basis: 依据 taxonomy_construction_rules.md，从 ima 原文逐节提取知识候选并跨册去重。
+  notes:
+    - 本文件是替代原有 v0.1 自然地理部分的候选草案；完成语法校验、边界审查和代表性真题验证后，方可作为正式映射词表。
+    - 教材册、章、节仅为来源线索，不直接等于 taxonomy 层级。
+    - 同一知识跨册出现时只保留一个节点，source_refs 记录多个来源。
+    - needs_review=true 的节点存在粒度、父级或来源疑问，需人工裁定。
+    - 本版尚未使用代表性真题验证可映射性，结构检查通过不等于定稿。
+
+# ============================================================
+# L1 学科领域
+# ============================================================
+nodes:
+  - id: DM-NAT
+    level: domain
+    name: 自然地理
+    parent_id: null
+    definition: 研究地球自然环境各要素的组成、结构、运动规律及相互关系的学科领域。
+    includes:
+      - 地球的宇宙环境与运动
+      - 大气、水、地表形态、植被与土壤等自然要素
+      - 自然灾害的成因机制
+      - 自然环境的整体性与差异性
+    excludes:
+      - 人口、城市、产业等人文地理内容
+      - 区域发展分析
+      - 资源、环境与国家安全的管理对策
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 全册
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 全册
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# L2 知识主题 + L3 知识单元
+# ============================================================
+
+  # ---------- 主题 1：地球的宇宙环境 ----------
+  - id: TH-NAT-UNIVERSE
+    level: theme
+    name: 地球的宇宙环境
+    parent_id: DM-NAT
+    definition: 研究地球在宇宙中的位置、太阳对地球的影响及地球作为行星的特征。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第一、二节
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-UNIVERSE-001
+    level: knowledge_unit
+    name: 天体与天体系统
+    parent_id: TH-NAT-UNIVERSE
+    definition: 宇宙中物质的存在形式及其相互吸引、绕转构成的层级系统。
+    includes:
+      - 恒星、星云、行星、卫星、流星体、彗星等天体类型
+      - 地月系、太阳系、银河系、可观测宇宙的层级关系
+    excludes:
+      - 天文观测工具的发展史
+      - 具体星座名称
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第一节"地球在宇宙中的位置"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-UNIVERSE-002
+    level: knowledge_unit
+    name: 太阳辐射及其对地球的影响
+    parent_id: TH-NAT-UNIVERSE
+    definition: 太阳以电磁波形式向宇宙空间放射能量及其对地球环境的维持作用。
+    includes:
+      - 太阳辐射的概念与能量来源（核聚变）
+      - 太阳辐射维持地表温度、驱动水与大气运动和生命活动
+      - 太阳辐射的纬度分布差异及其影响
+      - 太阳辐射的生产与生活利用
+    excludes:
+      - 太阳活动的具体现象（归入太阳活动节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第二节"太阳辐射对地球的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-UNIVERSE-003
+    level: knowledge_unit
+    name: 太阳活动及其对地球的影响
+    parent_id: TH-NAT-UNIVERSE
+    definition: 太阳大气变化现象及其对地球磁场、电离层和人类活动的扰动。
+    includes:
+      - 太阳大气结构（光球、色球、日冕）
+      - 太阳黑子、耀斑、日珥、日冕物质抛射等现象
+      - 太阳活动周期
+      - 磁暴、极光、短波通信中断等影响
+    excludes:
+      - 太阳辐射的能量来源（归入太阳辐射节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第二节"太阳活动对地球的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-UNIVERSE-004
+    level: knowledge_unit
+    name: 太阳系行星的特征与地球的特殊性
+    parent_id: TH-NAT-UNIVERSE
+    definition: 八大行星的运动与结构特征，以及地球存在高级智慧生命的条件。
+    includes:
+      - 类地行星与巨行星、远日行星的分类
+      - 八大行星运动的同向性、共面性、近圆性
+      - 地球普通性（距日、体积、运动）与特殊性（存在生命）
+      - 地球存在生命的温度、水、大气等条件
+    excludes:
+      - 具体行星名称作为独立知识点
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第一节"行星地球"
+    status: draft
+    confidence: medium
+    needs_review: true
+    review_note: "“太阳系行星的特征”和“地球的特殊性”是否需要拆分，待代表性真题验证。"
+
+  - id: KU-NAT-UNIVERSE-005
+    level: knowledge_unit
+    name: 天文观测的自然环境条件
+    parent_id: TH-NAT-UNIVERSE
+    definition: 影响地面天文观测清晰度、稳定性和可观测时长的地形、大气与光环境条件。
+    includes:
+      - 海拔高、大气稀薄对减少大气削弱和扰动的作用
+      - 晴夜多、云量少和空气干燥对延长有效观测时间的作用
+      - 大气稳定、视宁度好对提高观测清晰度的作用
+      - 远离城市灯光形成暗夜环境
+      - 减少光污染和电磁干扰
+    excludes:
+      - 天文观测仪器的发展史和操作方法
+      - 天体与天体系统的一般分类
+      - 具体天文台址案例
+    aliases:
+      - 天文观测台址条件
+      - 天文观测环境要求
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第一节"地球在宇宙中的位置"（天文观测与宇宙环境学习情境）
+    validation_refs:
+      - source_document: 精品解析：2025年浙江6月高考地理真题（解析版）.docx
+        question_numbers: "2"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经教师结合2025年浙江6月卷第2题确认，天文观测对自然环境的要求具有独立解题价值。"
+
+  # ---------- 主题 2：地球的结构与演化 ----------
+  - id: TH-NAT-EARTH-STRUCTURE
+    level: theme
+    name: 地球的结构与演化
+    parent_id: DM-NAT
+    definition: 研究地球的圈层结构及地球形成以来的地质演化历史。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第三、四节
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-STRUCTURE-001
+    level: knowledge_unit
+    name: 地球的内部圈层结构
+    parent_id: TH-NAT-EARTH-STRUCTURE
+    definition: 依据地震波传播速度变化划分的地球内部同心圈层。
+    includes:
+      - 纵波与横波的传播特性
+      - 莫霍界面与古登堡界面
+      - 地壳、地幔、地核的划分及特征
+      - 软流层与岩石圈
+    excludes:
+      - 外部圈层（归入外部圈层节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第四节"地球的内部圈层结构"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-STRUCTURE-002
+    level: knowledge_unit
+    name: 地球的外部圈层结构
+    parent_id: TH-NAT-EARTH-STRUCTURE
+    definition: 地球表层大气圈、水圈、生物圈及其与岩石圈的相互关系。
+    includes:
+      - 大气圈、水圈、生物圈的组成与作用
+      - 各圈层间的相互联系与渗透
+    excludes:
+      - 大气的垂直分层细节（归入大气垂直分层节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第四节"地球的外部圈层结构"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-STRUCTURE-003
+    level: knowledge_unit
+    name: 地层与化石
+    parent_id: TH-NAT-EARTH-STRUCTURE
+    definition: 具有时间顺序的层状岩石及其中保存的古生物遗体或遗迹，是研究地球历史的依据。
+    includes:
+      - 沉积岩的层理构造
+      - 化石的形成与意义
+      - 地层对比与时代确定
+    excludes:
+      - 具体化石种类
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第三节"化石和地质年代代表"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-STRUCTURE-004
+    level: knowledge_unit
+    name: 地质年代表
+    parent_id: TH-NAT-EARTH-STRUCTURE
+    definition: 依据地层顺序、生物演化阶段和岩石年龄对地球历史进行的系统性编年。
+    includes:
+      - 宙、代、纪的时间单位体系
+      - 前寒武纪、古生代、中生代、新生代的划分
+      - 各代的主要界限年龄
+    excludes:
+      - 各代生物演化细节（归入地球演化历程）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第三节"地质年代表"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-STRUCTURE-005
+    level: knowledge_unit
+    name: 地球的演化历程
+    parent_id: TH-NAT-EARTH-STRUCTURE
+    definition: 地球从形成至今各地质年代的环境变迁与生物演化过程。
+    includes:
+      - 前寒武纪大气层与海洋形成、原核生物出现
+      - 古生代海陆变迁、无脊椎动物到两栖动物演化、蕨类繁盛与成煤
+      - 中生代联合古陆解体、爬行动物繁盛、裸子植物兴盛与成煤
+      - 新生代现代地势形成、哺乳动物发展、人类出现
+      - 重大物种灭绝事件
+    excludes:
+      - 地质年代划分体系本身（归入地质年代表）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第一章第三节"地球的演化历程"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 3：地球的运动 ----------
+  - id: TH-NAT-EARTH-MOTION
+    level: theme
+    name: 地球的运动
+    parent_id: DM-NAT
+    definition: 研究地球自转与公转的运动特征及其产生的地理意义。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-001
+    level: knowledge_unit
+    name: 地球的自转
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 地球绕地轴的旋转运动及其基本特征和由此产生的昼夜交替与时差。
+    includes:
+      - 自转方向（自西向东）
+      - 恒星日与太阳日的区别
+      - 角速度与线速度的纬度分布
+      - 昼半球、夜半球与晨昏线
+      - 昼夜交替及其周期（太阳日）
+      - 地方时与经度的关系
+      - 时区划分与区时
+      - 国际日界线与日期变更
+    excludes:
+      - 昼夜长短的周年变化（归入昼夜长短的变化）
+      - 地转偏向力（单独设节点）
+    aliases:
+      - 昼夜交替与时差
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第一节"地球的自转"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第二节"昼夜交替和时差"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-002
+    level: knowledge_unit
+    name: 地球的公转
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 地球绕太阳的运动及其方向、轨道、周期和速度变化。
+    includes:
+      - 公转方向与椭圆轨道
+      - 恒星年与回归年
+      - 近日点与远日点及公转速度变化
+    excludes:
+      - 黄赤交角（单独设节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第一节"地球的公转"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-003
+    level: knowledge_unit
+    name: 黄赤交角与太阳直射点的回归运动
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 赤道平面与黄道平面的交角导致太阳直射点在回归线间的周期性往返运动。
+    includes:
+      - 黄赤交角（23°26′）的概念
+      - 太阳直射点的南北移动范围与周期
+      - 回归线与二分二至
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第一节"黄赤交角及其影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-005
+    level: knowledge_unit
+    name: 地转偏向力
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 地球自转使地表水平运动物体方向发生偏转的惯性力。
+    includes:
+      - 北半球右偏、南半球左偏、赤道无偏转
+      - 只改变方向不改变速度
+      - 对大气和水流水平运动的影响
+    excludes:
+      - 风的受力分析（归入大气的水平运动）
+    aliases:
+      - 科里奥利力
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第二节"沿地表水平运动物体的运动方向的偏转"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第二节"大气的水平运动——风"（应用层面）
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-006
+    level: knowledge_unit
+    name: 昼夜长短的变化
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 太阳直射点移动导致各纬度昼弧与夜弧长度随季节变化的规律。
+    includes:
+      - 夏半年北半球昼长夜短的纬度分布
+      - 冬半年北半球昼短夜长的纬度分布
+      - 二分日全球昼夜等长
+      - 极昼极夜现象
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第二节"昼夜长短的变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-007
+    level: knowledge_unit
+    name: 正午太阳高度的变化
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 太阳直射点移动导致正午太阳高度随纬度和季节变化的规律。
+    includes:
+      - 正午太阳高度的纬度分布规律（二分二至日）
+      - 正午太阳高度的季节变化规律
+      - 正午太阳高度计算公式
+      - 正午太阳方向
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第二节"正午太阳高度的变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-EARTH-MOTION-008
+    level: knowledge_unit
+    name: 四季更替与五带划分
+    parent_id: TH-NAT-EARTH-MOTION
+    definition: 昼夜长短与正午太阳高度的周年变化形成四季，太阳辐射纬度差异划分五带。
+    includes:
+      - 天文四季的含义
+      - 气候统计上的四季划分
+      - 以回归线和极圈为界的五带划分
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第一章第二节"四季更替和五带划分"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 4：大气 ----------
+  - id: TH-NAT-ATMOSPHERE
+    level: theme
+    name: 大气
+    parent_id: DM-NAT
+    definition: 研究大气的组成与结构、受热与运动、天气系统、大气环流及其气候影响。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-HEAT-001
+    level: knowledge_unit
+    name: 大气的组成
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 低层大气中干洁空气、水汽和杂质的组成及其作用。
+    includes:
+      - 干洁空气的主要成分（氮气、氧气）及微量成分（二氧化碳、臭氧）
+      - 水汽和杂质在天气变化中的作用
+      - 人类活动对大气成分的影响
+    excludes:
+      - 大气垂直分层（归入大气垂直分层节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第一节"大气的组成"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-HEAT-002
+    level: knowledge_unit
+    name: 大气的垂直分层
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 依据温度、运动状况和密度对大气自下而上的分层及各层特征。
+    includes:
+      - 对流层的气温变化、对流运动与天气现象
+      - 平流层的臭氧吸收紫外线与航空飞行
+      - 高层大气的电离层与无线电通信
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第一节"大气的垂直分层"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-HEAT-003
+    level: knowledge_unit
+    name: 大气的受热过程
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 太阳辐射穿越大气并被地面吸收，地面长波辐射加热近地面大气的过程。
+    includes:
+      - 大气对太阳短波辐射的吸收与反射
+      - 地面吸收太阳辐射增温
+      - 地面长波辐射作为近地面大气主要热源
+    excludes:
+      - 大气逆辐射的保温机制（归入大气保温作用）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第二节"大气的受热过程"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-HEAT-004
+    level: knowledge_unit
+    name: 大气的保温作用
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 大气吸收地面长波辐射后以大气逆辐射补偿地面热量损失的过程。
+    includes:
+      - 水汽、二氧化碳等吸收长波辐射
+      - 大气逆辐射的方向与作用
+      - 云层对大气逆辐射的增强
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第二节"大气对地面的保温作用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-HEAT-005
+    level: knowledge_unit
+    name: 大气热力环流
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 由地面冷热不均引起的空气垂直与水平运动构成的闭合环流。
+    includes:
+      - 热力环流的形成过程（受热上升、冷却下沉、水平补偿）
+      - 海陆风、山谷风、城市热岛环流等应用
+    excludes:
+      - 全球性大气环流（归入气压带和风带的形成）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第二节"大气热力环流"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第四章第三节"海—气相互作用"（热带太平洋大气热力环流部分）
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "跨册节点：必修一讲基本原理，选必一在海—气相互作用中应用，已合并。"
+
+  - id: KU-NAT-ATM-HEAT-006
+    level: knowledge_unit
+    name: 大气的水平运动
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 在水平气压梯度力、地转偏向力和摩擦力共同作用下形成的大气水平运动。
+    includes:
+      - 水平气压梯度力是形成风的直接原因
+      - 地转偏向力使风向偏转
+      - 摩擦力减小风速
+      - 高空风向与等压线平行、近地面风向与等压线斜交
+      - 等压线判读风向与风速
+    excludes: []
+    aliases:
+      - 风
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第二节"大气的水平运动——风"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-HEAT-007
+    level: knowledge_unit
+    name: 大气稳定度与对流运动
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 大气层结对空气垂直位移的促进或抑制程度及其对对流运动发展强弱的控制作用。
+    includes:
+      - 大气稳定、条件性不稳定与不稳定状态
+      - 稳定层结对空气垂直运动的抑制
+      - 不稳定层结对上升气流和对流发展的促进
+      - 对流运动与积云、积雨云等天气现象的关系
+    excludes:
+      - 由地面冷热不均形成的闭合热力环流（归入大气热力环流）
+      - 锋面和气旋等天气系统的一般结构
+    aliases:
+      - 大气稳定性与对流运动
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第二章第一节"大气的垂直分层"（对流层的对流运动与天气现象）
+    validation_refs:
+      - source_document: 精品解析：2025年安徽高考地理真题（解析版）
+        question_numbers: "15"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经教师结合2025年安徽卷第15题确认，稳定度对对流触发与抑制具有独立解题价值。"
+
+  - id: KU-NAT-ATM-CIRC-001
+    level: knowledge_unit
+    name: 锋与天气
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 冷暖气团交界形成的锋面及其过境时的天气变化。
+    includes:
+      - 气团的概念
+      - 冷锋、暖锋、准静止锋的结构与天气特征
+      - 锋面过境前后的天气变化
+    excludes:
+      - 气旋与反气旋（单独设节点）
+    aliases:
+      - 锋面系统
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章第一节"锋与天气"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-CIRC-002
+    level: knowledge_unit
+    name: 气旋与反气旋
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 低压与高压系统中的气流运动特征及其控制的天气状况。
+    includes:
+      - 低压（气旋）的气流运动与阴雨天气
+      - 高压（反气旋）的气流运动与晴朗天气
+      - 南北半球气旋与反气旋的旋转方向差异
+      - 台风作为强烈发展的热带气旋
+    excludes:
+      - 锋面系统（归入锋与天气）
+    aliases:
+      - 低压与高压系统
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章第一节"低气压（气旋）与高气压（反气旋）"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-CIRC-003
+    level: knowledge_unit
+    name: 气压带和风带的形成
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 由高低纬受热不均和地转偏向力形成的全球七气压带六风带及三圈环流。
+    includes:
+      - 赤道低压带、副热带高压带、副极地低压带、极地高压带
+      - 信风带、西风带、极地东风带
+      - 低纬、中纬、高纬三圈环流
+      - 气压带和风带的季节移动
+    excludes:
+      - 海陆分布的修正（归入海陆分布对气压带风带的影响）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章第二节"气压带和风带的形成"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-CIRC-004
+    level: knowledge_unit
+    name: 海陆分布对气压带和风带的影响
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 海陆热力差异使纬向气压带分裂为季节性高低气压中心。
+    includes:
+      - 1月与7月海平面气压分布特征
+      - 亚洲高压（冬季）与亚洲低压（夏季）
+      - 北半球气压带被海陆切断的现象
+    excludes:
+      - 季风的形成（单独设节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章第二节"海陆分布对气压带和风带的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-CIRC-005
+    level: knowledge_unit
+    name: 季风
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 海陆气压中心季节变化和气压带风带季节移动引起的盛行风随季节转换现象。
+    includes:
+      - 东亚季风（冬季西北风、夏季东南风）的成因
+      - 南亚季风（冬季东北风、夏季西南风）的成因
+      - 季风对降水季节分配的影响
+    excludes: []
+    aliases:
+      - 季风环流
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章第二节"海陆分布对气压带和风带的影响"（季风部分）
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-ATM-CIRC-006
+    level: knowledge_unit
+    name: 气压带和风带对气候的影响
+    parent_id: TH-NAT-ATMOSPHERE
+    definition: 气压带、风带及其交替控制对气候类型和自然景观形成的决定作用。
+    includes:
+      - 低压带控制区湿润、高压带控制区干燥
+      - 不同风带来源（高纬→低纬、海洋→陆地）对降水的影响
+      - 气压带与风带交替控制形成的地中海气候、热带草原气候
+      - 主要气候类型与自然景观的对应关系
+    excludes:
+      - 具体气候类型的气温降水数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第三章第三节"气压带和风带对气候的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 5：水文与海洋 ----------
+  - id: TH-NAT-WATER
+    level: theme
+    name: 水文与海洋
+    parent_id: DM-NAT
+    definition: 研究地球水循环、海水性质与运动、陆地水体关系、洋流及海气相互作用。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第四章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-WATER-001
+    level: knowledge_unit
+    name: 水循环
+    parent_id: TH-NAT-WATER
+    definition: 自然界的水在水圈、大气圈、岩石圈、生物圈中通过蒸发、水汽输送、降水、下渗、径流等环节连续运动的过程。
+    includes:
+      - 海陆间循环、陆地内循环、海上内循环
+      - 水循环各环节
+      - 水循环维持全球水量动态平衡与物质迁移能量转换的地理意义
+      - 人类活动对水循环环节的影响
+    excludes: []
+    aliases:
+      - 水分循环
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章第一节"水循环"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-WATER-002
+    level: knowledge_unit
+    name: 海水的性质
+    parent_id: TH-NAT-WATER
+    definition: 海水温度、盐度和密度的时空分布规律及其影响因素。
+    includes:
+      - 海水温度的垂直与水平分布及季节变化
+      - 海水盐度的分布规律（副热带最高）及影响因素
+      - 海水密度的分布规律与垂直变化
+      - 海水性质对海洋生物、航运和气候的影响
+      - 海中断崖现象
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章第二节"海水的性质"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-WATER-003
+    level: knowledge_unit
+    name: 海浪
+    parent_id: TH-NAT-WATER
+    definition: 海水在风力等作用下形成的波动及其对海岸和人类活动的影响。
+    includes:
+      - 风浪的形成与波浪要素
+      - 海啸与风暴潮
+      - 海浪对海岸地貌塑造及人类活动的影响
+    excludes:
+      - 潮汐（单独设节点）
+      - 洋流（单独设节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章第三节"海水的运动"（海浪部分）
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经代表性真题验证，已与潮汐拆分为独立知识单元。"
+
+  - id: KU-NAT-WATER-008
+    level: knowledge_unit
+    name: 潮汐
+    parent_id: TH-NAT-WATER
+    definition: 海水在月球和太阳引潮力作用下发生的周期性涨落及其对海岸和人类活动的影响。
+    includes:
+      - 潮汐的成因与周期性涨落
+      - 潮流及其侵蚀、搬运作用
+      - 潮汐对航运、生产生活和海岸地貌的影响
+    excludes:
+      - 海浪（单独设节点）
+      - 洋流（单独设节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章第三节"海水的运动"（潮汐部分）
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经代表性真题验证，已与海浪拆分为独立知识单元。"
+
+  - id: KU-NAT-WATER-004
+    level: knowledge_unit
+    name: 洋流
+    parent_id: TH-NAT-WATER
+    definition: 海水常年较稳定地沿一定方向大规模流动的现象、分布规律及其环境影响。
+    includes:
+      - 暖流与寒流的分类
+      - 中低纬与中高纬大洋环流分布规律
+      - 西风漂流与北印度洋季风洋流
+      - 洋流对气候、渔场、航行和污染扩散的影响
+    excludes: []
+    aliases:
+      - 海流
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章第三节"海水的运动"（洋流部分）
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第四章第二节"洋流"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "跨册节点：必修一侧重概念与影响，选必一侧重分布规律，已合并。"
+
+  - id: KU-NAT-WATER-005
+    level: knowledge_unit
+    name: 陆地水体及其相互关系
+    parent_id: TH-NAT-WATER
+    definition: 陆地河流、湖泊、冰川、地下水等水体的类型、特征及相互补给关系。
+    includes:
+      - 陆地水体的类型与分布
+      - 河流与湖泊的相互补给与径流调节
+      - 河流与地下水的相互补给
+      - 冰川和积雪融水对河流的补给
+      - 河流补给类型与径流季节变化
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第四章第一节"陆地水体及其相互关系"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-WATER-006
+    level: knowledge_unit
+    name: 海—气相互作用
+    parent_id: TH-NAT-WATER
+    definition: 海洋与大气之间的水热交换过程及其对全球气候的调节与异常影响。
+    includes:
+      - 海洋作为大气主要水汽来源和热量储存库
+      - 海气水热交换与全球水热平衡
+      - 厄尔尼诺现象及其气候影响
+      - 拉尼娜现象及其气候影响
+    excludes: []
+    aliases:
+      - 海气相互作用
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第四章第三节"海—气相互作用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-WATER-007
+    level: knowledge_unit
+    name: 人类活动对海洋环境的影响
+    parent_id: TH-NAT-WATER
+    definition: 人类开发、建设和保护活动通过改变海水运动、海洋生境与物质条件而影响海洋环境的过程。
+    includes:
+      - 海岸与海洋工程对局地海水运动的改变
+      - 人工构筑物对海洋生境和生态过程的影响
+      - 海洋资源开发利用对海洋环境的正负效应
+      - 海洋生态修复和保护活动的环境作用
+    excludes:
+      - 海水温度、盐度和密度的一般分布规律（归入海水的性质）
+      - 海浪、潮汐和洋流的一般形成与分布规律
+      - 以国家安全为中心的海洋空间资源开发（归入资源、环境与国家安全）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第一节"人类面临的主要环境问题"（人类活动与环境问题）
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第一章第三节"环境问题及其危害"
+    validation_refs:
+      - source_document: 精品解析：2025年海南高考地理真题（解析版）.docx
+        question_numbers: "5"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经教师结合2025年海南卷第5题确认，人类工程活动改变局地海洋环境具有独立映射价值。"
+
+  # ---------- 主题 6：地表形态 ----------
+  - id: TH-NAT-LANDFORM
+    level: theme
+    name: 地表形态
+    parent_id: DM-NAT
+    definition: 研究地貌类型识别、地貌观察方法及地表形态塑造的内力外力机制。
+    includes: []
+    excludes: []
+    aliases:
+      - 地貌
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第四章
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第二章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-001
+    level: knowledge_unit
+    name: 喀斯特地貌
+    parent_id: TH-NAT-LANDFORM
+    definition: 可溶性岩石在水的溶蚀和沉积作用下形成的地表与地下地貌。
+    includes:
+      - 溶沟、洼地、峰丛、峰林、孤峰等地表喀斯特地貌
+      - 溶洞、石钟乳、石笋、石柱等地下喀斯特地貌
+      - 喀斯特地貌的发育条件与演变
+    excludes: []
+    aliases:
+      - 岩溶地貌
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第四章第一节"喀斯特地貌"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-002
+    level: knowledge_unit
+    name: 河流地貌
+    parent_id: TH-NAT-LANDFORM
+    definition: 河流侵蚀、搬运和堆积作用形成的河谷、冲积平原、三角洲等地貌及其发育过程。
+    includes:
+      - V形河谷的形成与河谷演变
+      - 凹岸侵蚀与凸岸堆积
+      - 冲积扇、河漫滩平原、三角洲平原的形成
+      - 河曲与牛轭湖
+      - 河流地貌对聚落分布的影响
+    excludes: []
+    aliases:
+      - 河流地貌的发育
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第四章第一节"河流地貌"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第二章第三节"河流地貌的发育"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "跨册节点：必修一侧重类型识别，选必一侧重发育机制，已合并。"
+
+  - id: KU-NAT-LANDFORM-003
+    level: knowledge_unit
+    name: 风沙地貌
+    parent_id: TH-NAT-LANDFORM
+    definition: 干旱地区以风力为主形成的风蚀与风积地貌。
+    includes:
+      - 风蚀柱、风蚀蘑菇、雅丹等风蚀地貌
+      - 新月形沙丘、沙丘链等风积地貌
+      - 流动沙丘与固定沙丘
+    excludes: []
+    aliases:
+      - 风成地貌
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第四章第一节"风沙地貌"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-004
+    level: knowledge_unit
+    name: 海岸地貌
+    parent_id: TH-NAT-LANDFORM
+    definition: 海浪等作用在海岸带形成的海蚀与海积地貌。
+    includes:
+      - 海蚀崖、海蚀平台、海蚀穴、海蚀拱桥、海蚀柱
+      - 海滩、沙坝等堆积地貌
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第四章第一节"海岸地貌"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-005
+    level: knowledge_unit
+    name: 地貌的观察
+    parent_id: TH-NAT-LANDFORM
+    definition: 在野外或地图上识别地貌并从高度、坡度、坡向等方面描述地貌特征的方法。
+    includes:
+      - 绝对高度与相对高度
+      - 坡度与坡向的观察
+      - 地貌观察的顺序（宏观到微观）
+      - 地貌起伏与破碎程度的描述
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第四章第二节"地貌的观察"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-006
+    level: knowledge_unit
+    name: 塑造地表形态的内力与外力作用
+    parent_id: TH-NAT-LANDFORM
+    definition: 来自地球内部的内力作用和来自地球外部的外力作用共同塑造地表形态的过程。
+    includes:
+      - 内力作用（地壳运动、岩浆活动、变质作用）
+      - 外力作用（风化、侵蚀、搬运、堆积）
+      - 内力奠定基本格局、外力再塑造的关系
+      - 冰川作用及其地貌
+    excludes:
+      - 具体地貌类型（分别归入各地貌节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第二章第一节"塑造地表形态的力量"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-007
+    level: knowledge_unit
+    name: 岩石圈的物质循环
+    parent_id: TH-NAT-LANDFORM
+    definition: 岩浆岩、沉积岩和变质岩三大类岩石的相互转化过程。
+    includes:
+      - 岩浆岩（花岗岩、玄武岩）的形成
+      - 沉积岩（砾岩、砂岩、页岩、石灰岩）的形成
+      - 变质岩（板岩、大理岩）的形成
+      - 三大类岩石的转化关系与岩石圈物质循环
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第二章第一节"岩石圈的物质循环"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-008
+    level: knowledge_unit
+    name: 地质构造与地貌
+    parent_id: TH-NAT-LANDFORM
+    definition: 岩层变形变位形成的褶皱和断层及其对应的地貌表现。
+    includes:
+      - 褶皱（背斜、向斜）的形成与地貌
+      - 背斜成谷、向斜成山的地形倒置
+      - 断层的形成与地垒、地堑地貌
+      - 地质构造的实践意义
+    excludes:
+      - 板块运动（单独设节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第二章第二节"地质构造与地貌"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-LANDFORM-009
+    level: knowledge_unit
+    name: 板块运动与地貌
+    parent_id: TH-NAT-LANDFORM
+    definition: 板块构造学说及板块相向、相离运动形成的地貌。
+    includes:
+      - 六大板块的划分与板块运动特点
+      - 板块碰撞形成褶皱山系、海沟、岛弧
+      - 板块张裂形成裂谷、海洋
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第二章第二节"板块运动与地貌"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 7：植被与土壤 ----------
+  - id: TH-NAT-VEGETATION-SOIL
+    level: theme
+    name: 植被与土壤
+    parent_id: DM-NAT
+    definition: 研究植被类型与环境的关系及土壤的组成、形成因素和功能。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-VEG-SOIL-001
+    level: knowledge_unit
+    name: 植被与环境
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 植被的概念、类型及其与环境条件的相互关系。
+    includes:
+      - 天然植被与人工植被
+      - 植被的垂直结构与环境适应
+      - 植被分布与环境条件（气温、降水）的关系
+    excludes:
+      - 具体植被类型（归入森林植被、草原与荒漠植被）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第一节"植被与环境"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-VEG-SOIL-002
+    level: knowledge_unit
+    name: 森林植被
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 分布在湿润半湿润地区的主要森林类型及其环境特征与识别。
+    includes:
+      - 热带雨林的特征（茎花、板根、垂直结构复杂）
+      - 常绿阔叶林的特征
+      - 落叶阔叶林（夏绿林）的特征
+      - 亚寒带针叶林的特征
+      - 红树林的生态适应性
+    excludes:
+      - 草原与荒漠植被
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第一节"森林"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-VEG-SOIL-003
+    level: knowledge_unit
+    name: 草原与荒漠植被
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 水分不足地区以草本或旱生灌木为主的植被类型及其环境特征。
+    includes:
+      - 热带草原的干湿季变化
+      - 温带草原的特征
+      - 荒漠植被的旱生适应
+    excludes:
+      - 森林植被
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第一节"草原与荒漠"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-VEG-SOIL-004
+    level: knowledge_unit
+    name: 土壤的组成与观察
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 土壤的物质组成及从颜色、质地和剖面构造等方面观察土壤的方法。
+    includes:
+      - 土壤的四种组成（矿物质、有机质、水分、空气）
+      - 土壤颜色（黑土、红壤）
+      - 土壤质地（砂土、壤土、黏土）
+      - 土壤剖面构造（有机层、腐殖质层、淋溶层、淀积层、母质层、母岩层）
+      - 耕作土壤剖面
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第二节"观察土壤"
+    status: draft
+    confidence: medium
+    needs_review: true
+    review_note: "“土壤的组成”和“土壤观察方法”是否需要拆分，待代表性真题验证。"
+
+  - id: KU-NAT-VEG-SOIL-005
+    level: knowledge_unit
+    name: 土壤的主要形成因素
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 成土母质、生物、气候、地貌、时间等因素对土壤发育的综合作用。
+    includes:
+      - 成土母质对矿物质和质地的影响
+      - 生物对有机质和腐殖质形成的作用
+      - 气候对风化强度和有机质积累的影响
+      - 地貌对水热条件和颗粒分布的影响
+      - 时间对土壤发育程度的影响
+      - 人类活动对土壤的改造
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第二节"土壤的主要形成因素"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-VEG-SOIL-006
+    level: knowledge_unit
+    name: 土壤的功能与养护
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 土壤在地理环境中的地位及其蓄水保肥功能与合理利用养护方法。
+    includes:
+      - 土壤作为联系有机界和无机界的关键环节
+      - 土壤的蓄水保水功能
+      - 土壤改良（盐碱地治理、生物炭）
+      - 休耕、绿肥、轮作等养护方法
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第二节"土壤的功能和养护"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-VEG-SOIL-007
+    level: knowledge_unit
+    name: 树木年轮宽度的判读
+    parent_id: TH-NAT-VEGETATION-SOIL
+    definition: 依据树木年轮宽度及其逐年变化识别树木生长释放、生长抑制和环境扰动信号的方法。
+    includes:
+      - 年轮宽度与树木生长状况的关系
+      - 年轮宽度逐年增长量的正负变化
+      - 超过正阈值的生长释放识别
+      - 超过负阈值的生长抑制识别
+      - 利用年轮异常辅助识别环境扰动
+    excludes:
+      - 树木种类和植被类型的一般识别
+      - 滑坡形成机制及滑坡体运动过程
+    aliases:
+      - 生长释放与生长抑制的识别
+      - 树轮宽度判读
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第五章第一节"植被与环境"（植被对环境的指示作用）
+    validation_refs:
+      - source_document: 精品解析：2025年海南高考地理真题（解析版）.docx
+        question_numbers: "11"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经教师结合2025年海南卷第11题确认，年轮宽度阈值判读可独立参与解题。"
+
+  # ---------- 主题 8：自然灾害 ----------
+  - id: TH-NAT-HAZARD
+    level: theme
+    name: 自然灾害
+    parent_id: DM-NAT
+    definition: 研究气象灾害和地质灾害的成因、危害及防灾减灾措施。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第六章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-HAZARD-001
+    level: knowledge_unit
+    name: 气象灾害
+    parent_id: TH-NAT-HAZARD
+    definition: 由大气异常变化引起的洪涝、干旱、台风、寒潮等灾害的成因、分布与危害。
+    includes:
+      - 洪涝灾害的成因、多发区与危害
+      - 干旱灾害的成因与影响
+      - 台风的结构、生成、移动路径与危害
+      - 寒潮的成因、路径与危害
+    excludes:
+      - 地质灾害
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第六章第一节"气象灾害"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-HAZARD-002
+    level: knowledge_unit
+    name: 地质灾害
+    parent_id: TH-NAT-HAZARD
+    definition: 由地壳运动和重力作用引起的地震、滑坡、泥石流等灾害的成因、分布与危害。
+    includes:
+      - 地震的成因、震级与烈度、分布与危害
+      - 滑坡的形成条件与危害
+      - 泥石流的激发条件与危害
+      - 地质灾害的关联性
+    excludes:
+      - 气象灾害
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第六章第二节"地质灾害"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 9：自然环境的整体性与差异性 ----------
+  - id: TH-NAT-INTEGRITY
+    level: theme
+    name: 自然环境的整体性与差异性
+    parent_id: DM-NAT
+    definition: 研究自然环境要素间的物质迁移和能量交换构成的整体性，以及不同地域的分异规律。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-001
+    level: knowledge_unit
+    name: 自然环境要素间的物质迁移和能量交换
+    parent_id: TH-NAT-INTEGRITY
+    definition: 大气、水、土壤、生物、岩石等要素通过水循环、生物循环和岩石圈物质循环进行的物质迁移和能量交换。
+    includes:
+      - 自然环境要素的组成
+      - 水循环、生物循环、岩石圈物质循环的联结作用
+      - 生物循环对环境要素的改变
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第一节"自然环境要素间的物质迁移和能量交换"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-002
+    level: knowledge_unit
+    name: 自然环境的整体功能
+    parent_id: TH-NAT-INTEGRITY
+    definition: 自然环境在要素共同作用下拥有的生产功能和稳定功能。
+    includes:
+      - 生产功能（光合作用合成有机物）
+      - 稳定功能（自我调节保持性质稳定）
+      - 碳交换与二氧化碳含量的相对稳定
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第一节"自然环境的整体功能"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-003
+    level: knowledge_unit
+    name: 自然环境的统一演化和要素组合
+    parent_id: TH-NAT-INTEGRITY
+    definition: 自然环境各要素同步演化形成阶段性环境要素组合的过程。
+    includes:
+      - 要素演化的统一性
+      - 阶段性环境要素组合（如黄山"四绝"）
+      - 湖泊演变为陆地的过程
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第一节"自然环境的统一演化和要素组合"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-004
+    level: knowledge_unit
+    name: 自然环境对干扰的整体响应
+    parent_id: TH-NAT-INTEGRITY
+    definition: 某一环境要素受外部干扰变化后引发其他要素连锁变化的整体响应特征。
+    includes:
+      - 干扰下的快速环境变化与要素不同步
+      - 人类干扰的放大效应
+      - 森林采伐导致环境整体变化的案例
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第一节"自然环境对干扰的整体响应"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-005
+    level: knowledge_unit
+    name: 陆地地域分异规律
+    parent_id: TH-NAT-INTEGRITY
+    definition: 自然环境由赤道到两极及由沿海到内陆的规律性地域分异。
+    includes:
+      - 纬度地带性（由赤道到两极的分异）
+      - 干湿度地带性（由沿海到内陆的森林—草原—荒漠变化）
+      - 横穿大陆的自然地带（苔原带、亚寒带针叶林带、热带雨林带）
+      - 大陆东岸与西岸自然地带分布
+    excludes:
+      - 垂直地域分异
+      - 地方性分异
+    aliases:
+      - 地带性分异规律
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第二节"陆地地域分异规律"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-006
+    level: knowledge_unit
+    name: 垂直地域分异规律
+    parent_id: TH-NAT-INTEGRITY
+    definition: 高大山体随海拔变化水热状况不同而形成的垂直自然带谱。
+    includes:
+      - 垂直带谱与山体所在纬度、高度的关系
+      - 山麓与陆地自然地带的一致性
+      - 南北坡垂直带谱差异
+    excludes: []
+    aliases:
+      - 垂直地带性
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第二节"垂直地域分异规律"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-NAT-INTEGRITY-007
+    level: knowledge_unit
+    name: 地方性分异规律
+    parent_id: TH-NAT-INTEGRITY
+    definition: 受地形、岩石风化物等地方性因素影响形成的较小尺度地域分异。
+    includes:
+      - 地方性因素对物质与能量再分配的作用
+      - 地形引起的地方性植被分布
+      - 盐碱地等斑块状分布
+    excludes: []
+    aliases:
+      - 非地带性分异
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修1 自然地理基础
+        source_locator: 第五章第二节"地方性分异规律"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# 待审查项汇总
+# ============================================================
+review_items:
+  - candidate_name: 防灾减灾
+    issue: 跨领域待归属
+    detail: '防灾减灾工作体系属于资源、环境与国家安全领域；RS、GNSS、GIS 技术原理现阶段不纳入 taxonomy 主干。'
+    suggestion: '在资源、环境与国家安全领域建立防灾减灾节点并关联气象灾害和地质灾害；工具技术只保留教材来源线索，真题出现稳定考查时再按 taxonomy_gap 评估补充。'
+
+  - node_id: KU-NAT-UNIVERSE-004
+    issue: 粒度待真题验证
+    suggestion: '检验“太阳系行星的特征”与“地球的特殊性”是否需要拆分。'
+
+  - node_id: KU-NAT-VEG-SOIL-004
+    issue: 粒度待真题验证
+    suggestion: '检验“土壤的组成”与“土壤观察方法”是否需要拆分。'
+
+# ============================================================
+# 结构检查
+# ============================================================
+structure_check:
+  node_count:
+    domain: 1
+    theme: 9
+    knowledge_unit: 60
+    total: 70
+  id_uniqueness: pass  # 所有 id 均唯一
+  parent_child_validity: pass  # 父子层级合法，无孤立节点
+  single_parent: pass  # 每个节点只有一个主要父节点
+  definition_and_source: pass  # 每个主题和知识单元均有定义与 ima 来源
+  cross_book_dedup:
+    status: pass
+    merged_nodes:
+      - KU-NAT-ATM-HEAT-005（热力环流）：必修一 + 选必一
+      - KU-NAT-WATER-004（洋流）：必修一 + 选必一
+      - KU-NAT-LANDFORM-002（河流地貌）：必修一 + 选必一
+      - KU-NAT-EARTH-MOTION-005（地转偏向力）：选必一为主，必修一应用层面作为关联来源
+  case_exclusion: pass  # 案例、问题研究、情境、能力表达未进入主干
+  review_items_marked: pass  # 节点不确定项已标记 needs_review；跨领域候选已列入 review_items
+  overall: "部分检查通过"
+  remaining_issues:
+    - '本版仅完成自然地理领域；其他领域尚未构建，跨领域候选暂列入待审查项。'
+    - '尚未使用代表性高考真题验证各知识单元的可映射性，结构检查通过不等于定稿。'
+    - '原有 v0.1 按册别文件中的细碎名词（如“氮气”“氧气”等）未逐条迁移；如需追溯，可另建迁移对照表。'

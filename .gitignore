@@ -1,0 +1,29 @@
+# Local outputs / caches
+outputs/
+!outputs/README.md
+.vision-cache/
+.runs/
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Local configuration and credentials
+.env
+.env.*
+*.pem
+*.key
+config.local.yaml
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Sample images are NOT redistributed (copyright of exam papers);
+# users place their own images under sample-data/images/
+sample-data/images/
+# temp
+.git-msg.tmp
+

@@ -1,0 +1,827 @@
+# 高中地理 Taxonomy — 人文地理部分（跨册审查草案 v0.2-draft）
+#
+# 来源：ima 知识库「aaa」→ 高中文件夹
+#   - 普通高中教科书·地理必修 第二册（人教版 2019，樊杰、高俊昌总主编；袁书琪、刘健本册主编）
+#
+# 结构：domain → theme → knowledge_unit（三层教材主干）
+# 主干节点来自必修第二册，并已与选择性必修2、选择性必修3相关内容完成跨册边界审查。
+# 案例、问题研究、情境、能力表达均未进入主干。
+# 所有节点均基于教材原文提取，未使用 Agent 记忆或网络摘要。
+
+meta:
+  subject: 高中地理
+  taxonomy_name: 人文地理知识点体系（跨册审查草案）
+  version: v0.2-draft
+  status: draft
+  constructed_at: "2026-07-28"
+  source_textbooks:
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理必修 第二册
+      publisher: 人民教育出版社
+      edition: 2019
+      chief_editor: 樊杰、高俊昌
+      volume_editor: 袁书琪、刘健
+  construction_basis: 依据 taxonomy_construction_rules.md，从 ima 原文逐节提取知识候选。
+  cross_book_comparison_sources:
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理选择性必修2 区域发展
+      comparison_scope: 区域发展、城市辐射、产业结构、区际联系
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+      comparison_scope: 自然资源、环境问题、资源环境安全
+  notes:
+    - 本文件的人文地理主干来自必修第二册，并已与选择性必修2、选择性必修3相关内容完成跨册边界审查。
+    - 教材第五章"环境与发展"内容已分别纳入"资源、环境与国家安全"或"区域发展" taxonomy，不在人文地理重复建节点。
+    - 地理信息技术原先因 MVP 范围暂不纳入；经教师确认其属于核心考点，现已建立独立主题并先纳入 GNSS 技术原理与应用节点。
+    - 教材册、章、节仅为来源线索，不直接等于 taxonomy 层级。
+    - needs_review=true 的节点存在粒度、父级或来源疑问，需人工裁定。
+    - 本版尚未使用代表性真题验证可映射性，结构检查通过不等于定稿。
+
+# ============================================================
+# L1 学科领域
+# ============================================================
+nodes:
+  - id: DM-HUM
+    level: domain
+    name: 人文地理
+    parent_id: null
+    definition: 研究人类活动与地理环境相互关系的学科领域，涵盖人口、聚落、产业、交通运输、地理调查方法以及地理信息技术应用等内容。
+    includes:
+      - 人口的分布、迁移与容量
+      - 乡村和城镇的空间结构与城镇化
+      - 农业、工业和服务业的区位因素
+      - 交通运输布局与区域发展的相互关系
+      - 人文地理调查方案的设计与实施
+      - 地理信息技术的原理与应用
+    excludes:
+      - 地球自然环境各要素的组成与运动规律（归入自然地理）
+      - 环境问题、可持续发展与国家发展战略（归入资源、环境与国家安全或区域发展）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 全册
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# L2 知识主题 + L3 知识单元
+# ============================================================
+
+  # ---------- 主题 1：人口 ----------
+  - id: TH-HUM-POPULATION
+    level: theme
+    name: 人口
+    parent_id: DM-HUM
+    definition: 研究人口的空间分布、年龄结构、迁移规律及其与资源环境承载力的关系。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-001
+    level: knowledge_unit
+    name: 人口分布
+    parent_id: TH-HUM-POPULATION
+    definition: 人口在地理空间上的分布状况及其影响因素。
+    includes:
+      - 世界人口分布不均匀，主要集中在北半球中低纬度、沿海和低平地区
+      - 四大人口稠密区（东亚、南亚、欧洲西部、北美东部）
+      - 各大洲和各国人口分布的不平衡性
+      - 自然因素（气候、地形、水源）对人口分布的影响
+      - 人文因素（生产力水平与生产方式、经济发展水平、历史、政治军事文化）对人口分布的影响
+    excludes:
+      - 人口迁移（归入人口迁移节点）
+      - 具体国家或地区的人口数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章第一节"人口分布"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-002
+    level: knowledge_unit
+    name: 人口迁移
+    parent_id: TH-HUM-POPULATION
+    definition: 涉及人口居住地发生长期或永久改变的人口移动现象。
+    includes:
+      - 人口迁移的概念与判别（居住地长期或永久改变）
+      - 国际人口迁移与国内人口迁移的分类
+      - 人口机械增长与机械增长率的概念和计算
+      - 人口迁移对迁出地、迁入地和迁移者的影响
+    excludes:
+      - 暂时性人口移动（探亲、出差、旅游等）
+      - 影响人口迁移的因素（归入影响人口迁移的因素节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章第二节"人口迁移"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-003
+    level: knowledge_unit
+    name: 影响人口迁移的因素
+    parent_id: TH-HUM-POPULATION
+    definition: 迁出地推力与迁入地拉力共同构成的人口迁移动力机制及其自然和人文因素。
+    includes:
+      - 推拉理论的基本框架（推力、拉力、迁移障碍）
+      - 自然因素（自然环境差异、环境问题、自然灾害）对人口迁移的影响
+      - 经济因素作为主导因素的作用机制
+      - 政治、军事、文化等人文因素对人口迁移的影响
+    excludes:
+      - 人口迁移的概念与分类（归入人口迁移节点）
+      - 具体国家或历史时期的迁移案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章第二节"影响人口迁移的因素"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-004
+    level: knowledge_unit
+    name: 人口迁移的时空特点
+    parent_id: TH-HUM-POPULATION
+    definition: 不同历史时期和空间尺度下人口迁移所表现出的特征与变化。
+    includes:
+      - 19世纪以前国际人口迁移的特点（集团性、大规模移民为主）
+      - 二战后国际人口迁移的新变化（发展中国家流向发达国家、外籍工人成为主要形式）
+      - 国内人口迁移的一般规律（工业化后农村向城镇迁移为主）
+      - 中国改革开放前后国内人口迁移的阶段特点
+    excludes:
+      - 具体国家的人口迁移数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章第二节"人口迁移的时空特点"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-005
+    level: knowledge_unit
+    name: 区域资源环境承载力
+    parent_id: TH-HUM-POPULATION
+    definition: 在保证资源合理开发利用和保护良好生态环境的前提下，区域的资源环境条件所能承载的人口数量。
+    includes:
+      - 区域资源环境承载力的概念
+      - 自然资源状况的影响（木桶短板效应）
+      - 社会经济和科技发展水平的影响（资源利用效率提高、贸易获取外部资源）
+      - 人均消费水平的影响（消费水平越高承载力越低）
+    excludes:
+      - 人口合理容量（归入人口合理容量节点）
+    aliases:
+      - 资源环境承载力
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章第三节"区域资源环境承载力"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-006
+    level: knowledge_unit
+    name: 人口合理容量
+    parent_id: TH-HUM-POPULATION
+    definition: 按照合理的生活方式、保障健康生活水平且不妨碍未来人口生活质量的前提下，一个国家或地区最适宜的人口数量。
+    includes:
+      - 人口合理容量的概念
+      - 人口合理容量与资源环境承载力的关系（前者数值小于后者）
+      - 人口合理容量对制定人口战略和人口政策的意义
+      - 追求人口合理容量与人地协调发展的关系
+    excludes:
+      - 区域资源环境承载力的概念与影响因素（归入区域资源环境承载力节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章第三节"人口合理容量"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-007
+    level: knowledge_unit
+    name: 人口年龄结构
+    parent_id: TH-HUM-POPULATION
+    definition: 人口按年龄组构成的比例关系及其所反映的人口增长、劳动力供给和老龄化特征。
+    includes:
+      - 少年儿童、劳动年龄和老年人口的构成
+      - 年轻型、成年型和老年型人口结构的判读
+      - 人口年龄结构图与人口年龄金字塔的判读
+      - 年龄结构变化对人口增长和社会经济发展的影响
+    excludes:
+      - 各年龄组相对于劳动年龄人口的负担关系（归入人口抚养比节点）
+      - 具体国家或地区的年龄结构数据
+    aliases:
+      - 人口年龄构成
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章人口相关资料判读
+    validation_refs:
+      - source_document: 2025年山东高考地理真题
+        question_numbers: "7"
+      - source_document: 精品解析：2025年福建高考地理真题（解析版）.docx
+        question_numbers: "11"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-POP-008
+    level: knowledge_unit
+    name: 人口抚养比
+    parent_id: TH-HUM-POPULATION
+    definition: 非劳动年龄人口与劳动年龄人口的数量比值及其所反映的人口年龄负担关系。
+    includes:
+      - 总抚养比、少年儿童抚养比和老年人口抚养比
+      - 老年人口抚养比等于总抚养比与少年儿童抚养比之差
+      - 抚养比变化与人口年龄结构的关系
+      - 抚养比图表的计算与判读
+    excludes:
+      - 年龄组构成本身（归入人口年龄结构节点）
+      - 具体国家或地区的抚养比数据
+    aliases:
+      - 人口负担系数
+      - 人口负担比
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第一章人口相关资料判读
+    validation_refs:
+      - source_document: 2025年山东高考地理真题
+        question_numbers: "6"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 2：乡村与城镇 ----------
+  - id: TH-HUM-SETTLEMENT
+    level: theme
+    name: 乡村与城镇
+    parent_id: DM-HUM
+    definition: 研究乡村和城镇的土地利用与空间结构、城镇化进程及其问题、地域文化对城乡景观的影响。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-SET-001
+    level: knowledge_unit
+    name: 乡村土地利用
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 乡村以农业经济活动为主的土地利用类型及村落内部的空间分化。
+    includes:
+      - 农业用地类型（耕地、林地、草地、水域）
+      - 农业用地一般分布在村落周围的规律
+      - 村落内部土地利用的简单分化（以公共服务设施为中心的住宅分布）
+    excludes:
+      - 城镇功能区的土地利用（归入城镇内部空间结构节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第一节"乡村的土地利用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-SET-002
+    level: knowledge_unit
+    name: 城镇内部空间结构
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 城镇土地利用专业化形成的不同功能区及其空间分布组合。
+    includes:
+      - 城镇功能区的概念（居住区、商业区、工业区等）
+      - 各功能区的空间分布规律（商业区位于中心或交通干线两侧、工业区靠近交通线远离中心）
+      - 功能区之间无明确界线的特征
+      - 中央商务区（CBD）的概念
+    excludes:
+      - 城镇内部空间结构的形成机制（归入城镇内部空间结构的形成与变化节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第一节"城镇内部空间结构"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-SET-003
+    level: knowledge_unit
+    name: 城镇内部空间结构的形成与变化
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 经济因素主导下城镇各功能区土地利用的竞争机制及空间结构随城镇发展的动态演变。
+    includes:
+      - 经济因素（地租）作为影响城镇内部空间结构的主要因素
+      - 地租与交通便捷程度、距城镇中心远近的关系
+      - 各类土地利用付租能力随距市中心距离递减的规律
+      - 政策、文化、环境等因素对空间结构的影响
+      - 城镇空间结构随发展阶段变化的规律（初期混杂分布→功能分化→中心工业外迁）
+    excludes:
+      - 功能区的类型与分布规律（归入城镇内部空间结构节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第一节"城镇内部空间结构的形成和变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-SET-004
+    level: knowledge_unit
+    name: 合理利用城乡空间
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 通过规划优化城乡空间结构以实现可持续人地关系、提高资源利用效率和文化传承的意义与途径。
+    includes:
+      - 改善环境状况、建设宜居生活空间（卫星城、绿地、生态涵养空间）
+      - 提高土地资源利用效率（合理安排居住区、基础设施、公共服务设施）
+      - 保护历史文化场所与传统特色的文化传承意义
+      - 推动城乡一体化发展的指导意义
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第一节"合理利用城乡空间的意义"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经代表性真题验证，确认作为独立 L3 知识单元。"
+
+  - id: KU-HUM-SET-005
+    level: knowledge_unit
+    name: 城镇化
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 乡村人口向城镇地区集聚和乡村地区转变为城镇地区的过程及其对区域发展的意义。
+    includes:
+      - 城镇化的概念与三个主要标志（城镇人口增加、城镇人口比例上升、城镇建设用地规模扩大）
+      - 城镇人口占总人口比例作为衡量城镇化水平的最重要指标
+      - 城镇化与工业化的密切关系
+      - 城镇化对区域发展的积极作用（促进经济增长、提高资源利用效率、改善居住环境、增强社会和谐）
+    excludes:
+      - 世界城镇化进程的阶段特征（归入世界城镇化进程节点）
+      - 城镇化过程中出现的问题（归入城镇化问题节点）
+    aliases:
+      - 城市化
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第二节"城镇化的意义"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-SET-006
+    level: knowledge_unit
+    name: 世界城镇化进程
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 世界各国城镇化水平随时间变化的阶段性规律及发达国家与发展中国家的差异。
+    includes:
+      - 城镇化进程的S形曲线规律
+      - 发达国家城镇化起步早、水平高的特征
+      - 20世纪70年代后发达国家出现的逆城镇化现象
+      - 发展中国家城镇化起步晚、速度快但水平低的特征
+      - 中国城镇化的特点与区域差异
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第二节"世界城镇化进程"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-SET-007
+    level: knowledge_unit
+    name: 城镇化问题
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 城镇化过程中因人口和产业过度集中而产生的环境问题和社会问题。
+    includes:
+      - 环境问题（大气污染、水污染、垃圾污染、噪声污染）
+      - 社会问题（交通拥堵、住房紧张）
+      - 发展中国家城镇化畸形发展的问题（失业率高、贫困、贫民窟）
+      - 发达国家城镇化历史问题的治理经验
+    excludes: []
+    aliases:
+      - 城市化问题
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第二节"城镇化过程中出现的问题"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经代表性真题验证，确认作为独立 L3 知识单元。"
+
+  - id: KU-HUM-SET-008
+    level: knowledge_unit
+    name: 地域文化与城乡景观
+    parent_id: TH-HUM-SETTLEMENT
+    definition: 地域文化在特定地理环境中形成并通过城乡景观表现的相互作用关系。
+    includes:
+      - 地域文化的概念（物质方面与非物质方面）
+      - 文化景观与自然景观的区分
+      - 地域文化对乡村景观的影响（人地和谐理念、社会组织形态、精神追求）
+      - 地域文化对城镇景观的影响（城镇色调与色彩、建筑文化意蕴、空间格局的价值追求）
+    excludes:
+      - 具体城镇或乡村的景观案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第三节"地域文化与城乡景观"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 3：产业区位 ----------
+  - id: TH-HUM-INDUSTRY
+    level: theme
+    name: 产业区位
+    parent_id: DM-HUM
+    definition: 研究农业、工业和服务业区位选择的影响因素及其随时代发展的变化规律。
+    includes: []
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-IND-001
+    level: knowledge_unit
+    name: 农业区位因素
+    parent_id: TH-HUM-INDUSTRY
+    definition: 影响农业生产活动空间选择的各种自然因素和人文因素及其动态变化。
+    includes:
+      - 自然因素（气候中的热量光照降水、地形、土壤、水源）对农业区位的影响
+      - 人文因素（市场、交通运输、政策法规、资金、劳动力、科技）对农业区位的影响
+      - 农业生产的地域性、季节性和周期性特征
+      - 农业区位因素的变化（市场变化的主导作用、科技进步对自然因素的改造、交通运输与冷藏保鲜技术对市场范围的扩展）
+    excludes:
+      - 工业区位因素（归入工业区位因素节点）
+      - 服务业区位因素（归入服务业区位因素节点）
+      - 具体农作物的种植条件
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第一节"农业区位因素及其变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-IND-002
+    level: knowledge_unit
+    name: 工业区位因素
+    parent_id: TH-HUM-INDUSTRY
+    definition: 影响工业生产活动空间选择的经济、环境和社会因素及其随技术进步的动态变化。
+    includes:
+      - 经济效益因素（运输成本、能源成本、劳动力成本的综合权衡）
+      - 原料导向型、市场导向型、动力导向型、劳动力导向型工业的区位选择原则
+      - 环境因素对工业区位的影响（环境质量要求、污染工业布局、环保法规）
+      - 社会因素（政策、文化、个人偏好）对工业区位的影响
+      - 工业区位因素的变化（原料和能源影响弱化、交通和市场影响增强、信息技术对区位选择的影响、产业集聚）
+    excludes:
+      - 农业区位因素（归入农业区位因素节点）
+      - 具体工业企业的选址案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第二节"工业区位因素及其变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-IND-003
+    level: knowledge_unit
+    name: 服务业区位因素
+    parent_id: TH-HUM-INDUSTRY
+    definition: 影响商业性服务业和非商业性服务业空间选择的人文因素及其在现代信息技术条件下的变化。
+    includes:
+      - 商业性服务业的区位因素（市场、交通运输、劳动力、集聚、历史文化、政策法规）
+      - 市场因素中人口规模、消费水平、消费偏好对服务业区位的影响
+      - 集聚效应的利弊机制
+      - 非商业性公共服务业以均衡化为区位选择原则
+      - 服务业区位因素的变化（新兴服务业涌现、网络信息技术成为主要影响因素、区位选择灵活性增大）
+    excludes:
+      - 农业区位因素（归入农业区位因素节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第三节"服务业区位因素及其变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-IND-004
+    level: knowledge_unit
+    name: 智慧农业
+    parent_id: TH-HUM-INDUSTRY
+    definition: 以数据和算法为核心生产要素，综合运用感知、分析决策、精准作业和智能管理技术组织农业生产的现代农业形态。
+    includes:
+      - 农业生产环境和作物状态的数字化感知
+      - 基于数据与算法的智能化决策
+      - 定位导航、自动控制等支持的精准化作业
+      - 农业生产过程的智慧化管理
+      - 数据、算法与传统农业生产要素的协同
+    excludes:
+      - 一般农业自然与人文区位条件（归入农业区位因素）
+      - GNSS、RS、GIS等单项技术的原理与通用应用（归入地理信息技术）
+      - 具体智慧农场或农业企业案例
+    aliases:
+      - 数字农业
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第一节"农业区位因素及其变化"（科技进步对农业生产方式的影响）
+    validation_refs:
+      - source_document: 精品解析：2025年安徽高考地理真题（解析版）
+        question_numbers: "3"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经教师结合2025年安徽卷第3题确认，智慧农业具有独立概念边界和直接解题价值。"
+
+  # ---------- 主题 4：交通运输与区域发展 ----------
+  - id: TH-HUM-TRANSPORT
+    level: theme
+    name: 交通运输与区域发展
+    parent_id: DM-HUM
+    definition: 研究交通运输布局与区域发展之间相互促进、相互制约的双向关系。
+    includes: []
+    excludes:
+      - 具体交通线路的规划设计
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第四章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-TRA-001
+    level: knowledge_unit
+    name: 区域发展对交通运输布局的影响
+    parent_id: TH-HUM-TRANSPORT
+    definition: 区域经济社会发展所产生的运输需求、资金和技术条件对交通运输布局的决定性作用。
+    includes:
+      - 交通运输布局的一般原则（依据运输需求、适度超前、因地制宜、少占土地、发挥综合运输优势）
+      - 交通运输需求与交通运输布局的关系（需求量决定线站标准和规模、城市作为运输网节点、综合交通枢纽）
+      - 资金与交通运输布局的关系（经济水平影响线站密度和质量、技术进步减弱自然条件限制）
+    excludes:
+      - 交通运输布局对区域发展的影响（归入交通运输布局对区域发展的影响节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第四章第一节"区域发展对交通运输布局的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-TRA-002
+    level: knowledge_unit
+    name: 交通运输布局对区域发展的影响
+    parent_id: TH-HUM-TRANSPORT
+    definition: 交通运输布局通过促进要素流动和经济辐射推动区域经济发展，并通过改变交通条件影响聚落兴衰的机制。
+    includes:
+      - 促进区域经济发展（资源要素优化配置、缩短时空距离扩大经济辐射范围、交通运输本身的产业拉动效应）
+      - 影响聚落发展（交通枢纽促进城市形成、交通线路变化引起商业中心和城镇兴衰、乡村聚落因交通条件合并或消失）
+    excludes:
+      - 区域发展对交通运输布局的影响（归入区域发展对交通运输布局的影响节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第四章第二节"交通运输布局对区域发展的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 5：地理信息技术 ----------
+  - id: TH-HUM-GEOINFO
+    level: theme
+    name: 地理信息技术
+    parent_id: DM-HUM
+    definition: 利用空间定位、遥感观测和地理信息处理等技术获取、分析和应用地理信息的方法体系。
+    includes:
+      - 全球卫星导航系统（GNSS）
+      - 遥感（RS）
+      - 地理信息系统（GIS）
+    excludes:
+      - 通用计算机操作技能
+      - 不涉及地理信息获取、处理或应用的一般信息技术
+    aliases:
+      - 地理空间信息技术
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第二节"地理信息技术在城市管理中的应用"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第三节活动"地理信息技术在服务业中的应用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-GIT-001
+    level: knowledge_unit
+    name: GNSS技术原理与应用
+    parent_id: TH-HUM-GEOINFO
+    definition: 利用导航卫星信号确定地面目标位置，并提供导航、测速和授时等服务的技术原理与应用。
+    includes:
+      - 卫星定位与导航的基本原理
+      - 北斗卫星导航系统
+      - 定位、导航、测速和授时功能
+      - GNSS在交通、城市管理和生产生活中的应用
+    excludes:
+      - 遥感影像获取与判读
+      - 地理信息系统的空间数据管理与分析
+      - 水深、流速等环境要素的直接探测
+    aliases:
+      - 全球卫星导航系统原理与应用
+      - 卫星导航定位技术
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第二节"地理信息技术在城市管理中的应用"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第三节活动"地理信息技术在服务业中的应用"
+    validation_refs:
+      - source_document: 2025年山东高考地理真题
+        question_numbers: "15"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-GIT-002
+    level: knowledge_unit
+    name: GIS技术原理与应用
+    parent_id: TH-HUM-GEOINFO
+    definition: 利用地理空间数据进行存储、管理、查询、分析和表达，以解决空间分布与空间关系问题的技术原理与应用。
+    includes:
+      - 空间数据的采集、存储、管理和表达
+      - 图层叠加、缓冲区和网络分析
+      - 交通可达性与服务范围分析
+      - GIS在城市管理、公共服务和区位分析中的应用
+    excludes:
+      - 导航卫星定位与授时（归入GNSS技术原理与应用）
+      - 遥感影像获取与判读
+      - 通用统计软件的数据处理
+    aliases:
+      - 地理信息系统原理与应用
+      - GIS空间分析
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第二章第二节"地理信息技术在城市管理中的应用"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第三章第三节活动"地理信息技术在服务业中的应用"
+    validation_refs:
+      - source_document: 精品解析：2025年福建高考地理真题（解析版）.docx
+        question_numbers: "19"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 6：地理调查与实践 ----------
+  - id: TH-HUM-GEOPRACTICE
+    level: theme
+    name: 地理调查与实践
+    parent_id: DM-HUM
+    definition: 围绕人文地理问题设计调查、采集资料、处理信息并形成结论的实践方法体系。
+    includes:
+      - 实地调查
+      - 问卷调查与访谈
+      - 调查资料整理与分析
+    excludes:
+      - 核心素养名称或一般能力表述
+      - 不包含地理问题和空间对象的通用社会调查
+    aliases:
+      - 人文地理调查
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 全册相关调查、访谈和实践活动
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-HUM-PRACTICE-001
+    level: knowledge_unit
+    name: 地理调查方案设计
+    parent_id: TH-HUM-GEOPRACTICE
+    definition: 根据地理调查目标系统确定调查对象、调查方法、调查内容、数据处理和结果分析的方案设计方法。
+    includes:
+      - 根据目标确定调查对象与样本
+      - 实地观察、问卷和访谈等方法的选择
+      - 调查内容与指标设计
+      - 数据处理和结果分析安排
+    excludes:
+      - “地理实践力”等核心素养名称
+      - 脱离调查目标的调查方法罗列
+    aliases:
+      - 调查方案设计
+      - 地理调查设计
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 全册相关调查、访谈和实践活动
+    validation_refs:
+      - source_document: 精品解析：2025年福建高考地理真题（解析版）.docx
+        question_numbers: "19"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# 待审查项汇总
+# ============================================================
+review_items: []
+
+# ============================================================
+# 结构检查
+# ============================================================
+structure_check:
+  node_count:
+    domain: 1
+    theme: 6
+    knowledge_unit: 24
+    total: 31
+  id_uniqueness: pass  # 所有 id 均唯一
+  parent_child_validity: pass  # 父子层级合法，无孤立节点
+  single_parent: pass  # 每个节点只有一个主要父节点
+  definition_and_source: pass  # 每个主题和知识单元均有定义与 ima 来源
+  cross_book_dedup:
+    status: completed
+    note: 已与选择性必修2、选择性必修3相关内容完成跨册边界审查；跨领域内容分别由区域发展和资源、环境与国家安全 taxonomy 维护。
+  case_exclusion: pass  # 案例、问题研究、情境、能力表达未进入主干
+  cross_domain_exclusion: pass  # 第五章跨领域内容由对应 taxonomy 维护；地理信息技术按教师裁定纳入人文地理主干
+  review_items_marked: pass  # 节点不确定项已标记 needs_review
+  overall: "部分检查通过"
+  remaining_issues:
+    - '除新增的人口年龄结构、人口抚养比、GNSS技术原理与应用、GIS技术原理与应用和地理调查方案设计节点外，其余知识单元尚未系统使用代表性高考真题验证可映射性。'

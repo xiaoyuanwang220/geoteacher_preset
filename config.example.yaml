@@ -1,0 +1,38 @@
+# GeoTeacher — config example (copy to your own deployment)
+
+# 1) Agent preset config (equivalent of preset/agent.cordis.yml, geo group):
+#    Replace <...> placeholders with your environment before deploying.
+#    You usually edit preset/agent.cordis.yml directly; this file documents
+#    every tunable knob.
+
+# ── geo-core: data paths ────────────────────────────────────────────────────
+knowledgeBasePath: <KB_ROOT>/config                  # taxonomy yaml dir
+questionBankPath: <KB_ROOT>/obsidian_vault/04_题目   # question-bank md dir
+outputPath: <WORKSPACE>/outputs                      # analysis exports / index
+workspaceRoot: <WORKSPACE>                           # sandbox write root
+
+# ── geo-vision: vision model (USER-CONFIGURED CREDENTIALS) ──────────────────
+# enabled: runtime toggle in the drawer is available (GET/POST /geo/vision/status|toggle)
+vision:
+  enabled: true
+  # Provider route name declared in YOUR DSH settings.yaml (OpenAI-compatible).
+  provider: siliconflow
+  # Model id as declared in the DSH provider route. Qwen3-VL-8B is Apache-2.0;
+  # any OpenAI-compatible vision model works (Bailian, local vLLM, ...).
+  model: Qwen/Qwen3-VL-8B-Instruct
+  cacheDir: <WORKSPACE>/outputs/visionCache
+  workspaceRoot: <WORKSPACE>
+
+# ── DSH settings.yaml (outside this repo) ──────────────────────────────────
+# Add a provider route for vision, e.g.:
+#   siliconflow:
+#     apiKeyEnv: SILICONFLOW_API_KEY
+#     baseURL: https://api.siliconflow.cn/v1
+#     api: openai-completions
+#     displayName: SiliconFlow
+#     models:
+#       - id: Qwen/Qwen3-VL-8B-Instruct
+#         name: Qwen3-VL-8B
+#         input: [text, image]
+# Then export the key variable (e.g. SILICONFLOW_API_KEY=sk-...) so DSH can
+# read it. The main agent model route is independent of this vision route.
