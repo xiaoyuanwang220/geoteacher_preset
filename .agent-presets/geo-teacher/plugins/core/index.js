@@ -31,6 +31,17 @@ function parseTaxonomyNodes(text) {
 }
 
 // ========== 文件遍历 ==========
+// mtime 归一化为毫秒数（Date/字符串/数字兼容；取不到返回 null，不抛错）
+function normalizeMtimeMs(info) {
+  if (!info) return null;
+  let m = info.mtimeMs ?? info.mtime ?? null;
+  if (m == null) return null;
+  if (m instanceof Date) return m.getTime();
+  if (typeof m === 'string') { const p = Date.parse(m); return isNaN(p) ? null : p; }
+  if (typeof m === 'number') return m;
+  return null;
+}
+
 async function collectMdFiles(fsService, dirTarget, out) {
   let entries;
   try {
@@ -59,7 +70,13 @@ async function collectMdFiles(fsService, dirTarget, out) {
     if (isDir) {
       await collectMdFiles(fsService, childTarget, out);
     } else if (name.endsWith('.md')) {
-      out.push({ name, target: childTarget });
+      // 收集 mtime 供 loadBank 新鲜度检查（stat 不可用时置 null）
+      let mtime = null;
+      try {
+        const info = await fsService.stat(childTarget);
+        mtime = normalizeMtimeMs(info);
+      } catch (e3) { mtime = null; }
+      out.push({ name, target: childTarget, mtime });
     }
   }
 }
@@ -139,7 +156,13 @@ function extractMaterial(lines) {
   const out = [];
   for (const line of lines) {
     const t = line.trim();
-    if (/^!\[/.test(t)) continue;
+    // 保留图注文字（图片路径丢弃，caption 有用信息保留）
+    const imgMatch = t.match(/^!\[([^\]]*)\]\([^)]*\)\s*$/);
+    if (imgMatch) {
+      const caption = (imgMatch[1] || '').trim();
+      if (caption) out.push('[图] ' + caption);
+      continue;
+    }
     if (t === '') continue;
     out.push(t);
   }
@@ -234,19 +257,26 @@ function parseOneQuestion(title, body) {
     }
   }
 
+  let inKm = false; // MANAGED-KM 块状态机：KM 内 YAML 行不按正文处理（修复 question_id 双引号污染）
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
     if (!t) continue;
 
-    const qid = t.match(/^question_id:\s*`?([^`]+)`?\s*$/);
+    // KM 块行跳过：start 行开状态，首个 --> 行闭（与 kmStart/kmEnd 边界一致，含同行闭合）
+    if (/^<!-- MANAGED-KM-START/.test(t)) { inKm = true; continue; }
+    if (inKm) {
+      if (/-->/.test(t)) inKm = false;
+      continue;
+    }
+
+    // 单正则兼容反引号/双引号/裸 id；KM 行已被跳过，此兼容为纵深防御
+    const qid = t.match(/^question_id:\s*["`]?([^"`]+)["`]?\s*$/);
     if (qid) { questionId = qid[1].trim(); continue; }
-    const qid2 = t.match(/^question_id:\s*"([^"]+)"\s*$/);
-    if (qid2) { questionId = qid2[1].trim(); continue; }
 
     const stemMark = t.match(/^\*\*(题干|小问)\*\*[：:]\s*(.*)$/);
     if (stemMark) {
       phase = 'stem';
-      const inline = stemMark[1].trim();
+      const inline = stemMark[2].trim(); // 捕获组 2 = 真实题干内容（组 1 是「题干/小问」marker）
       if (inline) stem = inline;
       continue;
     }
@@ -757,23 +787,111 @@ export default {
     // （部署的 E:\DeepSeek\Harness），写项目内 outputs 会被拒；这里显式传入项目 workspace。
     const WRITE_POLICY = { mode: 'workspace-write', workspaceRoot: cfg.workspaceRoot || 'E:/geo_edu_agent' };
 
+    // ========== 题库索引（预构建 + 磁盘持久化 + 内存缓存） ==========
+    let _bankCache = null; // 内存缓存：{ byId: Map, all: [], filesCount, builtAt }
+    const INDEX_PATH = OUTPUT_PATH + '/question-index.json';
+
     async function loadBank() {
+      // 1. 内存缓存命中 → 直接返回
+      if (_bankCache) return _bankCache;
+
+      // 2. 尝试从磁盘读索引
       const bankDir = await fsService.resolve(QUESTION_BANK_PATH);
       const files = [];
       await collectMdFiles(fsService, bankDir, files);
+      const currentFileCount = files.length;
+
+      try {
+        const idxTarget = await fsService.resolve(INDEX_PATH);
+        const raw = await fsService.readText(idxTarget);
+        const idx = JSON.parse(raw);
+        // 新鲜度检查：version 代际（parser 修复标记）+ 文件数 + mtime（任一文件晚于 builtAt 即重建）
+        const builtAt = Date.parse(idx && idx.builtAt) || 0;
+        let fresh = !!(idx && idx.version === 2 && idx.fileCount === currentFileCount && Array.isArray(idx.items));
+        if (fresh) {
+          const maxMtime = files.reduce((mx, f) => (f.mtime && f.mtime > mx ? f.mtime : mx), 0);
+          if (maxMtime > 0 && maxMtime > builtAt) fresh = false; // stat 不可用时 maxMtime=0 → 跳过 mtime 判断
+        }
+        if (fresh) {
+          const byId = new Map();
+          const all = [];
+          for (const item of idx.items) {
+            // 确保 knowledgePoints 是数组
+            if (!Array.isArray(item.knowledgePoints)) item.knowledgePoints = [];
+            byId.set(item.questionId, item);
+            all.push(item);
+          }
+          _bankCache = { byId, all, filesCount: currentFileCount, builtAt: idx.builtAt, fromIndex: true };
+          console.log(`geo-core: 题库索引从磁盘加载 (${all.length} 小问, ${currentFileCount} 文件)`);
+          return _bankCache;
+        }
+      } catch (e) {
+        // 索引不存在/损坏/版本不符/文件更新 → 重建
+      }
+
+      // 3. 全量扫描 + 构建索引
       const byId = new Map();
       const all = [];
       for (const f of files) {
         const content = await fsService.readText(f.target);
         const meta = parseFrontmatter(content);
         const parsed = parseQuestionFileFull(content);
+        // 获取文件磁盘绝对路径（供 imageRefs 直接读文件，不重新遍历）
+        let filePath = '';
+        try { filePath = fsService.processPath(f.target); } catch (e) { filePath = f.name; }
         for (const q of parsed.questions) {
-          const item = { ...q, file: f.name, material: parsed.material, meta };
+          const item = { ...q, file: f.name, filePath, material: parsed.material, meta, knowledgePoints: q.knowledgePoints || [] };
           byId.set(q.questionId, item);
           all.push(item);
         }
       }
-      return { byId, all, filesCount: files.length };
+      _bankCache = { byId, all, filesCount: currentFileCount, builtAt: new Date().toISOString(), fromIndex: false };
+      console.log(`geo-core: 题库全量扫描完成 (${all.length} 小问, ${currentFileCount} 文件), 正在写索引...`);
+
+      // 4. 写磁盘索引
+      try {
+        const indexData = {
+          version: 2, // v2：parser 修复（KM 块跳过/qid 引号/stem 真实题干）的代际标记，旧 v1 索引不被信任
+          builtAt: _bankCache.builtAt,
+          fileCount: currentFileCount,
+          questionCount: all.length,
+          items: all.map(item => ({
+            questionId: item.questionId,
+            file: item.file,
+            filePath: item.filePath || '',
+            stem: item.stem,
+            options: item.options || [],
+            material: item.material,
+            meta: item.meta || {},
+            knowledgePoints: (item.knowledgePoints || []).map(kp => ({
+              role: kp.role,
+              domain: kp.domain || '',
+              theme: kp.theme || '',
+              knowledge_unit: kp.knowledge_unit || kp.knowledgeUnit || '',
+              knowledge_unit_id: kp.knowledge_unit_id || kp.knowledgeUnitId || '',
+              theme_id: kp.theme_id || '',
+              weight: kp.weight || '',
+              evidence: kp.evidence || ''
+            })),
+            extraTags: item.extraTags || []
+          }))
+        };
+        await fsService.writeText(
+          await fsService.resolve(INDEX_PATH),
+          JSON.stringify(indexData, null, 2),
+          undefined, undefined, WRITE_POLICY
+        );
+        console.log('geo-core: 题库索引已写入 ' + INDEX_PATH);
+      } catch (e) {
+        console.error('geo-core: 索引写盘失败（不影响运行）:', e.message);
+      }
+
+      return _bankCache;
+    }
+
+    // 手动重建索引（供未来调用：题库更新后清除缓存）
+    function invalidateBankCache() {
+      _bankCache = null;
     }
 
     function groupInfo(item) {
@@ -786,6 +904,9 @@ export default {
     }
 
     const api = {
+      // 重建题库索引（题库更新后调用，清除内存缓存 + 磁盘索引）
+      invalidateBankCache,
+
       async getTaxonomyTree() {
         try {
           const configDir = await fsService.resolve(KNOWLEDGE_BASE_PATH);
@@ -815,24 +936,98 @@ export default {
         }
       },
 
-      async searchQuestions(knowledgeId, keyword) {
+      // 重构：searchQuestions 支持结构化查询，统一 score 累加，按小问拆分返回。
+      // 兼容旧接口：searchQuestions(knowledgeId, keyword) 仍可用。
+      async searchQuestions(queryOrKnowledgeId, maybeKeyword) {
         try {
+          // 参数归一化：兼容旧的两个字符串参数
+          let region, year, questionNumber, questionType, keyword, knowledgeId;
+          if (typeof queryOrKnowledgeId === 'object' && queryOrKnowledgeId !== null) {
+            region = queryOrKnowledgeId.region || '';
+            year = queryOrKnowledgeId.year ? String(queryOrKnowledgeId.year) : '';
+            questionNumber = queryOrKnowledgeId.questionNumber ? String(queryOrKnowledgeId.questionNumber) : '';
+            questionType = queryOrKnowledgeId.questionType || '';
+            keyword = queryOrKnowledgeId.keyword || '';
+            knowledgeId = queryOrKnowledgeId.knowledgeId || '';
+          } else {
+            knowledgeId = queryOrKnowledgeId || '';
+            keyword = maybeKeyword || '';
+          }
+
           const bank = await loadBank();
-          const results = [];
-          const seen = new Set();
+          const candidates = [];
+
           for (const item of bank.all) {
-            const matched = knowledgeId
-              ? item.material.includes(knowledgeId) || item.stem.includes(knowledgeId) ||
-                (item.knowledgePoints || []).some(kp2 => (kp2.knowledge_unit_id === knowledgeId || kp2.knowledgeUnitId === knowledgeId || kp2.theme_id === knowledgeId))
-              : (keyword && (item.material.includes(keyword) || item.stem.includes(keyword)));
-            if (matched && !seen.has(item.file)) {
-              seen.add(item.file);
-              results.push({
-                file: item.file,
-                group: groupInfo(item),
-                questionIds: bank.all.filter(i => i.file === item.file).map(i => i.questionId)
-              });
+            const meta = item.meta || {};
+            const kpList = item.knowledgePoints || [];
+            let score = 0;
+
+            // 结构化字段：精确匹配，高分
+            if (region && (meta.region || '') === region) score += 10;
+            if (year && String(meta.year || '') === year) score += 10;
+            if (questionNumber && String(meta.question_numbers || '').includes(questionNumber)) score += 10;
+            if (questionType && String(meta.question_type || '').includes(questionType)) score += 5;
+
+            // 知识点：匹配 id + 名称 + 领域
+            if (knowledgeId) {
+              const kMatch = kpList.some(kp =>
+                kp.knowledge_unit_id === knowledgeId ||
+                kp.knowledgeUnitId === knowledgeId ||
+                kp.theme_id === knowledgeId ||
+                (kp.knowledge_unit || '').includes(knowledgeId) ||
+                (kp.knowledgeUnit || '').includes(knowledgeId) ||
+                (kp.domain || '').includes(knowledgeId) ||
+                (kp.theme || '').includes(knowledgeId)
+              );
+              if (kMatch) score += 8;
+              // 也搜材料/题干里的文字
+              if (item.material.includes(knowledgeId)) score += 3;
+              if (item.stem.includes(knowledgeId)) score += 3;
             }
+
+            // 全文关键词：覆盖 material/stem/options/knowledgeUnit/meta
+            if (keyword) {
+              const kw = keyword;
+              if (item.material.includes(kw)) score += 3;
+              if (item.stem.includes(kw)) score += 3;
+              if ((item.options || []).some(o => o.includes(kw))) score += 2;
+              if (kpList.some(kp =>
+                (kp.knowledge_unit || '').includes(kw) ||
+                (kp.knowledgeUnit || '').includes(kw) ||
+                (kp.domain || '').includes(kw) ||
+                (kp.theme || '').includes(kw)
+              )) score += 3;
+              if ((meta.region || '').includes(kw)) score += 5;
+              if (String(meta.year || '').includes(kw)) score += 5;
+              if (String(meta.question_numbers || '').includes(kw)) score += 5;
+              if ((meta.subject || '').includes(kw)) score += 2;
+              if ((meta.source_document || '').includes(kw)) score += 2;
+            }
+
+            if (score > 0) candidates.push({ item, score });
+          }
+
+          // 按 score 降序，去重（同一文件内多题保留最高分的那道代表）
+          candidates.sort((a, b) => b.score - a.score);
+
+          // 按小问拆分返回：每道小问独立一条结果
+          const seen = new Set();
+          const results = [];
+          for (const { item, score } of candidates) {
+            if (results.length >= 30) break; // 上限
+            if (seen.has(item.questionId)) continue;
+            seen.add(item.questionId);
+            results.push({
+              questionId: item.questionId,
+              file: item.file,
+              group: groupInfo(item),
+              stem: item.stem.slice(0, 100),
+              knowledgePoints: (item.knowledgePoints || []).map(kp => ({
+                role: kp.role,
+                knowledgeUnit: kp.knowledge_unit || kp.knowledgeUnit || ''
+              })),
+              score
+            });
           }
           return results;
         } catch (e) {
@@ -852,7 +1047,15 @@ export default {
             file: q.file,
             group: groupInfo(q),
             material: q.material,
-            questions: siblings.map(i => ({ stem: i.stem, options: i.options, questionId: i.questionId }))
+            questions: siblings.map(i => ({
+              stem: i.stem,
+              options: i.options,
+              questionId: i.questionId,
+              knowledgePoints: (i.knowledgePoints || []).map(kp => ({
+                role: kp.role,
+                knowledgeUnit: kp.knowledge_unit || kp.knowledgeUnit || ''
+              }))
+            }))
           };
         } catch (e) {
           return { status: 'error', message: '获取详情失败：' + (e && e.message ? e.message : e) };
@@ -872,7 +1075,15 @@ export default {
             file: q.file,
             group: groupInfo(q),
             material: q.material,
-            questions: siblings.map(i => ({ questionId: i.questionId, stem: i.stem, options: i.options }))
+            questions: siblings.map(i => ({
+              questionId: i.questionId,
+              stem: i.stem,
+              options: i.options,
+              // solve 阶段不给角色/证据（避免暴露"哪个是核心考点"）；完整信息由 judge(answerData) 阶段开放
+              knowledgePoints: (i.knowledgePoints || []).map(kp => ({
+                knowledgeUnit: kp.knowledge_unit || kp.knowledgeUnit || ''
+              }))
+            }))
           };
         } catch (e) {
           return { status: 'error', message: '获取题目失败：' + (e && e.message ? e.message : e) };
@@ -886,51 +1097,66 @@ export default {
           const bank = await loadBank();
           const q = bank.byId.get(questionId);
           if (!q) return { status: 'error', message: `未找到题目：${questionId}` };
-          // 定位含该 qid 的 md 文件及其磁盘绝对路径
-          const bankDir = await fsService.resolve(QUESTION_BANK_PATH);
-          const files = [];
-          await collectMdFiles(fsService, bankDir, files);
-          let mdDiskPath = null;
-          let mdText = null;
-          for (const f of files) {
+
+          // 优先用索引里存的 filePath（不再重新遍历全部文件）
+          let mdDiskPath = q.filePath || '';
+          let mdText = '';
+
+          if (mdDiskPath) {
+            // 从索引的 filePath 直接读文件
             try {
-              const text = await fsService.readText(f.target);
-              if (text && text.indexOf('question_id') >= 0 && text.indexOf(questionId) >= 0) {
-                mdDiskPath = fsService.processPath(f.target);
-                mdText = text;
-                break;
-              }
-            } catch (e) { /* skip unreadable */ }
+              const target = await fsService.resolve(mdDiskPath);
+              mdText = await fsService.readText(target);
+            } catch (e) {
+              mdDiskPath = ''; // 读失败，降级到遍历
+            }
           }
+
+          // 降级：遍历题库找文件（兼容无 filePath 的旧索引）
           if (!mdDiskPath) {
+            const bankDir = await fsService.resolve(QUESTION_BANK_PATH);
+            const files = [];
+            await collectMdFiles(fsService, bankDir, files);
+            for (const f of files) {
+              try {
+                const text = await fsService.readText(f.target);
+                if (text && text.indexOf(questionId) >= 0) {
+                  mdDiskPath = fsService.processPath(f.target);
+                  mdText = text;
+                  break;
+                }
+              } catch (e) { /* skip */ }
+            }
+          }
+
+          if (!mdDiskPath || !mdText) {
             return { status: 'success', questionId, hasImages: false, images: [], message: '未找到该题所在文件' };
           }
           const refs = extractImageRefs(mdText, mdDiskPath).filter(r => r.image);
-          return { status: 'success', questionId, file: (mdDiskPath.split('\\').pop() || '' ), hasImages: refs.length > 0, images: refs };
+          return { status: 'success', questionId, file: (mdDiskPath.split('\\').pop() || ''), hasImages: refs.length > 0, images: refs };
         } catch (e) {
           return { status: 'error', message: '图片引用解析失败：' + (e && e.message ? e.message : e) };
         }
       },
 
-      // 讲题 Solver（P1）：审题骨架——设问类型框架 / 思维模式 / 焦点要素 / 维度扫描 / 干扰项错因。
-      // 只提供"怎么想"的骨架，不泄露正确答案；干扰项错因仅作"为什么不是另一个答案"的排除论证辅助。
+      // 讲题 Solver（P1）：审题骨架——设问类型框架 / 思维模式 / 焦点要素 / 维度扫描。
+      // 只提供"怎么想"的骨架；绝不包含从官方解析派生的干扰项错因（那等于泄露答案），
+      // 干扰项排除论证由模型独立完成，judge(answerData) 阶段才开放解析对照。
       async solutionScaffold(questionId) {
         try {
           const bank = await loadBank();
           const q = bank.byId.get(questionId);
           if (!q) return { status: 'error', message: `未找到题目：${questionId}` };
-          const isChoice = q.options && q.options.length > 0;
           const framework = classifyQuestion(q.stem);
           const scans = dimensionScan(q.material || '');
           return {
             status: 'success',
             questionId,
-            isChoice,
+            isChoice: q.options && q.options.length > 0,
             questionFramework: { key: framework.key, name: framework.name, hint: framework.hint },
             thinkingModes: detectLiteracy(q.stem, q.material || ''),
             focusElements: Object.keys(scans).map(k => scans[k].name),
-            dimensionScan: scans,
-            distractorClues: isChoice ? detectDistractors(q.analysis) : []
+            dimensionScan: scans
           };
         } catch (e) {
           return { status: 'error', message: '骨架生成失败：' + (e && e.message ? e.message : e) };
@@ -1072,7 +1298,9 @@ export default {
             taxonomyFiles,
             taxonomyNodes,
             bankFiles: bank.filesCount,
-            bankQuestions: bank.all.length
+            bankQuestions: bank.all.length,
+            indexBuiltAt: bank.builtAt || null,
+            indexFromDisk: !!bank.fromIndex
           };
         } catch (e) {
           return { status: 'error', message: '健康检查失败：' + (e && e.message ? e.message : e) };

@@ -1,0 +1,14 @@
+{
+  "name": "geo-edu-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "高中地理教师辅助 Agent — 基于 DeepSeek Harness 的插件化教学工具系统",
+  "license": "MIT",
+  "scripts": {
+    "verify:geo": "node scripts/geo-verify.mjs"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0"
+  }
+}

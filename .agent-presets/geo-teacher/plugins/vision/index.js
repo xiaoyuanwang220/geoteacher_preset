@@ -1,13 +1,13 @@
 // GeoTeacher Agent — 视觉预处理插件（geo-vision，V1）
 // 分层职责：
-//   · Qwen3.6 Plus      = 视觉模型 Provider（只读图转 JSON，不做解题推理）
+//   · SiliconFlow / Qwen3-VL-8B = 视觉模型 Provider（只读图转 JSON，不做解题推理）
 //   · geoVision 服务     = 底层业务 Service：读图 → Qwen JSON → schema 校验 → 生产 GeoVisionResult
 //                          → imageHash 缓存 + index → run 日志 → 降级。供内部消费者复用。
 //   · geo_extract_images = 给 DeepSeek 主 Agent 的工具薄壳（execute 仅调 geoVision.extract(qid)）。
-// geo_solve（analysis）将来直接调 geoVision.extract(qid)，不绕经本工具。
+// geo_solve（analysis）直接调 geoVision.extract(qid)，不绕经本工具。
 // 注意：不 import 宿主包/第三方（C: 用户根无 node_modules）；Qwen JSON 用轻量手写校验，不用 zod。
-// 配置（vision.enabled 默认关）：provider / model(Qwen3.6 Plus) / promptVersion / schemaVersion /
-//                              cacheDir(outputs\visionCache) / maxBytesPerImage。
+// 配置：provider / model / promptVersion / schemaVersion / cacheDir / maxBytesPerImage。
+// 运行时开关：enabled 可通过 /geo/vision/toggle 动态切换（UI 面板），初始值来自配置。
 
 // ========== 轻量 schema 校验（V1） ==========
 function isStr(v) { return typeof v === 'string'; }
@@ -72,22 +72,48 @@ function renderToMarkdown(results) {
 const DEFAULT_PROMPT_VERSION = 'qwen-visual-transcribe-v1';
 const DEFAULT_SCHEMA_VERSION = 'geovision-obs-v1';
 
+// ========== HTTP 辅助（与其它 geo 插件一致） ==========
+function sendJson(res, status, data) {
+  const body = JSON.stringify(data);
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(body) });
+  res.end(body);
+}
+function parseQuery(url) {
+  const q = url.indexOf('?');
+  const out = {};
+  if (q >= 0) {
+    for (const pair of url.slice(q + 1).split('&')) {
+      if (!pair) continue;
+      const eq = pair.indexOf('=');
+      if (eq < 0) out[decodeURIComponent(pair)] = '';
+      else out[decodeURIComponent(pair.slice(0, eq))] = decodeURIComponent(pair.slice(eq + 1));
+    }
+  }
+  return out;
+}
+
 export default {
   name: 'geo-vision',
-  inject: ['fs', 'tools', 'geoKernel'],
+  inject: ['fs', 'geoKernel', 'webServer'],
   apply(ctx, config) {
     const fsService = ctx.fs;
-    // llm 是可选的（host 服务，可能在 isolate 组内不可 resolve）。缺失时 geoVision 不启用。
+    const webServer = ctx.webServer;
+    // llm / attachments 是可选的（host 服务，经 ctx.get 穿透 isolate realm；缺失时 geoVision 不启用）。
     const llm = ctx.get('llm');
+    const attachments = ctx.get('attachments');
     const kernel = ctx.geoKernel;
     const cfg = config || {};
-    const ENABLED = !!cfg.enabled && !!llm;
+    // 可变的运行时开关：初始由配置决定，可通过 /geo/vision/toggle 动态切换
+    let enabledState = !!cfg.enabled && !!llm && !!attachments;
     const CACHE_DIR = cfg.cacheDir || 'E:/geo_edu_agent/outputs/visionCache';
     const MAX_BYTES = cfg.maxBytesPerImage || 8 * 1024 * 1024; // 8MB
     const PROMPT_VERSION = cfg.promptVersion || DEFAULT_PROMPT_VERSION;
     const SCHEMA_VERSION = cfg.schemaVersion || DEFAULT_SCHEMA_VERSION;
     const FORCE_PROVIDER = cfg.provider || '';
-    const FORCE_MODEL = cfg.model || 'Qwen3.6 Plus';
+    const FORCE_MODEL = cfg.model || 'qwen3.6-plus';
+    if (cfg.enabled && !enabledState) {
+      console.log(`geo-vision: enabled 但依赖缺失（llm=${!!llm}, attachments=${!!attachments}），geoVision 不启用`);
+    }
 
     // 结构化运行日志（JSONL）
     async function appendRun(run) {
@@ -104,7 +130,7 @@ export default {
       return { mode: 'workspace-write', workspaceRoot: cfg.workspaceRoot || 'E:/geo_edu_agent' };
     }
 
-    // 自动发现：provider 路由名 + 模型 id（找 Qwen3.6 Plus）
+    // 自动发现：provider 路由名 + 模型 id（优先 Qwen3.6 Plus，且必须声明图像输入能力）
     function enumerateProviders() {
       try { return llm.listProviders() || []; } catch (e) { return []; }
     }
@@ -113,46 +139,75 @@ export default {
       if (typeof p === 'string') return p;
       return p.name || p.id || p.provider || p.key || '';
     }
+    function modelLabel(m) {
+      return String((m && (m.name || m.id || m.model)) || '');
+    }
+    // 返回 { provider, model, source, modalities? }；失败时返回带 error 字段的对象（不再静默回退）。
     async function resolveVisionModel() {
-      // 优先配置指定 provider
-      if (FORCE_PROVIDER) return { provider: FORCE_PROVIDER, model: FORCE_MODEL, source: 'config' };
-      const providers = enumerateProviders();
-      // 找含 qwen / opencode 的 provider
-      let pick = providers.find(p => /qwen/i.test(providerKey(p))) ||
-                 providers.find(p => /opencode/i.test(providerKey(p))) ||
-                 providers[0];
-      if (!pick) return null;
-      const pk = providerKey(pick);
-      try {
-        const models = await llm.listModels(pk);
-        if (Array.isArray(models)) {
-          // 找 Qwen3.6 Plus 精确 id
-          let model = models.find(m => /Qwen3\.6\s*Plus/i.test(String(m && (m.id || m.name || m.model))));
-          if (!model) model = models.find(m => /qwen/i.test(String(m && (m.id || m.name || m.model))));
-          if (model) return { provider: pk, model: (model.id || model.name || model.model), source: 'auto' };
+      // 优先配置指定 provider/model（推荐固定，避免自动发现漂移）
+      if (FORCE_PROVIDER) {
+        try {
+          const info = await llm.resolveModelInfo(FORCE_PROVIDER, FORCE_MODEL);
+          const mods = info && info.inputModalities;
+          if (Array.isArray(mods) && mods.includes('image')) {
+            return { provider: FORCE_PROVIDER, model: FORCE_MODEL, source: 'config', modalities: mods };
+          }
+          return { provider: FORCE_PROVIDER, model: FORCE_MODEL, source: 'config',
+            error: 'configured model has no image input modality: ' + JSON.stringify(mods || null) };
+        } catch (e) {
+          return { provider: FORCE_PROVIDER, model: FORCE_MODEL, source: 'config',
+            error: 'resolveModelInfo failed: ' + String((e && (e.code || e.message)) || e) };
         }
-        // 列表都取不到精确 id，退回配置默认名，让 run 记录候选清单便于排查
-        return { provider: pk, model: FORCE_MODEL, source: 'auto-fallback', candidates: models };
-      } catch (e) {
-        return { provider: pk, model: FORCE_MODEL, source: 'auto-err', error: String((e && e.message) || e) };
       }
+      const providers = enumerateProviders();
+      const failures = [];
+      for (const p of providers) {
+        const pk = providerKey(p);
+        if (!pk) continue;
+        let models = [];
+        try { models = await llm.listModels(pk) || []; }
+        catch (e) { failures.push(pk + ':list:' + String((e && e.message) || e)); continue; }
+        // 精确找 Qwen3.6 Plus：name="Qwen3.6 Plus"、id="qwen3.6-plus"（注意连字符，勿用空格正则匹配 id）
+        const byName = models.find(m => /Qwen3\.6\s*Plus/i.test(String((m && m.name) || '')));
+        const byId = models.find(m => /^qwen3\.6[\s_-]*plus$/i.test(String((m && m.id) || '')));
+        const cand = byName || byId ||
+                     models.find(m => /Qwen3\.6/i.test(modelLabel(m))) ||
+                     models.find(m => /qwen/i.test(modelLabel(m)));
+        if (!cand) continue;
+        const modelId = String(cand.id || cand.name || cand.model || '');
+        if (!modelId) continue;
+        try {
+          const info = await llm.resolveModelInfo(pk, modelId);
+          const mods = info && info.inputModalities;
+          if (Array.isArray(mods) && mods.includes('image')) {
+            return { provider: pk, model: modelId, source: 'auto', modalities: mods };
+          }
+          failures.push(pk + ':' + modelId + ':no-image-modality(' + JSON.stringify(mods || null) + ')');
+        } catch (e) {
+          failures.push(pk + ':' + modelId + ':' + String((e && (e.code || e.message)) || e));
+        }
+      }
+      // 没有任何可用视觉模型：明确失败（带候选与原因），不再静默回退
+      return { provider: '', model: '', source: 'none',
+        error: 'no_vision_model: ' + (failures.length ? failures.join(' | ') : 'no providers') };
     }
 
-    async function readImageBase64(sourcePath) {
+    async function readImageBytes(sourcePath) {
       const target = await fsService.resolve(sourcePath);
       const bytes = await fsService.readBytes(target, null, MAX_BYTES);
       if (!bytes || !bytes.length) throw new Error('empty image bytes');
       return bytes; // Uint8Array
     }
-    function bytesToBase64(bytes) {
-      // 用 TextDecoder/二进制安全的方式
-      let bin = '';
-      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-      return btoa(bin);
-    }
     function imageContentType(path) {
       const ext = String(path).split('.').pop().toLowerCase();
       return ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : 'image/png';
+    }
+    function newMessageId() {
+      try {
+        const c = globalThis.crypto;
+        if (c && typeof c.randomUUID === 'function') return 'msg-' + c.randomUUID();
+      } catch (e) { /* fallthrough */ }
+      return 'msg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
     }
 
     // ========== single image: Qwen JSON -> 生产 GeoVisionResult ==========
@@ -164,35 +219,76 @@ export default {
         status: 'failed', schemaOk: null
       };
       // 读图
-      let b64, contentType;
+      let bytes, contentType;
       try {
-        const bytes = await readImageBase64(img.sourcePath);
-        b64 = bytesToBase64(bytes);
+        bytes = await readImageBytes(img.sourcePath);
         contentType = imageContentType(img.sourcePath);
       } catch (e) {
         await appendRun({ ...base, error: 'read_image: ' + (e && e.message || e), durationMs: (Date.now() - start) });
         return { status: 'degraded', imageId: img.imageId, error: 'read_image: ' + (e && e.message || e) };
       }
 
+      // 图片字节上限：以 attachments.imageLimits 为准（默认 maxImageBytes 5MB），避免 saveImage 校验失败
+      const limits = attachments ? attachments.imageLimits : null;
+      const maxBytes = limits && limits.maxImageBytes ? Math.min(MAX_BYTES, limits.maxImageBytes) : MAX_BYTES;
+      if (bytes.length > maxBytes) {
+        await appendRun({ ...base, error: 'image_too_large: ' + bytes.length + ' > ' + maxBytes, durationMs: (Date.now() - start) });
+        return { status: 'degraded', imageId: img.imageId, error: 'image_too_large: ' + bytes.length + ' > ' + maxBytes };
+      }
+
+      // 规范 ImageBlock 契约：图必须经 durable attachments 服务落地为引用（不能传 OpenAI 线格式 source）
+      let ref;
+      try {
+        ref = await attachments.saveImage({ data: bytes, mediaType: contentType, name: img.caption || img.imageId });
+      } catch (e) {
+        const reason = 'save_image: ' + String((e && (e.code || e.message)) || e);
+        await appendRun({ ...base, error: reason, durationMs: (Date.now() - start) });
+        return { status: 'degraded', imageId: img.imageId, error: reason };
+      }
+
       const prompt = buildTranscribePrompt();
       const content = [
-        { type: 'image', source: { type: 'base64', media_type: contentType, data: b64 } },
+        { type: 'image', attachment: ref },
         { type: 'text', text: prompt }
       ];
-      const messages = [{ role: 'user', content }];
+      const messages = [{ id: newMessageId(), role: 'user', content, source: { kind: 'user' } }];
 
-      // 调 llm.stream 收集极简全文（仅取文本增量）
+      // 调 llm.stream：消费类型化 chunk（text-delta/reasoning-delta），finish 错误块转成真实异常；
+      // 仅对可重试错误码重试 1 次（确定性错误如 UNSUPPORTED_CONTENT/UNKNOWN_MODEL 不重试）。
       let rawText = '';
-      try {
-        const gen = llm.stream({ provider: visionModel.provider, model: visionModel.model, messages });
-        for await (const chunk of gen) {
-          // StreamChunk 形态依 DSH 而定；尽量取 text/增量
-          const t = chunk && (chunk.text !== undefined ? chunk.text : chunk.delta !== undefined ? chunk.delta : (typeof chunk === 'string' ? chunk : ''));
-          if (t) rawText += t;
+      let lastErr = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        rawText = '';
+        lastErr = null;
+        try {
+          const gen = llm.stream({ provider: visionModel.provider, model: visionModel.model, messages });
+          for await (const chunk of gen) {
+            if (!chunk || typeof chunk !== 'object') continue;
+            if (chunk.type === 'text-delta' || chunk.type === 'reasoning-delta') {
+              if (typeof chunk.text === 'string' && chunk.text) rawText += chunk.text;
+            } else if (chunk.type === 'finish') {
+              const reason = chunk.reason;
+              if (reason && (reason.kind === 'error' || reason.kind === 'aborted')) {
+                const f = reason.failure || {};
+                throw new Error('vision_llm ' + (f.code || reason.kind) + ': ' + (f.message || ''));
+              }
+            }
+          }
+          break; // 无异常 → 成功
+        } catch (e) {
+          lastErr = e;
+          const msg = String((e && e.message) || e);
+          const codeMatch = /^vision_llm (\S+)/.exec(msg);
+          const code = codeMatch ? codeMatch[1] : '';
+          const retryable = !code || !/^(UNSUPPORTED_|UNKNOWN_|MISSING_|INVALID_)/.test(code);
+          if (attempt === 0 && retryable) continue; // 重试一次
+          break;
         }
-      } catch (e) {
-        await appendRun({ ...base, error: 'llm_stream: ' + (e && e.message || e), durationMs: (Date.now() - start) });
-        return { status: 'degraded', imageId: img.imageId, error: 'llm_stream: ' + (e && e.message || e) };
+      }
+      if (lastErr) {
+        const reason = 'llm_stream: ' + String((lastErr && lastErr.message) || lastErr);
+        await appendRun({ ...base, error: reason, durationMs: (Date.now() - start), rawText });
+        return { status: 'degraded', imageId: img.imageId, error: reason };
       }
 
       // 提取 JSON：容忍 fenced code block
@@ -286,7 +382,7 @@ export default {
     // v2.1：cacheKey = 图片内容 hash（不限 sourcePath/model/prompt，同图内容跨题跨配置一个 key）。
     // 读取时用配套 index.json（记录 modelId/promptVersion/schemaVersion/ts）判定是否过期。
     async function imageContentHash(sourcePath) {
-      const bytes = await readImageBase64(sourcePath);
+      const bytes = await readImageBytes(sourcePath);
       const hexBytes = [];
       for (let i = 0; i < bytes.length; i++) hexBytes.push(bytes[i].toString(16).padStart(2, '0'));
       return sha256Hex(hexBytes.join(''));
@@ -306,22 +402,21 @@ export default {
 
     // ========== geoVision API ==========
     const api = {
-      enabled: ENABLED,
+      get enabled() { return enabledState; },
       // 生产视图：对每张图做可见提取 -> GeoVisionResult[]；失败单图降级、不阻塞整批
       async extract(qid) {
-        if (!ENABLED) return { status: 'disabled', message: 'vision.enabled=false' };
+        if (!enabledState) return { status: 'disabled', message: 'vision.enabled=false' };
         try {
           const refs = await kernel.imageRefs(qid);
           if (refs.status !== 'success' || !refs.hasImages) {
             return { status: 'success', questionId: qid, hasImages: false, images: [] };
           }
           const visionModel = await resolveVisionModel();
-          if (!visionModel) {
-            const runs = { providers: enumerateProviders() };
-            await appendRun({ ts: new Date().toISOString(), imageId: refs.images[0].imageId, sourcePath: refs.images[0].sourcePath, provider: '', model: '', cacheHit: false, durationMs: 0, status: 'degraded', schemaOk: null, error: 'no_vision_model: ' + JSON.stringify(runs.providers) });
-            return { status: 'degraded', questionId: qid, error: 'no_vision_model', providers: runs.providers };
+          if (!visionModel || visionModel.error) {
+            const reason = visionModel ? visionModel.error : 'no_vision_model';
+            await appendRun({ ts: new Date().toISOString(), imageId: refs.images[0].imageId, sourcePath: refs.images[0].sourcePath, provider: (visionModel && visionModel.provider) || '', model: (visionModel && visionModel.model) || '', cacheHit: false, durationMs: 0, status: 'degraded', schemaOk: null, error: reason });
+            return { status: 'degraded', questionId: qid, error: reason, providers: enumerateProviders() };
           }
-          if (!Array.isArray(visionModel.candidates)) visionModel.candidates = undefined;
           // 缓存 key = 图片内容 hash（v2.1），用 index.json 校验过期
           const results = [];
           const viewMeta = { model: visionModel.model, provider: visionModel.provider, source: visionModel.source };
@@ -340,12 +435,12 @@ export default {
               if (cached) {
                 const parsed = JSON.parse(cached);
                 await appendRun({ ts: new Date().toISOString(), imageId: img.imageId, sourcePath: img.sourcePath, provider: visionModel.provider, model: visionModel.model, status: 'success', schemaOk: null, durationMs: 0, cacheHit: true, resultSummary: 'cache' });
-                results.push(parsed.result);
+                results.push({ ok: true, result: parsed.result });
                 continue;
               }
               const t = await transcribeOne(img, visionModel);
               if (t.status === 'success') {
-                results.push(t.result);
+                results.push({ ok: true, result: t.result });
                 try {
                   await fsService.writeText(await fsService.resolve(cachePath), JSON.stringify({ schemaVersion: SCHEMA_VERSION, result: t.result }), undefined, undefined, WRITE_POLICY());
                   await writeCacheIndex(CACHE_DIR, hkey, viewMeta);
@@ -357,14 +452,18 @@ export default {
               results.push({ status: 'degraded', imageId: img.imageId, error: String((e && e.message) || e) });
             }
           }
-          const view = results.map(r => r.result ? r.result : null).filter(Boolean);
+          const view = results.filter(r => r.ok).map(r => r.result);
+          const degraded = results.filter(r => !r.ok && r.status === 'degraded').map(r => ({ imageId: r.imageId, error: r.error }));
+          // visionOk：有图且至少一张成功；全部失败时 markdown 为空、visionOk=false（不静默伪装成功）
+          const visionOk = degraded.length < results.length;
           // 供 DeepSeek 与工具消费
           return {
             status: 'success',
             questionId: qid,
             hasImages: true,
             images: view,
-            degraded: results.filter(r => r.status === 'degraded').map(r => ({ imageId: r.imageId, error: r.error })),
+            degraded,
+            visionOk,
             markdown: renderToMarkdown(view),
             meta: viewMeta
           };
@@ -376,34 +475,43 @@ export default {
       render(results) { return renderToMarkdown(results); }
     };
 
-    // 发布 geoVision 服务（供 analysis.geo_solve、工具薄壳消费；同 group 同 isolate realm）
+    // 发布 geoVision 服务（供 analysis.geo_solve 内部消费；同 group 同 isolate realm）
     try {
       ctx.provide('geoVision', api);
     } catch (e) { /* 若 realm 已存在同名服务则忽略，不阻断挂载 */ }
+    // 注：V1.2 起不再注册 geo_extract_images 工具——读图统一由 geo_solve 自动带图（vision 字段），
+    // 避免"Agent 主动读图"与"solve 自动带图"双入口导致重复调用（决策见 docs/视觉与工作流修复方案.md D2）。
 
-    // ========== Agent 工具薄壳（与其它 geo 插件一致：直接 register） ==========
-    ctx.tools.register({
-      name: 'geo_extract_images',
-      description: '读图转录：解析指定题目的图片，用视觉模型(Qwen3.6 Plus)提取图中可观察信息为结构化结果（含图例/数值/符号/空间关系等）。返回每张图的 GeoVisionResult + Markdown；供 DeepSeek 在图类型直观判断或需引图信息时调用。不含任何解题推理（推理由 DeepSeek 完成）。',
-      parameters: {
-        type: 'object',
-        properties: {
-          qid: { type: 'string', description: '题目 ID（如 2025-安徽-地理-...-Q17-1）' }
-        },
-        required: ['qid']
-      },
-      output: {
-        schema: { type: 'object', additionalProperties: true },
-        render(_args, value) {
-          const text = JSON.stringify(value, null, 2);
-          const capped = String(text).length > 16000 ? String(text).slice(0, 16000) + '\n...[截断]' : text;
-          return [{ type: 'text', text: capped }];
-        }
-      },
-      async execute(args) {
-        const result = await api.extract(args.qid);
-        return result;
+    // ========== 运行时开关路由（UI 面板用） ==========
+    webServer.register({
+      kind: 'exact',
+      path: '/geo/vision/status',
+      handler: (req, res) => {
+        sendJson(res, 200, {
+          enabled: api.enabled,
+          provider: FORCE_PROVIDER,
+          model: FORCE_MODEL,
+          depsOk: !!(llm && attachments)
+        });
       }
     });
+    webServer.register({
+      kind: 'exact',
+      path: '/geo/vision/toggle',
+      handler: (req, res) => {
+        const q = parseQuery(req.url || '/');
+        const v = q.enabled;
+        if (v !== undefined) {
+          // ?enabled=1|true|0|false
+          const on = v === '1' || v === 'true';
+          if (on && !llm) { sendJson(res, 400, { ok: false, error: 'llm 服务不可用' }); return; }
+          if (on && !attachments) { sendJson(res, 400, { ok: false, error: 'attachments 服务不可用' }); return; }
+          enabledState = !!on;
+          console.log(`geo-vision: 运行时切换 enabled=${enabledState}`);
+        }
+        sendJson(res, 200, { enabled: api.enabled });
+      }
+    });
+    console.log('geo-vision: /geo/vision/status 与 /geo/vision/toggle 路由已注册');
   }
 };

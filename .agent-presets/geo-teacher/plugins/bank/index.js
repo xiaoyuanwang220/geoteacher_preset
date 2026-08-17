@@ -46,7 +46,17 @@ export default {
           const action = pathname.replace(/^\/geo\/bank\/?/, '') || 'index';
           switch (action) {
             case 'search':
-              return sendJson(res, 200, await kernel.searchQuestions(query.kp || '', query.keyword || ''));
+              // 支持结构化参数：region/year/questionNumber/questionType/knowledgeId/keyword
+              // 向后兼容旧的 kp/keyword 参数
+              const sq = {
+                region: query.region || '',
+                year: query.year || '',
+                questionNumber: query.questionNumber || query.qn || '',
+                questionType: query.questionType || '',
+                knowledgeId: query.knowledgeId || query.kp || '',
+                keyword: query.keyword || ''
+              };
+              return sendJson(res, 200, await kernel.searchQuestions(sq));
             case 'detail':
               return sendJson(res, 200, await kernel.getQuestionDetail(query.qid || ''));
             default:
@@ -58,15 +68,19 @@ export default {
       }
     });
 
-    // 模型工具：真题检索
+    // 模型工具：真题检索（结构化查询 + 全文搜索，按小问拆分返回）
     ctx.tools.register({
       name: 'geo_search_questions',
-      description: '按考点 ID 或关键词检索本地真题库，返回题组索引（年份/省份/题型/题号 + 题目 ID 列表）。用于回答“这个考点有哪些真题”“某省某年考了什么”。',
+      description: '检索本地真题库。支持结构化查询（省份/年份/题号/题型）和全文搜索（关键词/考点名称）。返回匹配的小问列表（每道小问独立），含题组标签、题干摘要、知识点。用于回答"某省某年某题有哪些真题""某个考点有哪些真题""某关键词相关的题目"。',
       parameters: {
         type: 'object',
         properties: {
-          kp: { type: 'string', description: '考点 ID（knowledge_unit_id 或 theme_id，如 KU-HUM-POP-001）' },
-          keyword: { type: 'string', description: '关键词（在材料/题干中匹配，如“港口”）' }
+          region: { type: 'string', description: '省份（如"安徽""广东"）' },
+          year: { type: 'string', description: '年份（如"2025"）' },
+          questionNumber: { type: 'string', description: '题号（如"17"），匹配 question_numbers 字段' },
+          questionType: { type: 'string', description: '题型：single_choice_group（选择题组）或 comprehensive_group（综合题组）' },
+          knowledgeId: { type: 'string', description: '考点 ID 或名称（如"KU-HUM-POP-001"或"产业转移"）' },
+          keyword: { type: 'string', description: '全文关键词（在材料/题干/选项/知识点名称/省份/年份中匹配）' }
         },
         additionalProperties: false
       },
@@ -75,7 +89,8 @@ export default {
         render: renderJson
       },
       async execute(args) {
-        return { status: 'success', groups: await kernel.searchQuestions(args.kp || '', args.keyword || '') };
+        // 传整个 args 对象给 kernel（新接口），内部自动归一化
+        return { status: 'success', results: await kernel.searchQuestions(args) };
       }
     });
 
