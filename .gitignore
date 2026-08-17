@@ -25,6 +25,9 @@ node_modules/
 # Download archives; extracted source may remain versioned
 deepseek-harness-skills-master.zip
 
+# Open-source publishing staging area (own git repo)
+open/
+
 # Editor and operating-system files
 .idea/
 .vscode/
