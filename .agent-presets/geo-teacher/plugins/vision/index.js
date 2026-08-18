@@ -48,6 +48,24 @@ function validateRaw(raw) {
   return { ok: errs.length === 0, errs, items: out, imageType };
 }
 
+// ========== 图片格式魔数嗅探（真实格式优先于扩展名） ==========
+// 处理"webp/jpg 内容 + .png 扩展名"等命名失误：mediaType 必须与字节内容一致，
+// 否则 OpenAI 兼容端点按错误格式解码会失败或乱码。嗅探失败时返回 null，由调用方按扩展名兜底。
+function sniffImageType(bytes) {
+  if (!bytes || bytes.length < 12) return null;
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+      bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return 'image/png';
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  // GIF: "GIF8"
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) return 'image/gif';
+  // WebP: "RIFF" .... "WEBP"（bytes 8-11）
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp';
+  return null;
+}
+
 // ========== 渲染：GeoVisionResult -> DeepSeek 用 Markdown（多图分段） ==========
 function renderToMarkdown(results) {
   if (!Array.isArray(results) || results.length === 0) return '';
@@ -218,11 +236,15 @@ export default {
         provider: visionModel.provider, model: visionModel.model, cacheHit: false,
         status: 'failed', schemaOk: null
       };
-      // 读图
+      // 读图（魔数嗅探优先：webp 伪装成 png/jpg 扩展名时仍能正确声明 mediaType）
       let bytes, contentType;
       try {
         bytes = await readImageBytes(img.sourcePath);
-        contentType = imageContentType(img.sourcePath);
+        const extType = imageContentType(img.sourcePath);
+        contentType = sniffImageType(bytes) || extType;
+        if (contentType !== extType) {
+          console.log(`geo-vision: 图片格式与扩展名不符 ${img.sourcePath} (扩展名判 ${extType}, 内容实为 ${contentType})`);
+        }
       } catch (e) {
         await appendRun({ ...base, error: 'read_image: ' + (e && e.message || e), durationMs: (Date.now() - start) });
         return { status: 'degraded', imageId: img.imageId, error: 'read_image: ' + (e && e.message || e) };
