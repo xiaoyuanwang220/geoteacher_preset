@@ -851,7 +851,7 @@ export default {
       // 4. 写磁盘索引
       try {
         const indexData = {
-          version: 2, // v2：parser 修复（KM 块跳过/qid 引号/stem 真实题干）的代际标记，旧 v1 索引不被信任
+          version: 3, // v3：索引持久化完整题目信息（answer/analysis），修复磁盘加载后 judge 标准答案丢失（方案 A）
           builtAt: _bankCache.builtAt,
           fileCount: currentFileCount,
           questionCount: all.length,
@@ -862,6 +862,8 @@ export default {
             stem: item.stem,
             options: item.options || [],
             material: item.material,
+            answer: item.answer || '',
+            analysis: item.analysis || '',
             meta: item.meta || {},
             knowledgePoints: (item.knowledgePoints || []).map(kp => ({
               role: kp.role,

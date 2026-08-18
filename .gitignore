@@ -21,6 +21,7 @@ node_modules/
 .env.*
 *.pem
 *.key
+.git-msg.tmp
 
 # Download archives; extracted source may remain versioned
 deepseek-harness-skills-master.zip

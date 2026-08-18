@@ -340,7 +340,8 @@ function checkPipelineDiscipline() {
   const mtimeOk = /mtime/.test(coreSrc);
   add('index-fresh', 'loadBank mtime 新鲜度检查', mtimeOk,
     mtimeOk ? '含 mtime 判断' : 'core/index.js loadBank 无 mtime 检查');
-  // 数据断言：索引若存在，不得含引号 qid / "题干" stem（旧 parser 产物）
+  // 数据断言：索引若存在，须为 v3 完整快照（无引号 qid / 无假 stem / 每项含 answer）
+  // v3：索引持久化 answer/analysis，修复磁盘加载后 judge 标准答案丢失（修复方案-20260817 方案 A）
   const idxPath = join(PROJECT_ROOT, 'outputs', 'question-index.json');
   if (existsSync(idxPath)) {
     try {
@@ -348,9 +349,10 @@ function checkPipelineDiscipline() {
       const items = Array.isArray(idx.items) ? idx.items : [];
       const quoted = items.filter(i => typeof i.questionId === 'string' && i.questionId.includes('"'));
       const fakeStem = items.filter(i => i.stem === '题干');
-      const dataOk = quoted.length === 0 && fakeStem.length === 0;
-      add('index-data', '索引数据无引号 qid / "题干" stem', dataOk,
-        dataOk ? `${items.length} 小问` : `引号 qid ${quoted.length} 个，假 stem ${fakeStem.length} 个（旧 parser 产物，需重建索引）`);
+      const noAnswer = items.filter(i => typeof i.answer !== 'string' || i.answer.trim() === '');
+      const dataOk = idx.version === 3 && quoted.length === 0 && fakeStem.length === 0 && noAnswer.length === 0;
+      add('index-data', '索引数据完整 (v3 / 无引号 qid / 无假 stem / 每项含答案)', dataOk,
+        dataOk ? `${items.length} 小问 (v${idx.version})` : `v=${idx.version}, 引号qid=${quoted.length}, 假stem=${fakeStem.length}, 缺答案=${noAnswer.length}（旧版本产物，需重建索引）`);
     } catch (e) {
       add('index-data', '索引数据检查', false, '索引解析失败: ' + e.message);
     }
