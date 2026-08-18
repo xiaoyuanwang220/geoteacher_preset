@@ -1,6 +1,6 @@
 ---
 name: geo-dev-checklist
-description: Use when modifying geo-teacher plugins, composition, or skills — before committing changes and after restarting DSH. Runs `npm run verify:geo` for deterministic checks, then guides through manual review items the script cannot cover. Not a teacher-facing skill.
+description: Use when modifying geo-teacher plugins, composition, or skills — before committing changes and after restarting DSH. Runs `npm run verify:geo` for deterministic checks, then guides through manual review items the script cannot cover. Semantic code review (judging whether code and design are correct) belongs to geo-code-review; this skill covers deterministic verification and pre-commit / post-restart checks only. Not a teacher-facing skill.
 ---
 
 # 地理教师 Agent 开发自检
@@ -41,12 +41,9 @@ description: Use when modifying geo-teacher plugins, composition, or skills — 
 - 若工具注册失败（报 "without inject"），需在插件声明 `inject: ['tools']`。
 - 服务 `ctx.provide` 必须在 isolate group 内。
 
-### 5. 代码审查维度（借鉴 dsh-code-review）
-审查改动时按以下维度检查：
-- **生命周期**：副作用是否归属 fiber？`ctx.effect()` 是否返回 disposer？未声明 inject 的服务访问是否用 `ctx.get()` + undefined 检查？
-- **所有权**：新增变量/状态是否属于当前插件？跨插件通信是否通过 `geoKernel` 服务而非直接 import？
-- **真实入口路径**：改动是否经得起 `npm run verify:geo` 的完整检查？是否存在 `node --check` 无法覆盖的动态加载路径？
-- **模型可见输出**：工具 description 是否精确？返回值是否稳定（无随机性）？信息是否足够让模型正确调用？
+### 5. 语义代码审查（交给 geo-code-review）
+判断代码与设计是否正确的**语义审查**（生命周期 / 所有权 / 真实入口 / 模型可见契约 / 讲题流水线纪律 / 缓存新鲜度等完整维度）由 `.agents/skills/geo-code-review/SKILL.md` 负责，触发词："review / 代码审查 / 审查改动 / 检查 diff / 找回归风险"。
+本技能只负责**确定性验证**与提交前 / 重启后检查；`npm run verify:geo` 全绿**不能证明**语义正确，代码审查也不替代静态检查和运行时冒烟。
 
 ### 6. 简化候选提醒
 发现以下模式时记录为 TODO（不要在本会话直接删改）：

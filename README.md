@@ -73,8 +73,8 @@ geo-core（内核服务 geoKernel：考点树 / 题库加载 / 真题分析 / �
 - `docs\使用指南.md` — **使用指南**（Web 面板 / 对话工具 / 出题技能三种用法 + 话术示例）
 - `docs\讲题功能设计.md` — **讲题功能设计**（设问先行/定向读材料、地理思维逻辑、一线教师评审修订、四段式讲题稿模型、技术落地与实施步骤）
 - `docs\讲题评测方案.md` — **讲题真题评测方案**（P4：分层抽样清单 + 五项指标打分表 + 通过门槛）
-- `docs\讲题图像转录方案.md` — **讲题图像转录预处理方案**（Qwen3.6 Plus 视觉读图转录 → 结构化 GeoVisionResult → DeepSeek 解题；`geoVision` 服务 + `geo_solve` 自动带图已启用：`provider: opencode-go, model: qwen3.6-plus`；V1.1 修复模型选择与调用契约后，**待 DSH 重启做真实图 E2E 验证**，见 `docs\视觉与工作流修复方案.md`）
-- `docs\harness-skills-应用方案.md` — **DSH 仓库 Skills 应用方案**（v3.0：11 个官方开发技能按四类归类；开发 Skill 放 `.agents/skills/`；`geo-verify.mjs` 确定性检查程序 + 项目 `package.json`；共享术语表；讲题稿"过程性元话语与作者痕迹检测"；含上游 commit SHA/下载包哈希/MIT 信息与验收标准）
+- `docs\讲题图像转录方案.md` — **讲题图像转录预处理方案**（视觉模型读图转录 → 结构化 GeoVisionResult → DeepSeek 解题；`geoVision` 服务 + `geo_solve` 自动带图已启用：`provider: siliconflow, model: Qwen/Qwen3-VL-8B-Instruct`；真实图 E2E 状态以运行时 `/geo/vision/status` 与运行日志为准，见 `docs\硅基流动视觉接入方案.md`、`docs\视觉与工作流修复方案.md`）
+- `docs\harness-skills-应用方案.md` — **DSH 仓库 Skills 应用方案**（v4.0：11 个官方开发技能按四类归类；三个开发 Skill（`geo-dev-checklist` 确定性验证 / `geo-code-review` 语义审查 / `geo-doc-writing` 写作规范）放 `.agents/skills/`；`geo-verify.mjs` 确定性检查程序 + 项目 `package.json`；共享术语表；讲题稿"过程性元话语与作者痕迹检测"；含上游 commit SHA/下载包哈希/MIT 信息与验收标准）
 - `docs\geo-teacher-agent-plan.md` — 地理教师 Agent 插件化与课程方案生成方案（附录 A/B：迁移与双副本调查）
 - `docs\plugin_definition.md` — 早期插件定义与调试历史
 - `legacy\README.md` — 归档内容清单

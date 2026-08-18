@@ -1,7 +1,7 @@
 # DSH 仓库 Skills 应用方案（deepseek-harness-skills-master）
 
-> 版本：v3.0　日期：2026-08-16　状态：方案定稿，可作实施基础
-> 修订（v2.0 → v3.0）：① 开发维护类 Skill 放 `.agents/skills/<skill-name>/SKILL.md`，不进普通 `skills/*.md`、不进 geo-teacher 教师预设；② geo-doc-writing 仅供开发 Agent，教师端术语/写作规则分别嵌入现有出题、解题、讲题、课程方案 Skill，共同以 `docs/术语表.md` 为权威；③ geo-verify.mjs 明确静态路由扫描局限 + 增加"重启后冒烟验证"，脚本不能替代重启；④ 项目根 `package.json` 固定 YAML 依赖，统一 `npm run verify:geo`，脚本支持 `--source/--runtime/--skip-runtime/--json`，运行时路径环境计算不写死用户名，约定退出码；⑤ "CoT 泄漏"改称"过程性元话语与作者痕迹检测"；⑥ proposition-preservation 边界明确（不能证明答案正确/一致/事实准确，需领域 Rubric）；⑦ .backups 仅为提示，不导致失败；⑧ 面板演示由人工录制，不建自动录制 Skill，明确不属于本方案实施范围；⑨ 补充验收标准、上游 commit SHA、下载包哈希、MIT 许可证；⑩ 修正内部引用；⑪ 避免默认每个工具都技能化。
+> 版本：v4.0　日期：2026-08-19　状态：当前有效
+> 说明：dsh-code-review 已独立适配为 `.agents/skills/geo-code-review/SKILL.md`（语义代码审查）。开发维护 Skill 现为三个，职责分离、互不替代：`geo-dev-checklist`（确定性验证）、`geo-code-review`（语义审查）、`geo-doc-writing`（写作规范）。
 > 来源：`E:\geo_edu_agent\deepseek-harness-skills-master`（从 deepseek-harness GitHub 仓库 `.agents/skills` 下载，共 11 个 skill 包）
 > 配套：`README.md`、`使用指南.md`、`讲题功能设计.md`、`讲题评测方案.md`、`讲题图像转录方案.md`
 
@@ -30,7 +30,7 @@
 | Skill | 用途（一句话） | 归类 | 本项目去向 |
 | :-- | :-- | :-- | :-- |
 | `dsh-pre-push-checks` | 推送前选最小验证集 | 确定性检查程序（思想） | **做 `scripts/geo-verify.mjs` 检查程序** |
-| `dsh-code-review` | 审查仓库 PR（生命周期/所有权/模型可见输出） | 项目开发维护 | 并入开发技能（人工判断部分） |
+| `dsh-code-review` | 审查仓库改动（生命周期/所有权/模型可见输出） | 项目开发维护 | **独立适配为 `.agents/skills/geo-code-review/SKILL.md`（语义代码审查）** |
 | `dsh-find-simplifications` | 找死代码/重复/过度设计 | 项目开发维护 | 一次性简化审计 |
 | `dsh-archive-agent-notes` | 决策记录生命周期管理 | 项目开发维护（轻量借鉴） | **轻量决策记录**（单文件，见 §六） |
 | `dsh-prose-standard` | 散文写作标准（契约完整、删废话） | 规范与术语 | **开发写作规范**（供开发 Agent）+ 命题完整性思想 |
@@ -49,13 +49,15 @@
 
 ```
 E:\geo_edu_agent\.agents\skills\
-  geo-dev-checklist\SKILL.md          # 开发自检（程序 + 人工判断两部分）
+  geo-dev-checklist\SKILL.md          # 确定性验证（verify:geo + 提交前/重启后检查）
+  geo-code-review\SKILL.md            # 语义代码审查（判断代码与设计是否正确）
   geo-doc-writing\SKILL.md            # 开发写作规范（含过程性元话语/作者痕迹检测）
 ```
 
 | Skill | 内容 |
 | :-- | :-- |
-| `geo-dev-checklist` | ① 何时运行 `npm run verify:geo`（含各参数模式）；② 程序无法覆盖的人工判断项（简化候选核验、code-review 维度、重启沟通）；③ code-review 移植的审查条目（生命周期/所有权/真实入口/模型可见输出） |
+| `geo-dev-checklist` | ① 何时运行 `npm run verify:geo`（含各参数模式）；② 程序无法覆盖的人工判断项（简化候选核验、重启沟通、重启后冒烟）；③ 语义代码审查指向 `geo-code-review`（不重复审查条目） |
+| `geo-code-review` | 语义代码审查：判断代码与设计是否正确（DSH 生命周期与服务边界 / 工具与模型可见契约 / 讲题流水线纪律 / 数据缓存新鲜度 / 安全文件边界 / 测试真实入口 / 文档一致性），findings-first 报告，默认不改代码 |
 | `geo-doc-writing` | 供**开发 Agent** 使用的写作规范：契约完整（proposition-preservation）、删废话、无过程性元话语/作者痕迹、术语引用 `docs/术语表.md`；**教师端不引用本 Skill** |
 
 ### B. 教师业务运行（教师运行 Skill）
@@ -76,7 +78,7 @@ E:\geo_edu_agent\.agents\skills\
 
 **原则：语法、哈希、导入、服务注册等确定性检查做成可执行脚本一键运行，不依赖 Agent 手工。**
 
-**`scripts/geo-verify.mjs`（规格，待实现）**：
+**`scripts/geo-verify.mjs`（已实现）**：
 
 ```
 项目根 package.json:
@@ -131,7 +133,7 @@ E:\geo_edu_agent\.agents\skills\
 
 ### 人工判断保留在开发 Skill
 - 代码简化审计（消费者证据：先证明无生产调用者再删）→ `geo-dev-checklist` 或一次性审计 TODO。
-- code-review 维度（生命周期/所有权/真实入口）→ 审查条目。
+- code-review 维度（生命周期/所有权/真实入口/模型可见输出/流水线纪律）→ 独立语义审查 Skill `geo-code-review`（不并入 checklist）。
 - 重启沟通：脚本提示 + 开发 Skill 说明。
 
 ### 轻量决策记录（见 §六）
@@ -172,7 +174,8 @@ proposition-preservation（来自 prose-standard）**只能检查"编辑时是�
 | :-- | :-- | :-- |
 | **P0** | `scripts/geo-verify.mjs` + 项目根 `package.json`（yaml 依赖、`npm run verify:geo`、参数/退出码） | 脚本 + package.json |
 | **P0** | `docs/术语表.md` 共享术语表（权威 + 教师技能引用） | 文档 + 各技能引用 |
-| **P1** | `.agents/skills/geo-dev-checklist/SKILL.md`（程序 + 人工判断） | 开发 Skill |
+| **P1** | `.agents/skills/geo-dev-checklist/SKILL.md`（确定性验证：verify:geo + 提交前/重启后检查） | 开发 Skill |
+| **P1** | `.agents/skills/geo-code-review/SKILL.md`（语义代码审查，独立适配 dsh-code-review） | 开发 Skill |
 | **P1** | `.agents/skills/geo-doc-writing/SKILL.md`（开发写作规范） | 开发 Skill |
 | **P1** | 教师技能内嵌规范：出题/解题/讲题/课程方案各自嵌术语 + 写作规则；讲题稿评测改名并入 `docs/讲题评测方案.md` | 各教师 SKILL.md + 评测文档 |
 | **P2** | 代码简化审计（sendJson/parseQuery 重复等）→ TODO 清单 | 一次性审计 |
@@ -183,11 +186,12 @@ proposition-preservation（来自 prose-standard）**只能检查"编辑时是�
 
 1. `npm run verify:geo -- --source` 全绿退出码 0；`--json` 输出合法 JSON；`--runtime` 在重启 DSH 后核心端点（`/geo/core/health`、`/geo-teacher`）与 geo_* 工具冒烟通过。
 2. 运行时路径由环境计算（`DSH_HOME`/`DSH_WEB_URL`），源码不含写死的用户名。
-3. `.agents/skills/geo-dev-checklist/`、`.agents/skills/geo-doc-writing/` 存在且 frontmatter 齐全；**不在** geo-teacher 教师预设内、**不在** 普通 `skills/*.md`。
-4. `docs/术语表.md` 建立，且出题/解题/讲题/课程方案四个教师 SKILL.md 均引用它；各教师技能内已嵌入对应术语与写作规则。
-5. 讲题稿评测项以"过程性元话语与作者痕迹检测"命名，保留可教学推理清单、删除类清单明确；评测方案同时声明 proposition-preservation 边界（不能证明正确性，需领域 Rubric）。
-6. `docs/决策记录.md` 存在并记录 ≥1 条既有决策（如双副本、isolate 白名单、standing 换代）。
-7. 方案文档（本文件）与 README 登记一致。
+3. `.agents/skills/geo-dev-checklist/`、`.agents/skills/geo-code-review/`、`.agents/skills/geo-doc-writing/` 存在且 frontmatter 齐全；**不在** geo-teacher 教师预设内、**不在** 普通 `skills/*.md`。
+4. `geo-code-review` 触发边界明确：description 能准确触发 "review / 代码审查 / 审查改动 / 检查 diff / 找回归风险" 类请求，且不抢占普通实现任务；与 `geo-dev-checklist`（确定性验证）、`geo-doc-writing`（写作规范）职责分工清晰，`npm run verify:geo` 全绿不替代语义审查。
+5. `docs/术语表.md` 建立，且出题/解题/讲题/课程方案四个教师 SKILL.md 均引用它；各教师技能内已嵌入对应术语与写作规则。
+6. 讲题稿评测项以"过程性元话语与作者痕迹检测"命名，保留可教学推理清单、删除类清单明确；评测方案同时声明 proposition-preservation 边界（不能证明正确性，需领域 Rubric）。
+7. `docs/决策记录.md` 存在并记录 ≥1 条既有决策（如双副本、isolate 白名单、standing 换代）。
+8. 方案文档（本文件）与 README 登记一致。
 
 ## 十、明确不做
 

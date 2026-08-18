@@ -350,6 +350,7 @@ function checkPipelineDiscipline() {
       const quoted = items.filter(i => typeof i.questionId === 'string' && i.questionId.includes('"'));
       const fakeStem = items.filter(i => i.stem === '题干');
       const noAnswer = items.filter(i => typeof i.answer !== 'string' || i.answer.trim() === '');
+      // 索引版本号须与 plugins/core/index.js 的 INDEX_VERSION 保持一致
       const dataOk = idx.version === 3 && quoted.length === 0 && fakeStem.length === 0 && noAnswer.length === 0;
       add('index-data', '索引数据完整 (v3 / 无引号 qid / 无假 stem / 每项含答案)', dataOk,
         dataOk ? `${items.length} 小问 (v${idx.version})` : `v=${idx.version}, 引号qid=${quoted.length}, 假stem=${fakeStem.length}, 缺答案=${noAnswer.length}（旧版本产物，需重建索引）`);
