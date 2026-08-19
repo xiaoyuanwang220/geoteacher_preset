@@ -790,6 +790,8 @@ export default {
     // ========== 题库索引（预构建 + 磁盘持久化 + 内存缓存） ==========
     let _bankCache = null; // 内存缓存：{ byId: Map, all: [], filesCount, builtAt }
     const INDEX_PATH = OUTPUT_PATH + '/question-index.json';
+    // 索引格式版本：items 结构/字段变化时必须递增；scripts/geo-verify.mjs 的 index-data 断言按此版本校验
+    const INDEX_VERSION = 3;
 
     async function loadBank() {
       // 1. 内存缓存命中 → 直接返回
@@ -805,9 +807,9 @@ export default {
         const idxTarget = await fsService.resolve(INDEX_PATH);
         const raw = await fsService.readText(idxTarget);
         const idx = JSON.parse(raw);
-        // 新鲜度检查：version 代际（parser 修复标记）+ 文件数 + mtime（任一文件晚于 builtAt 即重建）
+        // 新鲜度检查：version 代际（须与 INDEX_VERSION 一致）+ 文件数 + mtime（任一文件晚于 builtAt 即重建）
         const builtAt = Date.parse(idx && idx.builtAt) || 0;
-        let fresh = !!(idx && idx.version === 2 && idx.fileCount === currentFileCount && Array.isArray(idx.items));
+        let fresh = !!(idx && idx.version === INDEX_VERSION && idx.fileCount === currentFileCount && Array.isArray(idx.items));
         if (fresh) {
           const maxMtime = files.reduce((mx, f) => (f.mtime && f.mtime > mx ? f.mtime : mx), 0);
           if (maxMtime > 0 && maxMtime > builtAt) fresh = false; // stat 不可用时 maxMtime=0 → 跳过 mtime 判断
@@ -851,7 +853,7 @@ export default {
       // 4. 写磁盘索引
       try {
         const indexData = {
-          version: 2, // v2：parser 修复（KM 块跳过/qid 引号/stem 真实题干）的代际标记，旧 v1 索引不被信任
+          version: INDEX_VERSION, // v3：索引持久化完整题目信息（answer/analysis），修复磁盘加载后 judge 标准答案丢失（方案 A）
           builtAt: _bankCache.builtAt,
           fileCount: currentFileCount,
           questionCount: all.length,
@@ -862,6 +864,8 @@ export default {
             stem: item.stem,
             options: item.options || [],
             material: item.material,
+            answer: item.answer || '',
+            analysis: item.analysis || '',
             meta: item.meta || {},
             knowledgePoints: (item.knowledgePoints || []).map(kp => ({
               role: kp.role,
@@ -1051,8 +1055,8 @@ export default {
               stem: i.stem,
               options: i.options,
               questionId: i.questionId,
+              // 检索详情与 solve 口径一致：不暴露 role/evidence（避免"哪个是核心考点"等解析派生信息）；role 仅在真题分析（geo_analyze）的 examPoints 中返回
               knowledgePoints: (i.knowledgePoints || []).map(kp => ({
-                role: kp.role,
                 knowledgeUnit: kp.knowledge_unit || kp.knowledgeUnit || ''
               }))
             }))

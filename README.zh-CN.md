@@ -21,11 +21,12 @@ plugins），把 DSH Agent 变成高中地理教师助手。MIT 许可开源。
 
 ### 2. 视觉识别（`geo-vision`）
 
-把题目图片转录为结构化、经过 schema 校验的文本——**provider 无关**（任意 OpenAI 兼容视觉端点）且**显式优雅降级**（转录失败会如实上报，绝不静默伪装）：
+把题目图片转录为结构化证据，并在失败时明确降级。GeoTeacher 现在只保留轻量适配层；通用图片读取、OCR、模型路由、缓存与结果校验由宿主 `dshVision` 服务负责：
 
-- 内容 hash 缓存、运行日志、运行时开关（`/geo/vision/status|toggle`）；
-- 默认开发配置：SiliconFlow + `Qwen/Qwen3-VL-8B-Instruct`（Apache-2.0）；
-- **API Key 由你自行配置**——仓库内不含任何凭据。
+- 题库题由 `geo_solve` 自动获取图像转录；
+- 教师直接提供的独立图片使用宿主 `vision_inspect`，纯文字扫描可用 `vision_ocr`；
+- `/geo/vision/status|toggle` 只控制 GeoTeacher 适配层；
+- 模型、provider 与凭据均由宿主配置，本仓库不保存凭据。
   → [docs/zh/讲题图像转录方案.md](docs/zh/讲题图像转录方案.md) · [docs/en/vision.md](docs/en/vision.md)
 
 ### 其他能力
@@ -50,9 +51,8 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 #      questionBankPath:  <KB_ROOT>/obsidian_vault/04_题目
 #      outputPath:        <WORKSPACE>/outputs
 
-# 3. 配置视觉 provider 与 Key（用户自备凭据）
-#    在 DSH settings.yaml 添加 siliconflow 路由（见 config.example.yaml），
-#    并设置环境变量 SILICONFLOW_API_KEY。
+# 3. 确认 DSH 宿主已提供 dshVision 服务与视觉工具。
+#    provider、模型和凭据在宿主视觉组件中配置。
 
 # 4. 重启 DSH → 新建 geo-teacher 会话 → 提问：「讲解 25 年安徽卷第17题」
 ```
@@ -77,7 +77,7 @@ preset/              dsh 插件 + 技能（待部署产物）
 sample-data/         脱敏样例 + taxonomy 子集
 scripts/             geo-verify.mjs（检查）、install.ps1（部署）
 docs/en, docs/zh     架构 · 流水线 · 视觉 · 教学文档
-config.example.yaml  provider / 数据路径配置项
+config.example.yaml  数据路径 / 视觉适配层配置项
 ```
 
 ## 验证

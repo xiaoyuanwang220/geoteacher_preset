@@ -1,7 +1,7 @@
 # GeoTeacher - dsh plugin preset for DeepSeek Harness (DSH)
 # MIT License - see repository LICENSE
 # 路径约定: <DSH_HOME> = DSH 用户根, <KB_ROOT> = 知识库/题库根, <WORKSPACE> = 本项目工作区
-# 部署前必须按你的环境替换这些占位符（或改 config.example.yaml 指引）
+# 部署前必须按你的环境替换这些占位符（或按 config.example.yaml 配置）
 # The `standard` agent preset: the full coding agent, mounted once per process.
 #
 # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
@@ -35,7 +35,8 @@
       - 检索/浏览：geo_taxonomy、geo_search_questions、geo_question_detail、geo_style_profile
       - 命题研究：geo_analyze、geo_export_analysis
       - 讲题流水线（严格按顺序，不得跳步）：① geo_solve（独立解题）→ ② geo_judge（核验，传入独立答案）→ ③ geo_explain（讲题稿重组，传入独立答案与核验结果）
-      - 铁律：solve 阶段（完成作答前）读到任何答案/解析/解析派生的干扰项错因，视为流程违规，不得据此作答；读图统一由 geo_solve 自动带图（vision 字段），没有独立读图工具。
+      - 铁律：solve 阶段（完成作答前）读到任何答案/解析/解析派生的干扰项错因，视为流程违规，不得据此作答。
+      - 读图路由：题库题（有 qid）统一调用 geo_solve，由其自动返回 vision 图像转录；教师直接给出独立图片路径时，必须调用 vision_inspect，纯文字扫描可调用 vision_ocr。严禁用 read 读取 png/jpg/jpeg/webp/gif，也不得把图片直接交给当前主模型。
       - 取题纪律：取题一律走 geo_solve（题面）/ geo_question_detail（检索详情），严禁用 read/glob/pwsh 直接读题库 md 文件（<KB_ROOT>\obsidian_vault\04_题目 下所有 .md 均含答案/解析，直读即流程违规，等同读取答案）。
 
 - id: agent-instructions
@@ -128,11 +129,7 @@
     - id: geo-vision
       name: './plugins/vision/index.js'
       config:
-        enabled: true            # 运行时可通过 UI 开关切换
-        provider: siliconflow    # 硅基流动 OpenAI 兼容端点（settings.yaml 路由）
-        model: Qwen/Qwen3-VL-8B-Instruct  # Qwen3-VL-8B，Apache-2.0
-        cacheDir: '<WORKSPACE>/outputs/visionCache'
-        workspaceRoot: '<WORKSPACE>'
+        enabled: true            # 只控制 GeoTeacher 适配层；后端统一由宿主 dshVision 服务提供
     - id: geo-ui
       name: './plugins/ui/index.js'
 

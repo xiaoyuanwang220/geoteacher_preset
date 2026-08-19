@@ -11,9 +11,9 @@ geography-teacher assistant. Its two flagship capabilities:
    with an anti-leak design: the solver sees only the stem (no answers or
    analysis), the judge opens the standard answer for verification, and the
    explainer recomposes a teaching script.
-2. **Vision transcription** (`geo-vision`, provider-agnostic): any
-   OpenAI-compatible vision model endpoint, schema validation, content-hash
-   cache, run logs, explicit graceful degradation.
+2. **Vision transcription** (`geo-vision` adapter): question images are passed
+   to the host-provided `dshVision` service and mapped back to GeoTeacher's
+   evidence contract with explicit graceful degradation.
 
 ## Runtime dependency: DeepSeek Harness (DSH)
 
@@ -21,8 +21,9 @@ geography-teacher assistant. Its two flagship capabilities:
   own distribution (see its license/terms; this project references it as a
   dependency only).
 - The plugins run inside DSH's Cordis composition and consume DSH services:
-  `fs`, `webServer`, `tools`, `llm`, `attachments` (vision), `agentPresets`
-  (preset mounting). They do **not** depend on any model vendor SDK.
+  `fs`, `webServer`, `tools`, `agentPresets` (preset mounting), and
+  `dshVision` (vision). The host vision component owns `llm`, attachments,
+  provider routing, caching and validation. GeoTeacher has no vendor SDK.
 
 ### Directory layout expectation
 
@@ -43,14 +44,15 @@ questions + a minimal taxonomy subset only; the development question bank
 (province/year grouped gaokao pages with MANAGED-KM annotations) is **not**
 redistributed.
 
-## Vision provider & credentials (user-configured)
+## Host vision service & credentials
 
-- Default (dev) config: SiliconFlow, model `Qwen/Qwen3-VL-8B-Instruct`
-  (Apache-2.0).
-- **You bring your own API key.** Example: set `SILICONFLOW_API_KEY`, or
-  whichever key env your provider route declares in DSH `settings.yaml`.
-- Any OpenAI-compatible endpoint works (Bailian, local vLLM, ...); change
-  `geo-vision` `provider`/`model` in `agent.cordis.yml` + DSH `settings.yaml`.
+- The DSH host must publish a compatible `dshVision` service before this preset
+  mounts. Without it, the GeoTeacher adapter stays disabled and reports an
+  explicit degraded status.
+- Provider, model, API credentials, attachment handling, cache and retry policy
+  are configured in the host vision component, not in this preset.
+- The host should also expose `vision_inspect` and `vision_ocr` when users need
+  to submit standalone images outside the question bank.
 - See `config.example.yaml` and `docs/en/vision.md`.
 
 ## Runtime requirements
@@ -63,5 +65,5 @@ redistributed.
 
 ## Network
 
-- Vision calls go to your configured vision endpoint (requires network + key).
+- Vision network access is owned by the host `dshVision` component.
 - LLM calls go through your DSH model route.

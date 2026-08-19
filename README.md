@@ -31,14 +31,15 @@ question-bank markdown directly). →
 
 ### 2. Vision transcription (`geo-vision`)
 
-Read figure images from exam questions into structured, schema-validated text —
-**provider-agnostic** (any OpenAI-compatible vision endpoint) and with
-**explicit graceful degradation** (a failed transcription is reported, never
-silently faked):
+Read figure images from exam questions into structured evidence with explicit
+graceful degradation. GeoTeacher now contains only a thin adapter: generic
+image loading, OCR, model routing, caching and validation belong to the host's
+`dshVision` service.
 
-- content-hash cache, run logs, runtime toggle (`/geo/vision/status|toggle`),
-- default dev config: SiliconFlow + `Qwen/Qwen3-VL-8B-Instruct` (Apache-2.0).
-- **You bring your own API key** — no credentials live in this repository.
+- question-bank figures are transcribed automatically by `geo_solve`;
+- standalone images use host tools such as `vision_inspect` or `vision_ocr`;
+- `/geo/vision/status|toggle` controls the GeoTeacher adapter only;
+- model/provider credentials remain host-managed and are not stored here.
   →
   [docs/en/vision.md](docs/en/vision.md)
 
@@ -66,9 +67,8 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 #      questionBankPath:  <KB_ROOT>/obsidian_vault/04_题目
 #      outputPath:        <WORKSPACE>/outputs
 
-# 3. Configure the vision provider + key (user-configured credentials)
-#    In DSH settings.yaml add a siliconflow route (see config.example.yaml),
-#    then export SILICONFLOW_API_KEY.
+# 3. Ensure the DSH host provides the dshVision service and vision tools.
+#    Provider/model credentials are configured in that host component.
 
 # 4. Restart DSH → open a new session on the geo-teacher preset →
 #    ask: "讲解 25 年安徽卷第17题"  (or "explain Anhui 2025, question 17")
@@ -97,7 +97,7 @@ preset/              dsh plugins + skills (the artifact to deploy)
 sample-data/         sanitized samples + taxonomy subset
 scripts/             geo-verify.mjs (checks), install.ps1 (deploy)
 docs/en, docs/zh     architecture · pipeline · vision · teaching docs
-config.example.yaml  provider / data-path knobs
+config.example.yaml  data paths / vision-adapter settings
 ```
 
 ## Verification

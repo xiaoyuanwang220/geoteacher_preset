@@ -12,7 +12,7 @@ preset is mounted by DSH under `<DSH_HOME>/.agent-presets/geo-teacher/`.
 | `geo-bank` | `preset/plugins/bank/index.js` | question-bank search / detail | `/geo/bank/search`, `/geo/bank/detail` | `geo_search_questions`, `geo_question_detail` |
 | `geo-analysis` | `preset/plugins/analysis/index.js` | explain-pipeline tools + analysis/export | `/geo/analysis/*` | `geo_analyze`, `geo_export_analysis`, `geo_solve`, `geo_judge`, `geo_explain`, `geo_style_profile`* |
 | `geo-generator` | `preset/plugins/generator/index.js` | style profile / question generation support | `/geo/generator/style` | `geo_style_profile` |
-| `geo-vision` | `preset/plugins/vision/index.js` | `geoVision` service: vision transcription (provider-agnostic, schema-validated, cached, degradable) | `/geo/vision/status`, `/geo/vision/toggle` | — (consumed by `geo_solve`) |
+| `geo-vision` | `preset/plugins/vision/index.js` | `geoVision` adapter: maps the host `dshVision` result to GeoTeacher's evidence contract | `/geo/vision/status`, `/geo/vision/toggle` | — (consumed by `geo_solve`) |
 | `geo-ui` | `preset/plugins/ui/index.js` (+`page.html`) | teacher-facing dashboard | `/geo-teacher` | — |
 
 \* `geo_style_profile` is registered by `geo-generator`; listed here for the
@@ -32,6 +32,7 @@ markdown). See `docs/en/pipeline-solving.md`.
 ## Vision contract (the flagship)
 
 `geo_solve` auto-attaches an image transcription via `geoVision.extract(qid)`:
-OpenAI-compatible vision endpoint → schema validation → content-hash cache →
-run log (`vision-runs.jsonl`) → explicit `visionOk`/degraded flag (never
-silently fakes success). See `docs/en/vision.md`.
+question image references → host `dshVision.inspect(...)` in evidence-only OCR
+mode → adapter mapping → explicit `visionOk`/degraded status. Generic image
+loading, model calls, caching and validation remain host responsibilities. See
+`docs/en/vision.md`.

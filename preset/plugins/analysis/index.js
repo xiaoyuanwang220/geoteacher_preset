@@ -183,7 +183,7 @@ export default {
     // 模型工具：讲题 Solver（P1）——独立解题（讲题流水线第 1 步，唯一解题入口）
     ctx.tools.register({
       name: 'geo_solve',
-      description: '讲题流水线第 1 步（Solver）· 独立解题入口：返回题面（材料/题干/选项/小问）+ 审题骨架（设问类型框架/思维模式/焦点要素/维度扫描/图像转录），不含答案、解析或任何解析派生的干扰项错因。模型据此独立完成"审题→证据提取→知识激活→推理链→作答"。铁律：完成作答前不得读取答案/解析；读图由本工具自动带图（vision 字段），无独立读图工具。',
+      description: '讲题流水线第 1 步（Solver）· 题库题独立解题入口：返回题面（材料/题干/选项/小问）+ 审题骨架（设问类型框架/思维模式/焦点要素/维度扫描/图像转录），不含答案、解析或任何解析派生的干扰项错因。模型据此独立完成"审题→证据提取→知识激活→推理链→作答"。铁律：完成作答前不得读取答案/解析；题库图片由本工具自动返回 vision 图像转录，不要再次用 read 读取图片。',
       parameters: {
         type: 'object',
         properties: {
@@ -205,7 +205,7 @@ export default {
         try {
           const geoVision = ctx.get('geoVision');
           if (geoVision && geoVision.enabled) {
-            const v = await geoVision.extract(args.qid);
+            const v = await geoVision.extract(args.qid, { problem: data });
             if (v && v.status === 'success') {
               const markdown = (v.markdown || '').trim();
               // usable=true 仅当确有转录内容；全部图降级时 markdown 为空，明确标记不可用（不静默）
@@ -214,7 +214,9 @@ export default {
               vision = { status: 'degraded', questionId: args.qid, error: v.error || v.message || 'vision degraded' };
             }
           }
-        } catch (e) { vision = null; }
+        } catch (e) {
+          vision = { status: 'degraded', questionId: args.qid, error: String((e && e.message) || e) };
+        }
         return { status: 'success', problem: data, scaffold, vision };
       }
     });

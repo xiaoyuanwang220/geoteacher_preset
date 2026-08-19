@@ -11,28 +11,14 @@ questionBankPath: <KB_ROOT>/obsidian_vault/04_题目   # question-bank md dir
 outputPath: <WORKSPACE>/outputs                      # analysis exports / index
 workspaceRoot: <WORKSPACE>                           # sandbox write root
 
-# ── geo-vision: vision model (USER-CONFIGURED CREDENTIALS) ──────────────────
-# enabled: runtime toggle in the drawer is available (GET/POST /geo/vision/status|toggle)
+# ── geo-vision: GeoTeacher adapter ──────────────────────────────────────────
+# This flag controls only the adapter. The DSH host must separately provide
+# dshVision; that host component owns provider/model credentials, attachment
+# persistence, cache, retries, OCR/inspection routing and result validation.
 vision:
   enabled: true
-  # Provider route name declared in YOUR DSH settings.yaml (OpenAI-compatible).
-  provider: siliconflow
-  # Model id as declared in the DSH provider route. Qwen3-VL-8B is Apache-2.0;
-  # any OpenAI-compatible vision model works (Bailian, local vLLM, ...).
-  model: Qwen/Qwen3-VL-8B-Instruct
-  cacheDir: <WORKSPACE>/outputs/visionCache
-  workspaceRoot: <WORKSPACE>
 
-# ── DSH settings.yaml (outside this repo) ──────────────────────────────────
-# Add a provider route for vision, e.g.:
-#   siliconflow:
-#     apiKeyEnv: SILICONFLOW_API_KEY
-#     baseURL: https://api.siliconflow.cn/v1
-#     api: openai-completions
-#     displayName: SiliconFlow
-#     models:
-#       - id: Qwen/Qwen3-VL-8B-Instruct
-#         name: Qwen3-VL-8B
-#         input: [text, image]
-# Then export the key variable (e.g. SILICONFLOW_API_KEY=sk-...) so DSH can
-# read it. The main agent model route is independent of this vision route.
+# Host prerequisite (configured outside this repository):
+# - publish a compatible dshVision service;
+# - expose vision_inspect and vision_ocr for standalone user images if needed;
+# - configure provider, model and credentials in the host vision component.

@@ -72,5 +72,5 @@ preset/            dsh plugins + skills (the artifact to deploy)
 sample-data/       sanitized sample questions + taxonomy subset
 scripts/           geo-verify.mjs (checks), install.ps1 (deploy)
 docs/en|zh         architecture, pipeline, vision, teaching docs
-config.example.yaml  vision/provider/data-path knobs
+config.example.yaml  data paths / vision-adapter settings
 ```

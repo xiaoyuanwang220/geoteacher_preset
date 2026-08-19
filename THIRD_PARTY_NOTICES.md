@@ -13,15 +13,15 @@ terms apply as follows; this project itself is MIT licensed (see LICENSE).
   See its repository/documentation. This project only documents the dependency
   and does not redistribute DSH source code.
 
-## Vision models (user-configured, not bundled)
+## Host vision component and models (not bundled)
 
-- **Qwen3-VL-8B-Instruct** — Apache-2.0 (Alibaba / Qwen). The `geo-vision`
-  plugin can talk to any OpenAI-compatible vision endpoint you have access to
-  (SiliconFlow, Alibaba Bailian, local vLLM, ...).
-- **API keys / credentials**: **you** bring your own key. This repository
-  contains no credentials. Configure a provider route in your DSH
-  `settings.yaml` (see `config.example.yaml` and DEPENDENCIES.md), e.g.
-  `SILICONFLOW_API_KEY`.
+- The `geo-vision` plugin is an adapter for the host-provided `dshVision`
+  service. This repository does not bundle that host component, a vision model,
+  model weights, or a provider SDK.
+- The host operator chooses the vision model and provider. Their respective
+  licenses and terms apply independently.
+- API keys and credentials belong to the host configuration and are never
+  stored by this repository.
 
 ## Sample data
 

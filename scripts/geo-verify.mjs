@@ -193,8 +193,8 @@ async function checkApply() {
         cfg.outputPath = '<WORKSPACE>/outputs';
         cfg.workspaceRoot = '<WORKSPACE>';
       }
-      // 给 vision 特定 config
-      if (f.includes('/vision/')) { cfg.enabled = false; cfg.cacheDir = '<WORKSPACE>/outputs/visionCache'; cfg.workspaceRoot = '<WORKSPACE>'; }
+      // 视觉适配层在源码冒烟中关闭；真实后端由宿主 dshVision 提供
+      if (f.includes('/vision/')) { cfg.enabled = false; }
       plugin.apply(ctx, cfg);
     } catch (e) {
       add('apply', `apply 冒烟: ${basename(f)}`, false, e.message);

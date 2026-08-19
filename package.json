@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "DeepSeek Harness (DSH) agent-preset plugins (dsh plugins) for a high-school geography teacher assistant: anti-leak question-explaining pipeline (solve/judge/explain) + provider-agnostic vision transcription with graceful degradation. MIT.",
+  "description": "DeepSeek Harness (DSH) agent-preset plugins for a high-school geography teacher assistant: anti-leak solving pipeline plus host-integrated vision transcription with graceful degradation. MIT.",
   "license": "MIT",
   "keywords": [
     "dsh",
