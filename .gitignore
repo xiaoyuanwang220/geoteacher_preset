@@ -21,6 +21,21 @@ node_modules/
 .env.*
 *.pem
 *.key
+*.p12
+*.pfx
+*.keystore
+config.local.*
+*.local.config.*
+credentials.json
+credentials.*.json
+secrets.json
+secrets.yaml
+secrets.yml
+.secrets/
+.aws/
+.ssh/
+.npmrc
+.pypirc
 .git-msg.tmp
 
 # Download archives; extracted source may remain versioned
