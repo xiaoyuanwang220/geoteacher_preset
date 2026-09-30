@@ -1,9 +1,0 @@
-{
-  "name": "geo-teacher-agent",
-  "version": "1.0.0",
-  "description": "高中地理教师辅助 Agent - 基于 DSH Cordis 插件架构",
-  "main": "geo-teacher-agent.js",
-  "dependencies": {
-    "js-yaml": "^4.1.0"
-  }
-}

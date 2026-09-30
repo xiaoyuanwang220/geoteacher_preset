@@ -1,0 +1,494 @@
+{
+  "schemaVersion": 1,
+  "taskId": "2026-0927-heat-circulation",
+  "revision": 7,
+  "mode": "competition",
+  "stage": "draft_ready",
+  "readiness": "draft_complete",
+
+  "request": {
+    "grade": "高一",
+    "topic": "热力环流",
+    "learningStateRaw": "学生对热力环流的概念不理解，做题时容易把它和大气受热过程混在一起",
+    "targetDifficulty": "中等",
+    "taughtScope": "必修第一册 第二章第二节",
+    "constraints": ["参赛作品需附完整设计说明", "题组为材料型单项选择题组"]
+  },
+
+  "taxonomySources": [
+    {
+      "file": "knowledge_taxonomy_natural_geography.yaml",
+      "version": "v0.2-draft",
+      "status": "draft",
+      "readAt": "2026-09-27T10:15:00+08:00"
+    }
+  ],
+
+  "knowledge": {
+    "coreNodeIds": ["KU-NAT-ATM-HEAT-005"],
+    "supportingNodeIds": ["KU-NAT-ATM-HEAT-001"],
+    "candidateNodeIds": ["KU-NAT-ATM-CIRC-001"],
+    "unresolved": [],
+    "taxonomyGap": false
+  },
+
+  "learningHypotheses": [
+    {
+      "id": "LH-01",
+      "teacherInput": "学生对热力环流的概念不理解",
+      "statement": "可能无法建立「冷热差异 → 垂直运动 → 气压差异 → 水平气流」的完整因果链，只记住单个环节",
+      "observableErrors": ["只判断垂直运动，不判断水平气流", "把气温高直接判定为近地面高压"],
+      "candidateDistractorStrategy": "因果倒置或局部链条选项",
+      "status": "selected"
+    },
+    {
+      "id": "LH-02",
+      "teacherInput": "容易把它和大气受热过程混在一起",
+      "statement": "可能把热力环流的成因与大气受热过程的能量传递次序混淆，误把辐射环节当作环流环节",
+      "observableErrors": ["用大气受热过程的环节解释环流方向", "把地面辐射当作环流的直接驱动力"],
+      "candidateDistractorStrategy": "邻近概念替换选项",
+      "status": "selected"
+    },
+    {
+      "id": "LH-03",
+      "teacherInput": "做题时容易出错",
+      "statement": "待验证：可能能把原理复述出来，但无法迁移到城市热岛、海陆风等具体情境",
+      "observableErrors": ["情境换新后仍按教材原话作答", "忽略材料给出的时间或尺度条件"],
+      "candidateDistractorStrategy": "忽略材料条件的表面匹配选项",
+      "status": "proposed"
+    }
+  ],
+
+  "concepts": [
+    {
+      "id": "C1",
+      "revision": 2,
+      "title": "沿海城市海陆风：一天之内的风向反转",
+      "coreKnowledge": [
+        { "taxonomyId": "KU-NAT-ATM-HEAT-005", "role": "core_exam_point" },
+        { "taxonomyId": "KU-NAT-ATM-HEAT-001", "role": "supporting_knowledge" }
+      ],
+      "curriculumRefs": [
+        { "statement": "运用示意图等，说明大气热力环流原理，并解释相关现象。", "behaviorVerb": "说明、解释", "sourceId": "S1", "verification": "pending" }
+      ],
+      "coreCompetencies": ["综合思维", "区域认知"],
+      "paperSourceIds": [],
+      "learningHypothesisIds": ["LH-01", "LH-03"],
+      "context": {
+        "issue": "沿海城市在晴朗微风的天气里，午后与夜间的近地面风向相反，需要学生用冷热差异解释这一反转",
+        "sourceIds": ["S3"]
+      },
+      "measurementTarget": "能否用冷热差异推出垂直运动与近地面气压差异，并据此判断水平气流方向",
+      "itemProgression": [
+        { "item": 1, "cognitiveLevel": "理解与解释" },
+        { "item": 2, "cognitiveLevel": "分析与推断" },
+        { "item": 3, "cognitiveLevel": "迁移与应用" }
+      ],
+      "fourWings": {
+        "primary": ["基础性", "应用性"],
+        "secondary": ["综合性"],
+        "evidence": ["Q1 需从材料读出昼夜温差", "Q2 需把温差转成气压差", "Q3 需把同一原理迁到另一情境"]
+      },
+      "visualProposalIds": ["V1"],
+      "innovation": "用同一天的两次风向对比替代静态原理图，让学生必须先处理时间条件再判断方向",
+      "expectedDifficulty": "中等",
+      "risks": ["若不给图，材料的时间条件不易读清", "海陆风与城市热岛环流可能被学生混为一谈"]
+    },
+    {
+      "id": "C2",
+      "revision": 1,
+      "title": "城市热岛环流：把郊区与市区的温差当作驱动力",
+      "coreKnowledge": [
+        { "taxonomyId": "KU-NAT-ATM-HEAT-005", "role": "core_exam_point" }
+      ],
+      "curriculumRefs": [
+        { "statement": "运用示意图等，说明大气热力环流原理，并解释相关现象。", "behaviorVerb": "说明、解释", "sourceId": "S1", "verification": "pending" }
+      ],
+      "coreCompetencies": ["人地协调观", "综合思维"],
+      "paperSourceIds": [],
+      "learningHypothesisIds": ["LH-01", "LH-02"],
+      "context": {
+        "issue": "夏季晴朗夜晚，市区与郊区地面温度差异形成近地面气流，影响城市绿地布局",
+        "sourceIds": ["S1", "S4"]
+      },
+      "measurementTarget": "能否区分「气温高低」与「气压高低」的对应关系",
+      "itemProgression": [
+        { "item": 1, "cognitiveLevel": "识别与描述" },
+        { "item": 2, "cognitiveLevel": "分析与推断" }
+      ],
+      "fourWings": {
+        "primary": ["应用性"],
+        "secondary": ["基础性", "创新性"],
+        "evidence": ["Q2 需用材料中的温差判断近地面气流方向"]
+      },
+      "visualProposalIds": [],
+      "innovation": "以绿地布局的实际决策作为设问落点",
+      "expectedDifficulty": "中等偏易",
+      "risks": ["热点若只作背景、删除后题目仍成立，则须更换情境"]
+    },
+    {
+      "id": "C3",
+      "revision": 1,
+      "title": "山谷风：把尺度与时间条件作为判断前提",
+      "coreKnowledge": [
+        { "taxonomyId": "KU-NAT-ATM-HEAT-005", "role": "core_exam_point" }
+      ],
+      "curriculumRefs": [
+        { "statement": "运用示意图等，说明大气热力环流原理，并解释相关现象。", "behaviorVerb": "说明、解释", "sourceId": "S1", "verification": "pending" }
+      ],
+      "coreCompetencies": ["区域认知", "地理实践力"],
+      "paperSourceIds": [],
+      "learningHypothesisIds": ["LH-03"],
+      "context": {
+        "issue": "山区昼夜风向变化对夜间冷空气堆积与农业布局的影响",
+        "sourceIds": ["S2"]
+      },
+      "measurementTarget": "能否在不同时空尺度上迁移同一原理",
+      "itemProgression": [
+        { "item": 1, "cognitiveLevel": "理解与解释" },
+        { "item": 2, "cognitiveLevel": "迁移与应用" }
+      ],
+      "fourWings": {
+        "primary": ["综合性"],
+        "secondary": ["基础性"],
+        "evidence": ["Q2 需同时处理坡度与昼夜两个条件"]
+      },
+      "visualProposalIds": [],
+      "innovation": "用农业布局后果反推气流方向",
+      "expectedDifficulty": "中等",
+      "risks": ["山谷风的教材深度因版本而异，须核验必备知识范围"]
+    }
+  ],
+
+  "selectedConcept": {
+    "conceptIds": ["C1"],
+    "revision": 2,
+    "composed": false,
+    "basis": "教师选择 C1；理由是情境最贴近学生生活经验，且时间条件的处理正好指向 LH-03"
+  },
+
+  "questionSet": {
+    "questionSetId": "QS-2026-0927-HEAT-01",
+    "material": {
+      "text": "某沿海城市位于大陆东岸，夏季晴朗微风日。观测记录显示：午后近地面风由海洋吹向陆地，夜间近地面风由陆地吹向海洋。城市西侧有一片向内陆延伸的平缓陆地，东侧为开阔海面。",
+      "visualRefs": ["V1"]
+    },
+    "items": [
+      {
+        "itemId": "Q1",
+        "stem": "午后，该城市近海面与内陆近地面相比，气温与气压的对应关系是",
+        "options": {
+          "A": "内陆气温较高、近地面气压较低",
+          "B": "内陆气温较高、近地面气压较高",
+          "C": "内陆气温较低、近地面气压较低",
+          "D": "内陆气温较低、近地面气压较高"
+        },
+        "answer": "A",
+        "analysis": "据材料「夏季晴朗微风日」与「午后」可知，午后内陆陆地升温快于海面，内陆气温较高；气温较高处空气受热上升，近地面空气密度减小，故近地面气压较低。故选 A。",
+        "distractorMap": {
+          "B": { "misconceptionId": "LH-01", "errorType": "因果倒置" },
+          "C": { "misconceptionId": "LH-02", "errorType": "概念混淆" },
+          "D": { "misconceptionId": "LH-02", "errorType": "邻近概念替换" }
+        },
+        "coreExamPoint": "KU-NAT-ATM-HEAT-005",
+        "supportingKnowledge": ["KU-NAT-ATM-HEAT-001"],
+        "materialClues": ["夏季晴朗微风日", "午后", "东侧为开阔海面"],
+        "cognitiveLevel": "理解与解释",
+        "fourWings": {
+          "primary": ["基础性"],
+          "secondary": ["综合性"],
+          "evidence": ["需同时读取时间条件与海陆位置，并把气温差转成气压差"]
+        }
+      },
+      {
+        "itemId": "Q2",
+        "stem": "该城市午后近地面风的形成过程，正确的顺序是",
+        "options": {
+          "A": "海陆温差 → 空气垂直运动 → 同一水平面上气压差异 → 水平气流",
+          "B": "同一水平面上气压差异 → 海陆温差 → 空气垂直运动 → 水平气流",
+          "C": "空气垂直运动 → 海陆温差 → 水平气流 → 同一水平面上气压差异",
+          "D": "海陆温差 → 水平气流 → 同一水平面上气压差异 → 空气垂直运动"
+        },
+        "answer": "A",
+        "analysis": "据材料与热力环流原理：地面冷热不均（海陆温差）使空气发生垂直运动；垂直运动造成同一水平面上的气压差异；水平气压差异再驱动空气由高压流向低压，形成水平气流。故顺序为 A。B、C、D 都把结果置于原因之前或把水平气流置于气压差之前。",
+        "distractorMap": {
+          "B": { "misconceptionId": "LH-01", "errorType": "因果倒置" },
+          "C": { "misconceptionId": "LH-01", "errorType": "因果倒置" },
+          "D": { "misconceptionId": "LH-01", "errorType": "局部链条替换" }
+        },
+        "coreExamPoint": "KU-NAT-ATM-HEAT-005",
+        "supportingKnowledge": [],
+        "materialClues": ["午后近地面风由海洋吹向陆地"],
+        "cognitiveLevel": "分析与推断",
+        "fourWings": {
+          "primary": ["基础性", "综合性"],
+          "secondary": ["应用性"],
+          "evidence": ["需把四步因果链完整排序，任一环错位即失败"]
+        }
+      },
+      {
+        "itemId": "Q3",
+        "stem": "若该城市在夜间于西侧内陆规划一片绿地，从热力环流角度看，其主要作用是",
+        "options": {
+          "A": "降低内陆夜间降温幅度，减弱由陆地吹向海洋的近地面气流",
+          "B": "提高内陆夜间气温，增强由陆地吹向海洋的近地面气流",
+          "C": "改变海陆温差的方向，使夜间近地面风由海洋吹向陆地",
+          "D": "消除陆地的垂直运动，使夜间近地面气压差异消失"
+        },
+        "answer": "A",
+        "analysis": "据材料「夜间近地面风由陆地吹向海洋」可知夜间陆地降温快、气温低于海面，陆地近地面气压较高。绿地可减小内陆夜间降温幅度，使海陆温差减小，从而减弱由陆地吹向海洋的近地面气流。故 A 正确。B 与绿地作用方向相反；C 夸大了绿地的作用，海陆温差方向由昼夜过程决定；D 表述绝对化，绿地不能消除垂直运动。",
+        "distractorMap": {
+          "B": { "misconceptionId": "LH-03", "errorType": "方向误判" },
+          "C": { "misconceptionId": "LH-03", "errorType": "绝对化表述" },
+          "D": { "misconceptionId": "LH-01", "errorType": "绝对化表述" }
+        },
+        "coreExamPoint": "KU-NAT-ATM-HEAT-005",
+        "supportingKnowledge": [],
+        "materialClues": ["夜间近地面风由陆地吹向海洋", "西侧有一片向内陆延伸的平缓陆地"],
+        "cognitiveLevel": "迁移与应用",
+        "fourWings": {
+          "primary": ["应用性"],
+          "secondary": ["综合性", "创新性"],
+          "evidence": ["需把昼夜条件与绿地这一新变量结合，判断对气流强弱的影响"]
+        }
+      }
+    ]
+  },
+
+  "design": {
+    "curriculumBasis": [
+      {
+        "statement": "运用示意图等，说明大气热力环流原理，并解释相关现象。",
+        "behaviorVerb": "说明、解释",
+        "evidenceInItem": "Q1 解释午后海陆气温与气压对应关系；Q2 说明环流形成的因果顺序；Q3 解释绿地布局对近地面气流的影响",
+        "sourceId": "S1",
+        "verification": "pending"
+      }
+    ],
+    "textbookBasis": [
+      {
+        "prerequisite": "地面冷热不均引起空气垂直运动，进而造成同一水平面上的气压差异",
+        "basis": "人教版《地理》必修第一册 第二章第二节「大气热力环流」正文与示意图",
+        "sourceId": "S2"
+      },
+      {
+        "prerequisite": "近地面气温高对应近地面气压低",
+        "basis": "同上，教材以等压面弯曲方向说明近地面与高空气压的对应关系",
+        "sourceId": "S2"
+      }
+    ],
+    "taxonomyRole": {
+      "coreExamPoint": "KU-NAT-ATM-HEAT-005（大气热力环流）",
+      "supportingKnowledge": ["KU-NAT-ATM-HEAT-001（大气受热过程）"],
+      "materialClues": ["夏季晴朗微风日", "午后/夜间风向对比", "西侧内陆绿地"]
+    },
+    "fourWings": {
+      "primary": ["基础性", "应用性"],
+      "secondary": ["综合性"],
+      "evidence": ["Q1 基础性：概念与气压对应", "Q2 综合性：完整因果链", "Q3 应用性：在新变量下作出判断"]
+    },
+    "expectedDifficulty": {
+      "level": "中等",
+      "rationale": [
+        "考查知识与教材依据：核心为热力环流因果链，属高中地理主干知识",
+        "信息加工负荷：需处理时间（午后/夜间）、海陆位置与绿地这一新变量，关键证据 3 条，无冗余数据",
+        "认知水平：Q1 理解与解释、Q2 分析与推断、Q3 迁移与应用，与课标行为动词「说明、解释」相互校验",
+        "干扰项区分度：错误选项分别对应因果倒置、概念混淆与绝对化表述，需达到相应理解水平才能排除"
+      ],
+      "knowledgeBasis": "核心考点 KU-NAT-ATM-HEAT-005，字面匹配当前 taxonomy（v0.2-draft）",
+      "informationLoad": "336 字材料 + 1 张拟用图；3 道小题共用同一情境",
+      "cognitiveLevel": "理解与解释 → 分析与推断 → 迁移与应用",
+      "distractorDiscrimination": "每道小题的 3 个干扰项分别映射 LH-01/LH-02/LH-03"
+    },
+    "innovationBoundary": [
+      "创新点在情境组织与时间条件处理，不在知识点本身",
+      "不使用论文原始图表；如后续引用研究结论，须先完成教学化转化并记录读取范围",
+      "无真实试测数据，不输出正确率与区分度"
+    ]
+  },
+
+  "simulations": [
+    {
+      "profile": "A",
+      "cognitiveDescription": "能准确提取材料条件，完成分析与迁移",
+      "responses": [
+        { "itemId": "Q1", "selected": "A", "reasoning": "午后内陆升温快，气温高则近地面气压低", "correctUnderstanding": "气温与近地面气压的对应关系", "errorStep": null, "misconceptionId": null },
+        { "itemId": "Q2", "selected": "A", "reasoning": "冷热差异先造成垂直运动，才有同一水平面的气压差，最后才是水平气流", "correctUnderstanding": "完整因果链", "errorStep": null, "misconceptionId": null },
+        { "itemId": "Q3", "selected": "A", "reasoning": "绿地减小夜间降温幅度，海陆温差变小，陆地吹向海洋的风减弱", "correctUnderstanding": "把新变量接入原理", "errorStep": null, "misconceptionId": null }
+      ],
+      "teacherInterpretation": "该生对因果链完整，可直接进入变式训练",
+      "intervention": "可提高情境陌生度或用多要素叠加情境继续检验迁移",
+      "disclaimer": "预测性认知路径"
+    },
+    {
+      "profile": "B",
+      "cognitiveDescription": "掌握基本概念，但证据整合或推断不完整",
+      "responses": [
+        { "itemId": "Q1", "selected": "A", "reasoning": "记得午后陆地热", "correctUnderstanding": "气温判断正确", "errorStep": null, "misconceptionId": null },
+        { "itemId": "Q2", "selected": "D", "reasoning": "认为温差先直接造成风，再由风造成气压差", "correctUnderstanding": "知道温差是起点", "errorStep": "把水平气流置于气压差之前", "misconceptionId": "LH-01" },
+        { "itemId": "Q3", "selected": "A", "reasoning": "绿地让温差变小，风变小", "correctUnderstanding": "能迁移但表述不完整", "errorStep": null, "misconceptionId": null }
+      ],
+      "teacherInterpretation": "该生知道起点与终点，但中间环节顺序不稳，属典型的局部链条错误",
+      "intervention": "用箭头图让学生自己补全「温差→垂直运动→气压差→水平气流」的中间两步，并追问每一步的判据",
+      "disclaimer": "预测性认知路径"
+    },
+    {
+      "profile": "C",
+      "cognitiveDescription": "存在核心概念误解，依赖表面词语或记忆结论",
+      "responses": [
+        { "itemId": "Q1", "selected": "B", "reasoning": "气温高的地方应该气压也高", "correctUnderstanding": "能识别海陆差异", "errorStep": "把气温高低直接等同于气压高低", "misconceptionId": "LH-01" },
+        { "itemId": "Q2", "selected": "B", "reasoning": "先有气压差，空气才动", "correctUnderstanding": "知道气压差与气流有关", "errorStep": "把结果当作原因", "misconceptionId": "LH-01" },
+        { "itemId": "Q3", "selected": "B", "reasoning": "绿地能升温，所以风会更强", "correctUnderstanding": "知道绿地会影响温度", "errorStep": "把绿地作用方向判断反了", "misconceptionId": "LH-03" }
+      ],
+      "teacherInterpretation": "该生停留在字面记忆，未建立气温与气压的正确对应，需要回到等压面模型重建概念",
+      "intervention": "先用等压面弯曲做一次对比讲解，再让学生用同一图解释海陆风与城市热岛两个情境",
+      "disclaimer": "预测性认知路径"
+    }
+  ],
+
+  "sources": [
+    {
+      "sourceId": "S1",
+      "type": "curriculum",
+      "title": "普通高中地理课程标准（2017 年版 2020 年修订）相关内容要求",
+      "publisherOrInstitution": "中华人民共和国教育部",
+      "publishedAt": null,
+      "eventTime": null,
+      "accessedAt": "2026-09-27",
+      "urlOrPath": "教师提供的课程标准文本（引用条目）",
+      "accessScope": "excerpt",
+      "usedClaims": ["本条内容要求的行为动词为「说明、解释」，用于校验 Q1–Q3 的设问层级"],
+      "authorityLevel": "primary",
+      "limitations": "【样例占位】条目文字与编号未逐字核验，verification 保持 pending；正式交付前须核对原文"
+    },
+    {
+      "sourceId": "S2",
+      "type": "textbook",
+      "title": "普通高中教科书·地理 必修 第一册 第二章第二节",
+      "publisherOrInstitution": "人民教育出版社",
+      "publishedAt": null,
+      "eventTime": null,
+      "accessedAt": "2026-09-27",
+      "urlOrPath": "E:\\知识图谱\\config\\knowledge_taxonomy_natural_geography.yaml（source_refs 指向该章节）",
+      "accessScope": "excerpt",
+      "usedClaims": ["热力环流的形成过程属于该节教学内容", "教材以等压面弯曲说明近地面与高空气压的对应关系"],
+      "authorityLevel": "primary",
+      "limitations": "【样例占位】未直接读取教材原文，依据 taxonomy 节点的 source_refs 定位；正式交付前须核对教材原文"
+    },
+    {
+      "sourceId": "S3",
+      "type": "teacher_material",
+      "title": "教师提供的沿海城市海陆风观测说明（含午后与夜间近地面风向记录）",
+      "publisherOrInstitution": null,
+      "publishedAt": null,
+      "eventTime": "夏季晴朗微风日（具体日期由教师给出）",
+      "accessedAt": "2026-09-27",
+      "urlOrPath": "教师在本会话中提供的观测说明",
+      "accessScope": "full_text",
+      "usedClaims": ["午后近地面风由海洋吹向陆地", "夜间近地面风由陆地吹向海洋"],
+      "authorityLevel": "primary",
+      "limitations": "【样例占位】观测来源与观测规范未记录，须由教师补充；正式交付前不得表述为某机构观测数据"
+    },
+    {
+      "sourceId": "S4",
+      "type": "policy",
+      "title": "国家关于城市绿地与气候适应性建设的政策导向（仅作情境背景）",
+      "publisherOrInstitution": null,
+      "publishedAt": null,
+      "eventTime": null,
+      "accessedAt": "2026-09-27",
+      "urlOrPath": "待补充",
+      "accessScope": "metadata",
+      "usedClaims": ["城市绿地布局与局地热环境相关"],
+      "authorityLevel": "lead_only",
+      "limitations": "【样例占位】仅有线索，未取得正文，不得作为事实依据；删除该来源后 C1 的题目仍成立，故按「热点不能是装饰」规则暂不写进材料"
+    }
+  ],
+
+  "visuals": [
+    {
+      "id": "V1",
+      "revision": 2,
+      "title": "沿海城市午后与夜间近地面风向对比示意",
+      "type": "process_diagram",
+      "content": "两幅并列的剖面示意：左幅为午后，右幅为夜间。每幅包含海面、陆地、城市位置，并用箭头表示近地面与高空的水平气流方向，标注「午后」「夜间」两个时间条件。不包含具体数值。",
+      "itemFunction": "让学生先读出时间条件与气流方向，再据温差判断气压对应关系；Q1 与 Q2 均依赖图中信息",
+      "necessity": "文字可描述风向，但「午后与夜间方向相反」这一对比关系用并列示意更易读；且本题组考查的正是时间条件参与推理，纯文字易被跳过",
+      "linkedItems": ["Q1", "Q2"],
+      "candidateSourceIds": ["S2", "S3"],
+      "plannedMethod": "python_plot",
+      "risks": {
+        "scientific": "箭头方向须与原理一致；不得出现高空与近地面气压关系画反",
+        "copyright": "自行绘制，不复制教材或论文原图",
+        "mapCompliance": "不涉及行政区划轮廓，无需审图号",
+        "cognitiveLoad": "仅保留方向与时间两类信息，不加数值图层"
+      },
+      "status": "proposed",
+      "files": []
+    }
+  ],
+
+  "confirmations": [
+    {
+      "confirmationId": "CF1",
+      "type": "concept_selection",
+      "objectId": "C1",
+      "objectRevision": 2,
+      "teacherUtterance": "用海陆风这个，别用热岛，热岛学生见得太多了",
+      "at": "2026-09-27T10:22:00+08:00",
+      "sessionRef": "本会话第 3 轮教师消息"
+    },
+    {
+      "confirmationId": "CF2",
+      "type": "taxonomy_choice",
+      "objectId": "KU-NAT-ATM-HEAT-005",
+      "objectRevision": 1,
+      "teacherUtterance": "就按大气热力环流这个考点",
+      "at": "2026-09-27T10:19:00+08:00",
+      "sessionRef": "本会话第 2 轮教师消息"
+    }
+  ],
+
+  "reviews": [
+    {
+      "reviewId": "RV1",
+      "targetRevision": 7,
+      "checkType": "structural",
+      "method": "题包结构校验（字段完整性、答案唯一性、干扰项映射、投影禁用字段）",
+      "findings": ["结构项通过"],
+      "pendingItems": ["G5 图表审批：V1 仍为 proposed，正式制图未开始", "G2 证据：S1 课标条目待核验、S4 仅线索"]
+    },
+    {
+      "reviewId": "RV2",
+      "targetRevision": 7,
+      "checkType": "semantic",
+      "method": "独立作答：仅以 student 投影作答后与教师内容对照",
+      "findings": ["三题答案唯一，材料足以支撑"],
+      "pendingItems": ["语义评审尚未完成，本节结论不得当作最终质量结论"]
+    }
+  ],
+
+  "risks": [
+    {
+      "id": "RK1",
+      "description": "题组依赖 V1 图；未获批前不能宣称「可使用」",
+      "level": "high",
+      "mitigation": "先完成 V1 的审批与制作；若教师拒绝该图，改用纯文字并列描述并重做 Q1/Q2 的材料线索",
+      "blocking": true
+    },
+    {
+      "id": "RK2",
+      "description": "课标条目为 pending 核验，不得声称已完成精确对齐",
+      "level": "medium",
+      "mitigation": "交付稿在对应位置标注「课标原文待核对」",
+      "blocking": true
+    },
+    {
+      "id": "RK3",
+      "description": "S4 热点仅线索级且删除后题目仍成立，按规则未写进材料",
+      "level": "low",
+      "mitigation": "若教师要求体现时代性，需更换为与考点有真实关系且有最新进展的情境",
+      "blocking": false
+    }
+  ]
+}

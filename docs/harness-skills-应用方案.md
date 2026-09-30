@@ -1,9 +1,10 @@
 # DSH 仓库 Skills 应用方案（deepseek-harness-skills-master）
 
-> 版本：v4.0　日期：2026-08-19　状态：当前有效
+> 版本：v4.0　日期：2026-08-19　状态：方法论当前有效；验证入口与部署说明已对齐预设包形态，具体检查项以脚本和开发检查技能为准
+> 更新说明（2026-09-27，M0）：`geo-verify.mjs` 现按声明行形态（`.agent-presets/geo-teacher/cordis.patch.yml`）校验，**不再读 `agent.cordis.yml`，不再要求 C: 运行时副本**；检查项由"双副本一致性 / YAML 结构(agent.cordis.yml)"改为"预设包导出 / bundle patch 声明 / 声明行完整性 / 插件行 name / isolate / 路由 / 技能入口唯一性 / 讲题回归"。详见 `docs/geography-question-generation-m0-baseline.md`
 > 说明：dsh-code-review 已独立适配为 `.agents/skills/geo-code-review/SKILL.md`（语义代码审查）。开发维护 Skill 现为三个，职责分离、互不替代：`geo-dev-checklist`（确定性验证）、`geo-code-review`（语义审查）、`geo-doc-writing`（写作规范）。
 > 来源：`E:\geo_edu_agent\deepseek-harness-skills-master`（从 deepseek-harness GitHub 仓库 `.agents/skills` 下载，共 11 个 skill 包）
-> 配套：`README.md`、`使用指南.md`、`讲题功能设计.md`、`讲题评测方案.md`、`讲题图像转录方案.md`
+> 配套：`README.md`、`使用指南.md`、`讲题功能设计.md`、`讲题评测方案.md`、`讲题工作流修复方案.md`
 
 ## 〇、来源与合规信息
 
@@ -66,7 +67,7 @@ E:\geo_edu_agent\.agents\skills\
 
 | 教师技能 | 内嵌的规范 |
 | :-- | :-- |
-| `geo-question-generator` | 出题术语/五段式写法/自检（嵌"命题完整性"项） |
+| `geo-question-generator` | 出题术语/六大章节/四态完成度/自检（嵌"命题完整性"项） |
 | `geo-solver` | 解题术语/轨迹书写规范 |
 | `geo-question-explainer` | 讲题稿规范（含"过程性元话语与作者痕迹检测"项） |
 | `cn-high-school-geography-lesson-planning` | 课程方案术语/写作规范 |
@@ -86,37 +87,9 @@ E:\geo_edu_agent\.agents\skills\
   "dependencies": { "yaml": "^2.x" }   # 固定 YAML 解析依赖
 ```
 
-**命令行参数**：
+**现行验证入口**：`scripts/geo-verify.mjs`；使用方式见 [开发检查技能](../.agents/skills/geo-dev-checklist/SKILL.md)。具体检查项和退出语义以脚本为准，不在此维护第二份清单。
 
-| 参数 | 含义 |
-| :-- | :-- |
-| `--source` | 只做源码静态检查（语法/导入/apply 冒烟/YAML/isolate/路由静态扫描/双副本） |
-| `--runtime` | 做运行时冒烟（重启 DSH 后执行核心端点 + 工具冒烟） |
-| `--skip-runtime` | 跳过运行时冒烟（仅静态） |
-| `--json` | 输出机器可读 JSON 结果（默认人类可读文本） |
-
-- 默认行为：若未指定任何模式参数，先做静态检查；`--runtime` 或默认时尝试运行时冒烟（不可达则按退出码 3 处理并提示）。
-- **运行时路径环境计算（不写死用户名）**：运行时副本根 = `$env:DSH_HOME/.agent-presets/geo-teacher`（DSH_HOME 由 DSH 注入；未设置时回退 `$HOME/.dsh`）；权威源根 = 从脚本所在位置推导的项目内 `.agent-presets/geo-teacher`（不写死盘符/用户名）；DSH Web 地址 = `$env:DSH_WEB_URL`（默认 `http://127.0.0.1:3080`）。
-
-**检查项与失败语义**：
-
-| # | 检查项 | 方法 | 失败是否导致非零退出 |
-| :-- | :-- | :-- | :-- |
-| 1 | 插件语法 | `node --check` 全部 `plugins/*/index.js` | ✅ 是 |
-| 2 | 插件 ESM 导入 | `import()` 每个插件（捕获解析错误） | ✅ 是 |
-| 3 | 插件 apply 冒烟 | mock ctx 调用 `apply()`：注册工具/服务不抛错 | ✅ 是 |
-| 4 | 双副本一致性 | 权威源 vs 运行时全部文件 SHA-256 比对 | ✅ 是 |
-| 5 | YAML 结构 | `yaml` 解析 `agent.cordis.yml`，列出 geo group 全部行 | ✅ 是 |
-| 6 | isolate 白名单 | 扫描插件源码 `ctx.provide('X')` → 断言 X ∈ group `isolate` | ✅ 是 |
-| 7 | 路由静态扫描 | 扫描 `webServer.register` path → 断言当前源码内无重复 | ✅ 是（**仅当前源码**，见局限） |
-| 8 | 运行时冒烟（`--runtime`） | 重启 DSH 后：`GET /geo/core/health`、`/geo-teacher` 返回 200；geo_* 工具冒烟 | ✅ 是 |
-| 9 | `.backups` 存在 | 确认最近改动前备份存在 | ⚠️ **仅提示，不导致失败** |
-
-**退出码约定**：`0` = 全部硬性检查通过（提示项不算失败）；`1` = 一项或多项硬性检查失败；`2` = 用法错误（未知参数/环境缺失）；`3` = 运行时冒烟未执行（`--runtime` 要求但无法连通 DSH）。
-
-**⚠️ 静态路由扫描的局限（必须写明）**：第 7 项只能发现**当前源码中**的重复路径；**不能发现 DSH 运行进程中旧 preset generation 未释放路由的问题**（`duplicate exact route` 来自进程内存注册表，静态扫描不可见）。该问题的唯一解法是**重启 DSH**。因此：
-- **`geo-verify.mjs` 不能替代重启**；脚本应在输出中明确提示"修改 agent.cordis.yml/插件后必须重启 DSH 才能生效，且旧 generation 路由占用只能靠重启释放"。
-- 第 8 项运行时冒烟**必须在重启后执行**才有意义（脚本检测到 `--runtime` 时会提示"请确认 DSH 已重启"）。
+当前检查覆盖预设包导出、`cordis.patch.yml` 声明行、插件语法与加载、服务隔离、路由、技能入口、讲题纪律和原生图片交付。本机采用 profile 依赖 + link，不做双副本哈希同步；运行时验收须在插件或组合修改并完整重启后执行。静态检查不能证明运行进程已加载新代码。
 
 ### D. 规范与术语（共享规范）
 
@@ -129,7 +102,7 @@ E:\geo_edu_agent\.agents\skills\
 ## 四、开发侧要点
 
 ### 确定性检查程序化
-本项目已踩的坑全部固化为 `geo-verify.mjs` 自动断言：standing 换代路由冲突（运行时冒烟）、isolate 白名单泄漏、ESM 语法错误、双副本不同步、YAML 结构。
+`geo-verify.mjs` 覆盖可确定检查的加载、隔离、路由、题面解析与讲题纪律；运行时冒烟和教师内容评测仍须分别执行，不能以静态通过代替。
 
 ### 人工判断保留在开发 Skill
 - 代码简化审计（消费者证据：先证明无生产调用者再删）→ `geo-dev-checklist` 或一次性审计 TODO。

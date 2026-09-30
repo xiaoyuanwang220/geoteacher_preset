@@ -70,6 +70,25 @@ export default {
                 path: found.path.map(n => ({ id: n.id, name: n.name, level: n.level }))
               });
             }
+            case 'meta': {
+              const res = await kernel.getTaxonomy({});
+              return sendJson(res, res.status === 'error' ? 503 : 200, {
+                status: res.status,
+                message: res.message || null,
+                meta: res.meta,
+                sources: res.sources,
+                errors: res.errors
+              });
+            }
+            case 'query': {
+              const ids = query.ids ? query.ids.split(',').map((s) => s.trim()).filter(Boolean) : null;
+              const res = await kernel.getTaxonomy({
+                query: query.q || query.query || '',
+                ids,
+                limit: query.limit
+              });
+              return sendJson(res, res.status === 'error' ? 503 : 200, res);
+            }
             default:
               return sendJson(res, 404, { status: 'error', message: 'unknown action: ' + action });
           }
@@ -79,17 +98,33 @@ export default {
       }
     });
 
-    // 模型工具：考点树
+    // 模型工具：考点树。无参数时兼容旧行为（status + roots）；给定 query/ids 时只返回相关节点 + 版本元数据。
     ctx.tools.register({
       name: 'geo_taxonomy',
-      description: '获取高中地理三级考点树（领域→主题→知识单元），每个节点含 id、name、level、definition。用于定位考点、查询考点结构与编号（如 KU-HUM-POP-001）。',
-      parameters: { type: 'object', properties: {}, additionalProperties: false },
+      description: '定位与查询高中地理三级考点（领域→主题→知识单元）。给定 query 或 ids 时只返回相关节点（含 definition、includes、excludes、needs_review）与 taxonomy 版本元数据，避免整树输出被截断；不传参数时返回完整树（roots）。用于确认考点编号、知识边界与版本状态。',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: '考点名称或关键词，如“热力环流”。与节点 name/id 精确一致时 matchKind=exact，否则返回 candidates 候选供判断' },
+          ids: { type: 'array', items: { type: 'string' }, description: '按考点 id 精确查询，如 ["KU-NAT-ATM-HEAT-005"]' },
+          limit: { type: 'integer', minimum: 1, maximum: 50, description: '最多返回的候选节点数，默认 20' }
+        },
+        additionalProperties: false
+      },
       output: {
         schema: { type: 'object', additionalProperties: true },
         render: renderJson
       },
-      async execute() {
-        return { status: 'success', roots: await kernel.getTaxonomyTree() };
+      async execute(args) {
+        const a = args || {};
+        const hasTarget = (Array.isArray(a.ids) && a.ids.filter(Boolean).length > 0) || String(a.query || '').trim();
+        const res = await kernel.getTaxonomy({ query: a.query, ids: a.ids, limit: a.limit });
+        if (res.status === 'error') return res;
+        if (!hasTarget) {
+          // 兼容旧调用：仍返回 status + roots；版本元数据前置，不埋在大树末尾
+          return { status: 'success', meta: res.meta, sources: res.sources, errors: res.errors, roots: res.roots };
+        }
+        return res;
       }
     });
 

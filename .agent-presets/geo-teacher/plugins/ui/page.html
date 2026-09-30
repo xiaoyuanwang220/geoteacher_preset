@@ -64,8 +64,6 @@
 <div id="app">
   <header>
     <span class="title">🗺️ 地理教师辅助 Agent</span>
-    <span class="hint" id="vision-status" style="margin-left:auto;font-size:12px;">图像转录: …</span>
-    <button class="btn" id="vision-toggle" onclick="toggleVision()" style="font-size:11px;padding:3px 8px;">切换</button>
     <span class="status">● 运行中</span>
   </header>
   <nav id="nav"></nav>
@@ -294,39 +292,6 @@ function renderLesson(content) {
 }
 
 // ===== 启动 =====
-// 加载视觉开关状态
-(async function initVision() {
-  try {
-    const r = await fetch('/geo/vision/status');
-    if (!r.ok) return;
-    const d = await r.json();
-    updateVisionUI(d);
-  } catch {}
-})();
-function updateVisionUI(d) {
-  const elS = document.getElementById('vision-status');
-  const elT = document.getElementById('vision-toggle');
-  if (d.enabled) {
-    elS.textContent = '图像转录: ✅ 开启';
-    elS.style.color = 'var(--ok)';
-    elT.textContent = '关闭';
-  } else {
-    elS.textContent = '图像转录: ❌ 关闭';
-    elS.style.color = 'var(--muted)';
-    elT.textContent = '开启';
-  }
-}
-async function toggleVision() {
-  try {
-    const r = await fetch('/geo/vision/status');
-    if (!r.ok) return;
-    const d = await r.json();
-    const next = d.enabled ? '0' : '1';
-    const r2 = await fetch('/geo/vision/toggle?enabled=' + next);
-    if (!r2.ok) { alert('切换失败（HTTP ' + r2.status + '）'); return; }
-    updateVisionUI(await r2.json());
-  } catch (e) { alert('切换失败：' + e.message); }
-}
 render();
 </script>
 </body>

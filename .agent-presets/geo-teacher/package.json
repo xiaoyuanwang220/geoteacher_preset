@@ -1,0 +1,24 @@
+{
+  "name": "@geo-edu/dsh-geo-teacher-preset",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "地理教师辅助 Agent preset bundle: declares the geo-teacher agent preset",
+  "exports": {
+    "./package.json": "./package.json",
+    "./plugins/core": "./plugins/core/index.js",
+    "./plugins/taxonomy": "./plugins/taxonomy/index.js",
+    "./plugins/bank": "./plugins/bank/index.js",
+    "./plugins/analysis": "./plugins/analysis/index.js",
+    "./plugins/generator": "./plugins/generator/index.js",
+    "./plugins/ui": "./plugins/ui/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "yaml": "^2.7.0"
+  }
+}

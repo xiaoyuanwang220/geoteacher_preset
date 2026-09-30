@@ -1,0 +1,479 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geo-edu.local/schemas/question-package.schema.json",
+  "title": "出题任务包（outputs/出题/<taskId>/package.json）",
+  "description": "唯一编辑源。Markdown、学生投影与教师投影均由本数据生成，不分别维护第二份权威内容。字段见 docs/geography-question-generation-execution-plan.md §6.1。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "taskId", "revision", "mode", "stage", "readiness",
+    "request", "taxonomySources", "knowledge", "learningHypotheses",
+    "concepts", "sources", "visuals", "confirmations", "reviews", "risks"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "taskId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$",
+      "description": "唯一标识，不靠可重复的标题 slug 隔离任务"
+    },
+    "revision": { "type": "integer", "minimum": 1, "description": "单调递增修订号；并发修改时停止覆盖并重新读取" },
+    "mode": { "enum": ["competition", "targeted_practice"] },
+    "stage": {
+      "enum": ["input_normalized", "concepts_proposed", "concept_selected", "draft_ready", "visuals_approved", "finalized"]
+    },
+    "readiness": {
+      "enum": ["concepts_pending", "draft_complete", "usable", "pending"],
+      "description": "构思待选择 / 初稿完成 / 可使用 / 待补充"
+    },
+
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grade", "topic", "learningStateRaw"],
+      "properties": {
+        "grade": { "type": "string", "description": "学段或年级；不把年级等同于固定教学进度" },
+        "topic": { "type": "string" },
+        "learningStateRaw": { "type": "string", "description": "教师学情原话，逐字保留" },
+        "targetDifficulty": { "type": ["string", "null"] },
+        "taughtScope": { "type": ["string", "null"], "description": "已教范围" },
+        "constraints": { "type": "array", "items": { "type": "string" }, "description": "比赛评分表/字数/风格等实际提供的约束" }
+      }
+    },
+
+    "taxonomySources": {
+      "type": "array",
+      "minItems": 1,
+      "description": "每份 taxonomy 文件各自记录版本，不假设四份永远同版",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "version", "status", "readAt"],
+        "properties": {
+          "file": { "type": "string" },
+          "version": { "type": ["string", "null"] },
+          "status": { "type": ["string", "null"] },
+          "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "文件内容指纹，由校验器计算并回填（M3）；模型不得手写或猜测，未回填时省略本字段" },
+          "readAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "knowledge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coreNodeIds"],
+      "properties": {
+        "coreNodeIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "supportingNodeIds": { "type": "array", "items": { "type": "string" } },
+        "candidateNodeIds": { "type": "array", "items": { "type": "string" }, "description": "近似匹配候选，须由教师选择，不自动替换" },
+        "unresolved": { "type": "array", "items": { "type": "string" }, "description": "未收录或待确认的考点描述" },
+        "taxonomyGap": { "type": "boolean", "description": "true 表示指定考点未收录；不得自行生成 ID" }
+      }
+    },
+
+    "learningHypotheses": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "description": "由模糊学情转译的待验证认知障碍；措辞须含「可能/待验证」",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "teacherInput", "statement", "observableErrors", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^LH-[0-9]{2}$" },
+          "teacherInput": { "type": "string" },
+          "statement": { "type": "string", "pattern": "可能|待验证" },
+          "observableErrors": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "candidateDistractorStrategy": { "type": ["string", "null"] },
+          "status": { "enum": ["proposed", "selected", "rejected", "revised"] }
+        }
+      }
+    },
+
+    "concepts": {
+      "type": "array",
+      "description": "命题构思；阶段 concepts_proposed 时应有 3 个且实质不同",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "revision", "title", "coreKnowledge", "curriculumRefs", "coreCompetencies", "context", "learningHypothesisIds", "itemProgression", "fourWings", "expectedDifficulty"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^C[0-9]+$" },
+          "revision": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string" },
+          "coreKnowledge": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["taxonomyId", "role"],
+              "properties": {
+                "taxonomyId": { "type": "string" },
+                "role": { "enum": ["core_exam_point", "supporting_knowledge"] }
+              }
+            }
+          },
+          "curriculumRefs": {
+            "type": "array", "minItems": 1,
+            "description": "构思对应的课标要求与行为动词（PRD §6.2 构思卡必含项）",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["statement"],
+              "properties": {
+                "statement": { "type": "string" },
+                "behaviorVerb": { "type": ["string", "null"] },
+                "sourceId": { "type": ["string", "null"] },
+                "verification": { "enum": ["verified", "pending"], "description": "无法核验时标 pending，不杜撰引文" }
+              }
+            }
+          },
+          "coreCompetencies": {
+            "type": "array", "minItems": 1,
+            "description": "主要考查的地理核心素养；术语表规定不得单说「素养」",
+            "items": { "enum": ["区域认知", "综合思维", "人地协调观", "地理实践力"] }
+          },
+          "paperSourceIds": {
+            "type": "array", "items": { "type": "string" },
+            "description": "可参考的论文来源 id（可空；本机文献通道未建时通常为空，不得据此声称已读全文）"
+          },
+          "learningHypothesisIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "context": {
+            "type": "object", "additionalProperties": false,
+            "required": ["issue"],
+            "properties": {
+              "issue": { "type": "string" },
+              "sourceIds": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "measurementTarget": { "type": ["string", "null"] },
+          "itemProgression": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["item", "cognitiveLevel"],
+              "properties": {
+                "item": { "type": "integer", "minimum": 1 },
+                "cognitiveLevel": { "type": "string" }
+              }
+            }
+          },
+          "fourWings": { "$ref": "#/$defs/fourWings" },
+          "visualProposalIds": { "type": "array", "items": { "type": "string" } },
+          "innovation": { "type": ["string", "null"] },
+          "expectedDifficulty": { "type": "string" },
+          "risks": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+
+    "selectedConcept": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "教师选定/组合的构思与 revision；组合后形成有明确内容的新修订",
+      "required": ["conceptIds", "revision"],
+      "properties": {
+        "conceptIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "revision": { "type": "integer", "minimum": 1 },
+        "composed": { "type": "boolean" },
+        "basis": { "type": ["string", "null"], "description": "组合依据（改动了哪些方向）" }
+      }
+    },
+
+    "questionSet": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "题组；stage >= draft_ready 时必填",
+      "required": ["questionSetId", "material", "items"],
+      "properties": {
+        "questionSetId": { "type": "string" },
+        "material": {
+          "type": "object", "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "text": { "type": "string" },
+            "visualRefs": { "type": "array", "items": { "type": "string" }, "description": "学生题面可引用的图片/图表 id" }
+          }
+        },
+        "items": {
+          "type": "array", "minItems": 1, "maxItems": 3,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["itemId", "stem", "options", "answer", "analysis", "distractorMap", "coreExamPoint", "cognitiveLevel", "fourWings"],
+            "properties": {
+              "itemId": { "type": "string", "pattern": "^Q[0-9]+$" },
+              "stem": { "type": "string" },
+              "options": {
+                "type": "object", "additionalProperties": false,
+                "required": ["A", "B", "C", "D"],
+                "properties": { "A": { "type": "string" }, "B": { "type": "string" }, "C": { "type": "string" }, "D": { "type": "string" } }
+              },
+              "answer": { "enum": ["A", "B", "C", "D"], "description": "答案唯一" },
+              "analysis": { "type": "string" },
+              "distractorMap": {
+                "type": "object", "additionalProperties": false,
+                "description": "每个干扰项对应一种可解释的认知错误；正确项不得出现",
+                "properties": {
+                  "A": { "$ref": "#/$defs/distractor" },
+                  "B": { "$ref": "#/$defs/distractor" },
+                  "C": { "$ref": "#/$defs/distractor" },
+                  "D": { "$ref": "#/$defs/distractor" }
+                }
+              },
+              "coreExamPoint": { "type": "string" },
+              "supportingKnowledge": { "type": "array", "items": { "type": "string" } },
+              "materialClues": { "type": "array", "items": { "type": "string" } },
+              "cognitiveLevel": { "type": "string" },
+              "fourWings": { "$ref": "#/$defs/fourWings" }
+            }
+          }
+        }
+      }
+    },
+
+    "design": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "命题设计说明的依据；stage >= draft_ready 时必填",
+      "required": ["curriculumBasis", "fourWings", "expectedDifficulty"],
+      "properties": {
+        "curriculumBasis": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["statement", "evidenceInItem"],
+            "properties": {
+              "statement": { "type": "string", "description": "课标内容要求与行为动词" },
+              "behaviorVerb": { "type": ["string", "null"] },
+              "evidenceInItem": { "type": "string", "description": "题面中实际承载该要求的证据" },
+              "sourceId": { "type": ["string", "null"] },
+              "verification": { "enum": ["verified", "pending"], "description": "无法核验时标 pending，不杜撰引文" }
+            }
+          }
+        },
+        "textbookBasis": {
+          "type": "array",
+          "description": "作为答案必要前提的知识属高中共同知识的依据",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["prerequisite", "basis"],
+            "properties": { "prerequisite": { "type": "string" }, "basis": { "type": "string" }, "sourceId": { "type": ["string", "null"] } }
+          }
+        },
+        "taxonomyRole": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "coreExamPoint": { "type": "string" },
+            "supportingKnowledge": { "type": "array", "items": { "type": "string" } },
+            "materialClues": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "fourWings": { "$ref": "#/$defs/fourWings" },
+        "expectedDifficulty": {
+          "type": "object", "additionalProperties": false,
+          "description": "无真实试测数据时只给定性判断；禁止伪造正确率/难度系数/区分度",
+          "required": ["level", "rationale"],
+          "properties": {
+            "level": { "type": "string" },
+            "rationale": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "knowledgeBasis": { "type": ["string", "null"] },
+            "informationLoad": { "type": ["string", "null"] },
+            "cognitiveLevel": { "type": ["string", "null"] },
+            "distractorDiscrimination": { "type": ["string", "null"] }
+          }
+        },
+        "innovationBoundary": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "simulations": {
+      "type": "array",
+      "description": "默认 3 名（A/B/C 各 1）；须标注为预测性认知路径，不得冒充真实试测",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["profile", "cognitiveDescription", "responses", "disclaimer"],
+        "properties": {
+          "profile": { "enum": ["A", "B", "C"] },
+          "cognitiveDescription": { "type": "string" },
+          "responses": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["itemId", "selected", "reasoning"],
+              "properties": {
+                "itemId": { "type": "string" },
+                "selected": { "enum": ["A", "B", "C", "D"] },
+                "reasoning": { "type": "string" },
+                "correctUnderstanding": { "type": ["string", "null"] },
+                "errorStep": { "type": ["string", "null"] },
+                "misconceptionId": { "type": ["string", "null"], "description": "必须与所选干扰项的 misconceptionId 一致" }
+              }
+            }
+          },
+          "teacherInterpretation": { "type": ["string", "null"] },
+          "intervention": { "type": ["string", "null"] },
+          "disclaimer": { "const": "预测性认知路径" }
+        }
+      }
+    },
+
+    "sources": {
+      "type": "array",
+      "description": "来源不等于证据：只填 URL 不算证据支持，须记录实际支持的事实/设计决策",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["sourceId", "type", "title", "urlOrPath", "accessScope", "usedClaims", "authorityLevel"],
+        "properties": {
+          "sourceId": { "type": "string", "pattern": "^S[0-9]+$" },
+          "type": { "enum": ["policy", "news", "dataset", "paper", "map", "curriculum", "textbook", "question_style", "teacher_material", "other"] },
+          "title": { "type": "string" },
+          "publisherOrInstitution": { "type": ["string", "null"] },
+          "publishedAt": { "type": ["string", "null"], "format": "date" },
+          "eventTime": { "type": ["string", "null"] },
+          "accessedAt": { "type": ["string", "null"], "format": "date" },
+          "urlOrPath": { "type": "string" },
+          "accessScope": { "enum": ["metadata", "abstract", "excerpt", "full_text", "dataset"] },
+          "usedClaims": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "authorityLevel": { "enum": ["primary", "authoritative_secondary", "lead_only"] },
+          "limitations": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "visuals": {
+      "type": "array",
+      "description": "图表提案；批准前不得创建正式制图产物",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "revision", "title", "type", "content", "itemFunction", "necessity", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^V[0-9]+$" },
+          "revision": { "type": "integer", "minimum": 1, "description": "内容/变量/用途/必要性改变时递增，旧批准随之失效" },
+          "title": { "type": "string" },
+          "type": { "enum": ["line_chart", "bar_chart", "scatter", "process_diagram", "map", "remote_sensing", "table", "other"] },
+          "content": { "type": "string" },
+          "itemFunction": { "type": "string" },
+          "necessity": { "type": "string", "description": "为何不能用文字替代" },
+          "linkedItems": { "type": "array", "items": { "type": "string" } },
+          "candidateSourceIds": { "type": "array", "items": { "type": "string" } },
+          "plannedMethod": { "enum": ["python_plot", "paper_redraw", "official_map_overlay", "teacher_provided", "none"] },
+          "risks": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "scientific": { "type": "string" }, "copyright": { "type": "string" },
+              "mapCompliance": { "type": "string" }, "cognitiveLoad": { "type": "string" }
+            }
+          },
+          "status": { "enum": ["proposed", "approved", "rejected", "generated", "verified"] },
+          "files": { "type": "array", "items": { "type": "string" }, "description": "已有附件引用；status != generated/verified 时必须为空" }
+        }
+      }
+    },
+
+    "confirmations": {
+      "type": "array",
+      "description": "教师自然语言确认的可追溯记录；仅 approved=true 不足以支持恢复或后续制作",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["confirmationId", "type", "objectId", "objectRevision", "teacherUtterance", "at"],
+        "properties": {
+          "confirmationId": { "type": "string", "pattern": "^CF[0-9]+$" },
+          "type": { "enum": ["concept_selection", "visual_approval", "taxonomy_choice", "other"] },
+          "objectId": { "type": "string" },
+          "objectRevision": { "type": "integer", "minimum": 1 },
+          "teacherUtterance": { "type": "string", "description": "教师原话" },
+          "at": { "type": "string", "format": "date-time" },
+          "sessionRef": { "type": ["string", "null"], "description": "可获得的会话/消息引用" }
+        }
+      }
+    },
+
+    "reviews": {
+      "type": "array",
+      "description": "结构与语义结论分开；评审绑定所针对的题面 revision",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["reviewId", "targetRevision", "checkType", "method", "findings"],
+        "properties": {
+          "reviewId": { "type": "string" },
+          "targetRevision": { "type": "integer", "minimum": 1 },
+          "checkType": { "enum": ["structural", "semantic"] },
+          "method": { "type": "string" },
+          "findings": { "type": "array", "items": { "type": "string" } },
+          "pendingItems": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "description", "level"],
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "level": { "enum": ["low", "medium", "high"] },
+          "mitigation": { "type": ["string", "null"] },
+          "blocking": { "type": "boolean", "description": "true 时不得宣称「可使用」" }
+        }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "stage": { "enum": ["concepts_proposed", "concept_selected", "draft_ready", "visuals_approved", "finalized"] } }, "required": ["stage"] },
+      "then": {
+        "properties": { "concepts": { "minItems": 3 } },
+        "description": "R1 硬门：命题前须提供 3 个实质不同的构思"
+      }
+    },
+    {
+      "if": { "properties": { "stage": { "enum": ["draft_ready", "visuals_approved", "finalized"] } }, "required": ["stage"] },
+      "then": {
+        "required": ["selectedConcept", "questionSet", "design", "simulations"],
+        "properties": {
+          "selectedConcept": { "type": "object" },
+          "questionSet": { "type": "object" },
+          "design": { "type": "object" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "readiness": { "const": "usable" } }, "required": ["readiness"] },
+      "then": {
+        "properties": {
+          "risks": {
+            "type": "array",
+            "items": { "properties": { "blocking": { "const": false } } }
+          }
+        },
+        "description": "可使用：不得存在 blocking 风险；依赖未制作图表的题组只能到 draft_complete/pending"
+      }
+    }
+  ],
+
+  "$defs": {
+    "fourWings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "四翼是「怎么考」的要求，不是四个难度等级；不强凑四项，无题面承载则不标",
+      "required": ["primary"],
+      "properties": {
+        "primary": { "type": "array", "items": { "enum": ["基础性", "综合性", "应用性", "创新性"] }, "minItems": 1 },
+        "secondary": { "type": "array", "items": { "enum": ["基础性", "综合性", "应用性", "创新性"] } },
+        "evidence": { "type": "array", "items": { "type": "string" }, "description": "每项要求对应的题面证据" }
+      }
+    },
+    "distractor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["misconceptionId", "errorType"],
+      "properties": {
+        "misconceptionId": { "type": ["string", "null"], "description": "映射到 learningHypotheses[].id" },
+        "errorType": { "type": "string", "description": "如 概念混淆 / 因果倒置 / 证据遗漏 / 时空尺度错误 / 表面信息匹配" }
+      }
+    }
+  }
+}

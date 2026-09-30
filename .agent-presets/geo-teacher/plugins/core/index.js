@@ -3,31 +3,188 @@
 // 不注册业务路由（只提供 /geo/health 健康检查）。
 // 数据路径来自插件 config（knowledgeBasePath / questionBankPath / outputPath），未配置时回退默认。
 
-// ========== YAML taxonomy 解析 ==========
-function parseTaxonomyNodes(text) {
+import { createHash } from 'node:crypto';
+
+// ========== taxonomy 解析 ==========
+// 优先使用“预设包自身声明的 YAML 解析依赖”（package.json → dependencies.yaml）；
+// 未安装时降级为下面的行解析，并在接口的 `parser` 字段如实标注，不静默冒充完整解析。
+// 行解析覆盖当前四份真实源文件的实际形态：meta 键缩进 2、节点 `- id` 缩进 2、字段缩进 4、列表项缩进 6。
+const TAXONOMY_META_KEYS = 'subject|taxonomy_name|version|status|constructed_at';
+const TAXONOMY_FIELD_KEYS = 'level|name|parent_id|definition|status|confidence|needs_review|review_note';
+const TAXONOMY_LIST_KEYS = 'includes|excludes|aliases';
+
+let yamlParsePromise = null;
+function loadYamlParse() {
+  if (!yamlParsePromise) {
+    yamlParsePromise = import('yaml')
+      .then((m) => {
+        if (m && typeof m.parse === 'function') return m.parse;
+        if (m && m.default && typeof m.default.parse === 'function') return m.default.parse;
+        return null;
+      })
+      .catch(() => null);
+  }
+  return yamlParsePromise;
+}
+
+function unquoteScalar(raw) {
+  const value = String(raw == null ? '' : raw).trim();
+  if (value === 'null' || value === '~') return null;
+  if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+function toNeedsReview(value) {
+  return value === true || value === 'true';
+}
+
+// 行解析（降级路径）：返回 { meta, nodes }
+function parseTaxonomyDocumentLegacy(text) {
+  const meta = {};
   const nodes = [];
   let current = null;
-  const lines = text.split('\n');
-  for (const line of lines) {
-    const m = line.match(/^  - id:\s*(\S+)\s*$/);
-    if (m) {
+  let listField = null;
+  for (const line of text.split('\n')) {
+    const idMatch = line.match(/^  - id:\s*(\S+)\s*$/);
+    if (idMatch) {
       if (current) nodes.push(current);
-      current = { id: m[1] };
+      current = { id: idMatch[1] };
+      listField = null;
       continue;
     }
-    if (!current) continue;
-    const f = line.match(/^    (level|name|parent_id|definition|status|confidence|needs_review):\s*(.*)$/);
-    if (f) {
-      let value = f[2].trim();
-      if (value === 'null') value = null;
-      else if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
-        value = value.slice(1, -1);
-      }
-      current[f[1]] = value;
+    if (!current) {
+      const metaMatch = line.match(new RegExp(`^  (${TAXONOMY_META_KEYS}):\\s*(.*)$`));
+      if (metaMatch) meta[metaMatch[1]] = unquoteScalar(metaMatch[2]);
+      continue;
     }
+    const listMatch = line.match(new RegExp(`^    (${TAXONOMY_LIST_KEYS}):\\s*(\\[\\])?\\s*$`));
+    if (listMatch) {
+      listField = listMatch[1];
+      if (!Array.isArray(current[listField])) current[listField] = [];
+      continue;
+    }
+    if (listField) {
+      const itemMatch = line.match(/^      -\s+(.*)$/);
+      if (itemMatch) { current[listField].push(unquoteScalar(itemMatch[1])); continue; }
+      if (/^    \S/.test(line)) listField = null;   // 回到字段层，继续走下面的字段匹配
+      else continue;                                 // 更深层（如 source_refs）忽略
+    }
+    const f = line.match(new RegExp(`^    (${TAXONOMY_FIELD_KEYS}):\\s*(.*)$`));
+    if (f) current[f[1]] = unquoteScalar(f[2]);
   }
   if (current) nodes.push(current);
-  return nodes;
+  return { meta, nodes };
+}
+
+// 真实 YAML 解析结果 → 统一节点形态（补齐列表字段、归一化 needs_review）
+function normalizeParsedDocument(parsed) {
+  const src = parsed && typeof parsed === 'object' ? parsed : {};
+  const meta = src.meta && typeof src.meta === 'object' ? src.meta : {};
+  const nodes = (Array.isArray(src.nodes) ? src.nodes : []).map((n) => ({
+    id: n && n.id,
+    level: n && n.level,
+    name: n && n.name,
+    parent_id: n && n.parent_id != null ? n.parent_id : null,
+    definition: n && n.definition,
+    status: n && n.status,
+    confidence: n && n.confidence,
+    review_note: n && n.review_note,
+    needs_review: toNeedsReview(n && n.needs_review),
+    includes: Array.isArray(n && n.includes) ? n.includes : [],
+    excludes: Array.isArray(n && n.excludes) ? n.excludes : [],
+    aliases: Array.isArray(n && n.aliases) ? n.aliases : [],
+  })).filter((n) => n.id);
+  return { meta, nodes };
+}
+
+// 读取全部 taxonomy 文件：逐份记录版本/状态/内容指纹，读不到与解析失败都显式返回
+async function loadTaxonomyAll(fsService, configDir) {
+  const entries = await fsService.listDir(configDir);
+  const parseYaml = await loadYamlParse();
+  const parser = parseYaml ? 'yaml' : 'legacy';
+  const readAt = new Date().toISOString();
+  const sources = [];
+  const errors = [];
+  const nodes = [];
+  for (const entry of entries) {
+    if (!entry.name || !entry.name.endsWith('.yaml')) continue;
+    const target = entry.target || entry;
+    try {
+      const text = await fsService.readText(target);
+      let doc;
+      if (parseYaml) {
+        try {
+          doc = normalizeParsedDocument(parseYaml(text));
+        } catch (e) {
+          errors.push({ file: entry.name, kind: 'parse', message: 'YAML 解析失败：' + ((e && e.message) || e) });
+          continue;
+        }
+      } else {
+        doc = parseTaxonomyDocumentLegacy(text);
+      }
+      sources.push({
+        file: entry.name,
+        version: doc.meta.version == null ? null : String(doc.meta.version),
+        status: doc.meta.status == null ? null : String(doc.meta.status),
+        contentHash: 'sha256:' + createHash('sha256').update(text, 'utf8').digest('hex'),
+        readAt,
+        parser,
+        nodeCount: doc.nodes.length,
+      });
+      for (const n of doc.nodes) nodes.push(n);
+    } catch (e) {
+      errors.push({ file: entry.name, kind: 'read', message: '读取失败：' + ((e && e.message) || e) });
+    }
+  }
+  return { parser, sources, errors, nodes };
+}
+
+function buildTaxonomyTree(allNodes) {
+  const nodeMap = new Map();
+  allNodes.forEach((n) => nodeMap.set(n.id, { ...n, children: [] }));
+  const roots = [];
+  allNodes.forEach((n) => {
+    if (n.parent_id && nodeMap.has(n.parent_id)) nodeMap.get(n.parent_id).children.push(nodeMap.get(n.id));
+    else if (!n.parent_id) roots.push(nodeMap.get(n.id));
+  });
+  return roots;
+}
+
+function flattenTaxonomy(roots) {
+  const out = [];
+  const walk = (arr, ancestors) => {
+    for (const n of arr) {
+      const here = ancestors.concat([{ id: n.id, name: n.name, level: n.level }]);
+      out.push({ node: n, path: here });
+      if (n.children && n.children.length) walk(n.children, here);
+    }
+  };
+  walk(roots, []);
+  return out;
+}
+
+function resolveTaxonomyMatches(flat, opts) {
+  const ids = Array.isArray(opts.ids) ? opts.ids.filter(Boolean) : [];
+  if (ids.length) {
+    const matches = [];
+    const unmatched = [];
+    for (const id of ids) {
+      const hit = flat.find((f) => f.node.id === id);
+      if (hit) matches.push(hit); else unmatched.push(id);
+    }
+    return { matchKind: matches.length ? (unmatched.length ? 'partial' : 'exact') : 'none', matches, unmatched };
+  }
+  const q = String(opts.query || '').trim();
+  if (!q) return { matchKind: 'none', matches: [], unmatched: [] };
+  const exact = flat.filter((f) => f.node.name === q || f.node.id === q);
+  if (exact.length) return { matchKind: 'exact', matches: exact, unmatched: [] };
+  const approx = flat.filter((f) => {
+    const hay = [f.node.name, f.node.definition, (f.node.aliases || []).join(' '), (f.node.includes || []).join(' ')].filter(Boolean).join(' ');
+    return hay.includes(q);
+  });
+  return { matchKind: approx.length ? 'candidates' : 'none', matches: approx, unmatched: [] };
 }
 
 // ========== 文件遍历 ==========
@@ -641,17 +798,259 @@ function buildJudgeScaffold(q, isChoice) {
   };
 }
 
-// ========== 讲题 Explainer 骨架（P3） ==========
-// 将已验证解题过程重组为「题目定位—审题—破题—反思迁移」四段式讲题稿（教学化重组，不照抄解析）。
-// 输入：题目 + solver 已生成的题干/选项 + judge 核验结果 + 同考点变式。
-function buildExplainerReport(q, isChoice, judge, variants) {
+// ========== 讲题 Explainer 骨架（P3 · 三对象） ==========
+// 将已验证解题过程按讲解对象重组（教学化重组，不照抄解析）。
+// 输入：题目 + solver 已生成的题干/选项 + judge 核验结果 + 同考点变式 + 讲解对象 audience。
+export const EXPLAIN_AUDIENCES = ['student', 'teacher', 'setter'];
+export const EXPLAIN_RULESET_VERSION = 2;
+const AUDIENCE_LABELS = { student: '学生', teacher: '教师', setter: '命题人' };
+
+// 题面指纹：区分"题目版本"，防止切换对象或题目改版后返回旧稿。
+function questionFingerprint(q) {
+  const text = [q.questionId, q.material, q.stem, (q.options || []).join('\u0001'), q.answer].join('\u0002');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+function explainLanguageGuide(audience) {
+  if (audience === 'teacher') {
+    return {
+      objective: '让教师能设计出让学生自己产生、检验和修正想法的教学引导，而不是替学生解释答案',
+      opening: '无寒暄，直接进入教学问题',
+      voice: '教学引导文体：面向教师写“怎么问、怎么撤支架”，不套用学生对象的讲课口吻',
+      reasoning: '正确解题逻辑必须清楚，主体篇幅用于学生的思维动作、可能回答与分支引导',
+      transfer: '反思与迁移落到“怎样让学生自己概括方法”，并给出独立迁移检测与观察点',
+      answerPresentation: '不把诱导学生猜标准答案当作思维启发；答案出现在学生自己检验之后',
+      ending: '以可撤去的支架条件与撤去后的观察点收束'
+    };
+  }
+  if (audience === 'setter') {
+    return {
+      objective: '评价这道题实际考到了什么、设计是否奏效',
+      opening: '无寒暄，直接从考查目标进入',
+      voice: '设计评价分析文体：术语精确，不使用教学口吻',
+      reasoning: '逐层检查设问、材料、选项中的干扰，说明位置、错误路径与辨别依据',
+      transfer: '评估是否测到迁移、是否仅靠记忆套路即可完成',
+      answerPresentation: '不复述答案本身，重点是答案成立条件与错误路径',
+      ending: '以题组与质量评价收束；无原作者说明时标注“依据题面推断”'
+    };
+  }
+  return {
+    objective: '教会学生解决一类地理问题，讲“怎么想”，不以呈现答案为终点',
+    opening: '无开场白或寒暄，直接进入审题',
+    voice: '使用“我们/大家”的讲课口吻；口语化，但地理术语必须严谨',
+    reasoning: '从“拿到题第一步想什么”起步；每一步说明“为什么能推出下一步”（材料证据 × 原理 × 设问）',
+    transfer: '破题与反思落到可迁移的思维模板、判断标尺或排除逻辑',
+    answerPresentation: '答案由推理自然引出，不先亮答案再凑理由',
+    ending: '以可迁移的方法收束，不留客套话'
+  };
+}
+
+// 三对象共同要求：讲题由地理问题、材料证据与学科原理推动。
+function buildCommonAnalysis() {
+  return {
+    requirements: [
+      '讲解由地理问题、材料证据与学科原理推动，不得对照答案补理由',
+      '方法总结按问题结构提炼可迁移思路及适用边界，避免固定因素清单',
+      '跨学科从地理问题出发，只在真正有解释价值时引入，不为凑章节强行关联'
+    ],
+    fourQuestions: [
+      '为什么用这个知识（知识选择依据）',
+      '为什么依靠这条材料（材料使用依据）',
+      '这一步为什么能推出下一步（推理链条因果）',
+      '这题为什么不是另一个答案（排除论证）'
+    ]
+  };
+}
+
+// 跨学科状态由讲题阶段按题面判断；工具不做关键词启发式关联。
+function buildInterdisciplinary() {
+  return {
+    status: 'pending',
+    allowedStatus: ['applicable', 'not_applicable', 'pending'],
+    chain: ['地理解释需要', '学科工具', '情境对应', '解释贡献', '适用限制'],
+    note: '工具不预判跨学科价值：由讲题阶段按“地理解释需要→学科工具→情境对应→解释贡献→适用限制”判断并记状态；证据不足时不硬讲，不适用时简短说明。'
+  };
+}
+
+function buildStudentPlan() {
+  return {
+    entryQuestion: '',      // 待在讲题阶段填写：拿到这道题第一步想什么
+    steps: [],              // 待在讲题阶段填写：可执行的思考步骤
+    methodBoundary: '',     // 待在讲题阶段填写：方法的适用条件与边界
+    guidance: [
+      '答案由推理自然引出，不先亮答案再凑理由',
+      '重点写“下一步可以做什么以及为什么”',
+      '教师如何安排课堂、如何诊断学情的内容不占正文',
+      '“无答案练习支架”是另一种可选交付形式，不等于学生对象本身'
+    ]
+  };
+}
+
+function buildTeacherPlan() {
+  return {
+    nodeTemplate: ['思维培养目标', '问题/活动', '学生思维动作', '关注的回答及依据', '分支追问与必要支架', '撤去支架后的独立表现'],
+    thinkingGoals: [],      // 待填写：本题专属的思维培养目标
+    studentActions: [],     // 待填写：学生思维动作
+    progressiveQuestions: [], // 待填写：递进追问
+    scaffolds: [],          // 待填写：必要支架
+    scaffoldRemoval: { signal: '', observe: '' }, // 待填写：何时撤、撤后观察什么
+    independentTransfer: { task: '', observe: '' }, // 待填写：独立迁移检测与观察点
+    guidance: [
+      '正确解题逻辑必须清楚，但主体篇幅用于学生如何产生、检验和修正想法，而不只是教师如何解释答案',
+      '至少给出一条“学生自主提出解释→证据检验→独立迁移”的完整引导路径并标明思维培养目的',
+      '避免连续使用只需回答“是/否”的诱导问题，把学生带向预设答案',
+      '没有真实学情时只提出待验证障碍；“粗心”不得替代具体错误环节分析',
+      '不得把教师对象做成“可照读的学生讲稿”或“学生解析后追加泛化教学建议”'
+    ]
+  };
+}
+
+function buildSetterPlan(isChoice) {
+  return {
+    structure: ['考查目标', '情境/材料/设问', '设问、材料与选项的干扰辨析', '预期认知路径', '答案成立条件及错误路径', '迁移与跨学科设计', '题组和质量评价'],
+    interferenceLayers: [
+      {
+        layer: '设问', applicable: true,
+        focus: '易被忽略或误读的对象、任务动词、时间空间尺度、比较基准、条件限定，以及可能诱发惯性作答的表述',
+        mustCheck: '限定词通常是必要条件，不能直接认定为干扰或故意陷阱',
+        findings: []
+      },
+      {
+        layer: '材料（含图表）', applicable: true,
+        focus: '与当前小问无直接关系的信息、显著但非主导的因素、可能诱发错误归因的数据或现象、适用尺度不同的信息',
+        mustCheck: '区分关键证据、必要背景、其他小问所需信息与实际干扰',
+        findings: []
+      },
+      isChoice ? {
+        layer: '选项', applicable: true,
+        focus: '概念混淆、因果倒置、证据遗漏、尺度错配、部分正确但不回答当前问题',
+        mustCheck: '说明吸引力、可能对应的认知偏差、排除依据与正确项依赖的条件',
+        findings: []
+      } : {
+        layer: '选项', applicable: false,
+        note: '综合题无选项：选项层不适用；可分析典型偏离思路，但不得虚构选项',
+        findings: []
+      }
+    ],
+    perFindingFields: ['所在位置及原文/图表证据', '可能诱发的错误思路', '辨别所需的知识或证据', '对考查的作用', '质量判断（有效认知辨析／无效噪声／歧义风险）'],
+    constraints: [
+      '无原作者说明时标注“依据题面推断”，不冒称原作者故意如此设计',
+      '无试测数据时不生成正确率、区分度数值或实际测量效果断言',
+      '某层未发现干扰时如实说明，不强凑三层',
+      '不把必要背景、其他小问所需信息或未用于最终答案的内容一律判作干扰；不把合理限定误判为文字陷阱'
+    ],
+    reference: 'skills/references/explainer-audiences.md §6（三层干扰辨析完整表）'
+  };
+}
+
+function buildStudentTeacherStructure(q, isChoice, difficulty, framework, scans, variants, coreKp, audience) {
+  const emphasis = audience === 'teacher' ? {
+    locate: '教学价值、核心与支撑知识、重点难点及原因、应培养的思维',
+    examine: '设计让学生自主界定问题的切入与追问；引导提出分析角度，而非教师宣布框架',
+    solve: '沿同一解题逻辑组织思维启发：追问、学生思维动作、可能回答、分支引导、图示/反例、支架撤除',
+    reflect: '怎样引导学生自己概括、比较、修正方法；独立迁移检测与观察点'
+  } : {
+    locate: '要解决什么问题、核心知识与必要联系；压缩与理解无关的元信息',
+    examine: '识别对象、任务动词、限定条件、时空尺度；第一步想什么、为什么',
+    solve: '读图、定向取证、知识选择依据、证据—原理—结论、关键辨析；有价值时引入跨学科视角',
+    reflect: '错因、可迁移思路与适用边界、简短变式或条件变化'
+  };
+  return {
+    frame: '题目定位—审题—破题—反思与迁移',
+    note: '四维（知识/解题/方法/跨学科）融入四段段内，不另设替代四段式的顶层目录；子标题按题目与对象灵活设置。',
+    locate: { title: '题目定位', fields: bestowBasicLabels(q, isChoice, difficulty, framework), audienceEmphasis: emphasis.locate },
+    examine: { title: '审题', hint: framework.hint, audienceEmphasis: emphasis.examine },
+    solve: {
+      title: '破题',
+      choiceNote: isChoice ? '选择题：读图→定向读材料→逐项排除链（材料证据×知识×设问），每个干扰项讲清错因；不让排除选项替代问题分析' : '综合题：读图→定向读材料→要素维度排查→采分点组织（要素+证据+结论）→术语规范；不凑采分点替代问题分析',
+      dimensionScan: scans,
+      audienceEmphasis: emphasis.solve
+    },
+    reflect: {
+      title: '反思与迁移',
+      alternatives: variants,
+      coreKnowledgeUnit: (coreKp && (coreKp.knowledge_unit || coreKp.knowledgeUnit)) || '',
+      audienceEmphasis: emphasis.reflect
+    }
+  };
+}
+
+function buildSetterStructure(q, isChoice, framework, scans, variants, coreKp) {
+  const meta = q.meta || {};
+  const optionCount = (q.options || []).length;
+  return {
+    frame: '考查目标→情境/材料/设问→干扰辨析→预期认知路径→答案成立条件及错误路径→迁移与跨学科设计→题组和质量评价',
+    note: '分析已有题目不强迫其服从生成器的题数或生成顺序约束；无原作者说明时标注“依据题面推断”。',
+    sections: [
+      {
+        key: 'examTarget', title: '考查目标',
+        items: [
+          `核心考点：${(coreKp && (coreKp.knowledge_unit || coreKp.knowledgeUnit)) || '待填'}（权重 ${(coreKp && coreKp.weight) || '—'}）`,
+          `设问类型：${framework.name}；素养立意：${detectLiteracy(q.stem, q.material || '').join('、') || '待填'}`,
+          '待填：实际任务是否有效承载该考查目标（须由讲题阶段依据题面判断）'
+        ]
+      },
+      {
+        key: 'context', title: '情境、材料与设问',
+        items: [
+          `材料长度：${q.material ? q.material.length : 0} 字；涉图：${/图|示意|坐标|曲线|统计|表格/.test(q.material || '') ? '是' : '否'}`,
+          `小问/小题数：${q.questionId ? 1 : 0}（本题实例）；题干：${(q.stem || '').slice(0, 120)}`,
+          isChoice ? `选项数：${optionCount}` : '综合题：无选项',
+          `年份省份题号：${(meta.year || '')}${(meta.region || '')}卷 ${meta.question_numbers || ''}`
+        ]
+      },
+      {
+        key: 'interference', title: '设问、材料与选项的干扰辨析（必检）',
+        items: [
+          '逐层检查：设问层、材料（含图表）层、选项层；不能缩减为错误选项解析',
+          '每个确认存在的干扰给出：位置及原文/图表证据→可能诱发的错误思路→辨别所需的知识或证据→对考查的作用→质量判断',
+          '某层未发现干扰时如实说明；综合题将选项层标为不适用，可分析典型偏离思路但不得虚构选项'
+        ]
+      },
+      {
+        key: 'cognitionPath', title: '预期认知路径',
+        items: ['待填：材料和设问如何引发认知操作、是否可绕开考点（须由讲题阶段依据题面推断）']
+      },
+      {
+        key: 'answerConditions', title: '答案成立条件及错误路径',
+        items: [
+          '待填：答案成立的必要条件，以及主要错误路径',
+          isChoice ? '选择题：检查正确项唯一性及干扰项机制' : '综合题：检查合理答案范围、评分依据与开放性'
+        ]
+      },
+      {
+        key: 'transferDesign', title: '迁移与跨学科设计',
+        items: [
+          '待填：是否测到迁移、是否仅靠记忆套路即可完成',
+          '待填：跨学科是否服务目标、材料是否交代必要知识、有无暗中超纲',
+          `同考点变式候选：${(variants || []).length ? (variants || []).slice(0, 5).map(v => v.file).join('、') : '题库暂无'}`
+        ]
+      },
+      {
+        key: 'qualityReview', title: '题组与质量评价',
+        items: ['待填：题组内的递进关系与本题质量判断；无试测数据时不生成正确率、区分度数值或实际测量效果断言']
+      }
+    ]
+  };
+}
+
+export function buildExplainerReport(q, isChoice, judge, variants, audience) {
+  const aud = EXPLAIN_AUDIENCES.includes(audience) ? audience : 'student';
   const coreKp = (q.knowledgePoints || []).find(kp => kp.role === 'core_exam_point');
   const framework = classifyQuestion(q.stem);
   const scans = dimensionScan(q.material || '');
   const literacy = detectLiteracy(q.stem, q.material || '');
   const difficulty = detectDifficulty(q);
   const focusElements = Object.keys(scans).map(k => scans[k].name);
-  return {
+  const report = {
+    schemaVersion: EXPLAIN_RULESET_VERSION,
+    audience: aud,
+    audienceLabel: AUDIENCE_LABELS[aud],
     questionId: q.questionId,
     basic: {
       type: isChoice ? '选择题' : '综合题',
@@ -662,19 +1061,32 @@ function buildExplainerReport(q, isChoice, judge, variants) {
       materialLength: q.material ? q.material.length : 0,
       hasImage: /图|示意|坐标|曲线|统计|表格/.test(q.material || '')
     },
-    // 四段式讲题稿的结构骨架，正文由模型在 explainer 技能中填充
-    structure: {
-      locate: { title: '题目定位', fields: bestowBasicLabels(q, isChoice, difficulty, framework) },
-      examine: { title: '审题', hint: framework.hint },
-      solve: {
-        title: '破题',
-        choiceNote: isChoice ? '选择题：读图→定向读材料→逐项排除链（材料证据×知识×设问），每个干扰项讲清错因' : '综合题：读图→定向读材料→要素维度排查→采分点组织（要素+证据+结论）→术语规范',
-        dimensionScan: scans
-      },
-      reflect: { title: '反思与迁移', alternatives: variants, coreKnowledgeUnit: (coreKp && (coreKp.knowledge_unit || coreKp.knowledgeUnit)) || '' }
-    },
-    judgeSummary: judge ? { scorePoints: judge.scorePoints, coverageGrid: judge.coverageGrid } : null
+    languageGuide: explainLanguageGuide(aud),
+    commonAnalysis: buildCommonAnalysis(),
+    interdisciplinary: buildInterdisciplinary(),
+    // 必须无损 JSON：judgeReport 的 scaffold 缺这两个数组时，写成 {scorePoints: undefined}
+    // 会在 JSON 往返中丢键，被 DSH 工具边界判为 "value is not lossless JSON"，
+    // 导致整个 geo_explain 调用失败（核验材料其实合法）。
+    judgeSummary: judge
+      ? {
+        scorePoints: Array.isArray(judge.scorePoints) ? judge.scorePoints : [],
+        coverageGrid: Array.isArray(judge.coverageGrid) ? judge.coverageGrid : []
+      }
+      : null
   };
+  if (aud === 'setter') {
+    report.structure = buildSetterStructure(q, isChoice, framework, scans, variants, coreKp);
+    report.audiencePlan = buildSetterPlan(isChoice);
+    report.audienceDeliverable = '命题分析文档：设计评价 + 三层干扰辨析；保留独立的命题分析结构，不套用学生/教师四段式';
+  } else {
+    report.structure = buildStudentTeacherStructure(q, isChoice, difficulty, framework, scans, variants, coreKp, aud);
+    report.audiencePlan = aud === 'teacher' ? buildTeacherPlan() : buildStudentPlan();
+    report.audienceDeliverable = aud === 'teacher'
+      ? '教师对象：四段式教学引导稿，含思维培养目标、递进追问、支架撤除与独立迁移检测'
+      : '学生对象：四段式讲稿（可直接用于讲解），可含答案；“无答案练习支架”另附，不混为同一模式';
+  }
+  report.cacheKey = `${q.questionId}#${questionFingerprint(q)}#${aud}#rules${EXPLAIN_RULESET_VERSION}`;
+  return report;
 }
 
 function bestowBasicLabels(q, isChoice, difficulty, framework) {
@@ -911,33 +1323,97 @@ export default {
       // 重建题库索引（题库更新后调用，清除内存缓存 + 磁盘索引）
       invalidateBankCache,
 
+      // 兼容访问器：保持返回原数组结构，供既有路由/面板/健康检查继续消费。
+      // 失败时仍返回 []（旧行为，不改变既有消费者）；需要"失败与无匹配分开"的调用方请用 getTaxonomy()。
       async getTaxonomyTree() {
         try {
           const configDir = await fsService.resolve(KNOWLEDGE_BASE_PATH);
-          const entries = await fsService.listDir(configDir);
-          let allNodes = [];
-          for (const entry of entries) {
-            if (entry.name && entry.name.endsWith('.yaml')) {
-              const target = entry.target || entry;
-              const text = await fsService.readText(target);
-              allNodes = allNodes.concat(parseTaxonomyNodes(text));
-            }
-          }
-          const nodeMap = new Map();
-          allNodes.forEach(n => nodeMap.set(n.id, { ...n, children: [] }));
-          const roots = [];
-          allNodes.forEach(n => {
-            if (n.parent_id && nodeMap.has(n.parent_id)) {
-              nodeMap.get(n.parent_id).children.push(nodeMap.get(n.id));
-            } else if (!n.parent_id) {
-              roots.push(nodeMap.get(n.id));
-            }
-          });
-          return roots;
+          const loaded = await loadTaxonomyAll(fsService, configDir);
+          return buildTaxonomyTree(loaded.nodes);
         } catch (e) {
           console.error('geo-core: taxonomy failed', e);
           return [];
         }
+      },
+
+      // 新增兼容扩展接口：可选 query/ids 返回本次相关节点；版本/状态/指纹放在简短元数据中。
+      // status: 'success' 读取正常；'partial' 部分文件失败但仍有可用数据；'error' 完全不可用。
+      // matchKind: 'tree' 未指定目标（返回 roots）；'exact' | 'candidates' | 'partial' | 'none'；'unavailable' 读取失败。
+      async getTaxonomy(options) {
+        const opts = options || {};
+        let loaded;
+        try {
+          const configDir = await fsService.resolve(KNOWLEDGE_BASE_PATH);
+          loaded = await loadTaxonomyAll(fsService, configDir);
+        } catch (e) {
+          return {
+            status: 'error',
+            matchKind: 'unavailable',
+            message: '考点树不可读：' + ((e && e.message) || e),
+            meta: null,
+            sources: [],
+            errors: [{ file: null, kind: 'read', message: String((e && e.message) || e) }],
+          };
+        }
+        if (loaded.sources.length === 0) {
+          return {
+            status: 'error',
+            matchKind: 'unavailable',
+            message: loaded.errors.length
+              ? '考点树全部文件读取或解析失败'
+              : '配置目录内没有任何 .yaml 文件',
+            parser: loaded.parser,
+            meta: null,
+            sources: [],
+            errors: loaded.errors,
+          };
+        }
+        const roots = buildTaxonomyTree(loaded.nodes);
+        const flat = flattenTaxonomy(roots);
+        const needsReview = loaded.nodes.filter((n) => n.needs_review).map((n) => n.id);
+        const versions = [...new Set(loaded.sources.map((s) => s.version).filter(Boolean))];
+        const statuses = [...new Set(loaded.sources.map((s) => s.status).filter(Boolean))];
+        const meta = {
+          parser: loaded.parser,
+          fileCount: loaded.sources.length,
+          nodeCount: loaded.nodes.length,
+          taxonomyVersions: versions,
+          taxonomyStatuses: statuses,
+          multipleVersions: versions.length > 1,
+          finalised: statuses.length > 0 && statuses.every((s) => s === 'final' || s === 'released'),
+          needsReview,
+          anyNeedsReview: needsReview.length > 0,
+          errors: loaded.errors,
+        };
+        const out = {
+          status: loaded.errors.length ? 'partial' : 'success',
+          meta,
+          sources: loaded.sources,
+          errors: loaded.errors,
+        };
+        const hasTarget = (Array.isArray(opts.ids) && opts.ids.filter(Boolean).length > 0) || String(opts.query || '').trim();
+        if (!hasTarget) {
+          out.matchKind = 'tree';
+          out.roots = roots;
+          return out;
+        }
+        const r = resolveTaxonomyMatches(flat, opts);
+        out.matchKind = r.matchKind;
+        out.unmatched = r.unmatched;
+        out.matches = r.matches.slice(0, Math.max(1, Number(opts.limit) || 20)).map((f) => ({
+          id: f.node.id,
+          name: f.node.name,
+          level: f.node.level,
+          parent_id: f.node.parent_id,
+          definition: f.node.definition,
+          includes: f.node.includes,
+          excludes: f.node.excludes,
+          aliases: f.node.aliases,
+          needs_review: f.node.needs_review,
+          review_note: f.node.review_note,
+          path: f.path,
+        }));
+        return out;
       },
 
       // 重构：searchQuestions 支持结构化查询，统一 score 累加，按小问拆分返回。
@@ -1186,9 +1662,9 @@ export default {
         }
       },
 
-      // 讲题 Explainer（P3）：同考点变式候选 + 讲题稿重组骨架。
+      // 讲题 Explainer（P3）：同考点变式候选 + 讲题稿重组骨架（按讲解对象）。
       // 只消费已验证解题过程与同考点情境，不重新解题、不直接拿解析推导讲法。
-      async explainerData(questionId, independentAnswer, judge) {
+      async explainerData(questionId, independentAnswer, judge, audience) {
         try {
           const bank = await loadBank();
           const q = bank.byId.get(questionId);
@@ -1196,9 +1672,10 @@ export default {
           const isChoice = q.options && q.options.length > 0;
           const coreKp = (q.knowledgePoints || []).find(kp => kp.role === 'core_exam_point') || (q.knowledgePoints || [])[0] || {};
           const variants = collectSamePointContexts(bank.all, q, coreKp);
-          const judgeSummary = judge && judge.scaffold ? judge.scaffold : null;
-          const report = buildExplainerReport(q, isChoice, judgeSummary, variants);
-          return { status: 'success', questionId, report, variants };
+          const judgeSummary = judge && (judge.scaffold || judge.standard) ? (judge.scaffold || judge.standard) : null;
+          const aud = EXPLAIN_AUDIENCES.includes(audience) ? audience : 'student';
+          const report = buildExplainerReport(q, isChoice, judgeSummary, variants, aud);
+          return { status: 'success', questionId, audience: aud, report, variants };
         } catch (e) {
           return { status: 'error', message: '讲题重组失败：' + (e && e.message ? e.message : e) };
         }
@@ -1289,7 +1766,7 @@ export default {
               if (entry.name && entry.name.endsWith('.yaml')) {
                 const target = entry.target || entry;
                 const text = await fsService.readText(target);
-                taxonomyNodes += parseTaxonomyNodes(text).length;
+                taxonomyNodes += parseTaxonomyDocumentLegacy(text).nodes.length;
                 taxonomyFiles += 1;
               }
             }
