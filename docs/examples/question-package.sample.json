@@ -374,7 +374,7 @@
       "publishedAt": null,
       "eventTime": null,
       "accessedAt": "2026-09-27",
-      "urlOrPath": "E:\\知识图谱\\config\\knowledge_taxonomy_natural_geography.yaml（source_refs 指向该章节）",
+      "urlOrPath": "<考点库>/knowledge_taxonomy_natural_geography.yaml（source_refs 指向该章节）",
       "accessScope": "excerpt",
       "usedClaims": ["热力环流的形成过程属于该节教学内容", "教材以等压面弯曲说明近地面与高空气压的对应关系"],
       "authorityLevel": "primary",

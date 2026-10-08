@@ -48,6 +48,13 @@ deepseek-harness-skills-master.zip
 # Open-source publishing staging area (own git repo)
 open/
 
+# 一次性调试脚本（asar/插件解析探针等），含本机绝对路径，不属于项目产物
+tools/
+
+# 本机数据路径配置：真实配置放在 <DSH_HOME>/geo-teacher/config.json（仓库外），
+# 这里再兜一层，避免有人把填好本机路径的副本留在仓库根。
+geo-teacher.config.json
+
 # Editor and operating-system files
 .idea/
 .vscode/

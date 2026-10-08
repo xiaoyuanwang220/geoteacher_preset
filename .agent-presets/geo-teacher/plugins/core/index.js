@@ -1,9 +1,16 @@
 // GeoTeacher Agent — 内核插件（geo.kernel）
 // 数据层 + 分析引擎 + 风格档案，供各功能插件通过 geo.kernel 服务消费。
-// 不注册业务路由（只提供 /geo/health 健康检查）。
-// 数据路径来自插件 config（knowledgeBasePath / questionBankPath / outputPath），未配置时回退默认。
+// 不注册业务路由（只提供 /geo/core/health 健康检查）。
+// 数据路径解析见 apply() 的「数据路径解析」一节：插件 config ＞ 用户配置文件 ＞ 明确报错。
+// 不含任何作者机器路径；未配置时工具抛错，不静默回退、不返回空数据。
 
 import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, isAbsolute, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 // ========== taxonomy 解析 ==========
 // 优先使用“预设包自身声明的 YAML 解析依赖”（package.json → dependencies.yaml）；
@@ -200,12 +207,8 @@ function normalizeMtimeMs(info) {
 }
 
 async function collectMdFiles(fsService, dirTarget, out) {
-  let entries;
-  try {
-    entries = await fsService.listDir(dirTarget);
-  } catch (e) {
-    return;
-  }
+  // 读取失败必须传给调用方；否则配置错误或权限错误会被当作空题库。
+  const entries = await fsService.listDir(dirTarget);
   for (const entry of entries) {
     const name = entry.name;
     if (!name) continue;
@@ -258,7 +261,7 @@ function resolveImagePath(baseDir, rel) {
     if (seg === '..') { if (stack.length > 1) stack.pop(); continue; }
     stack.push(seg);
   }
-  // 处理盘符场景：形如 ["E:", "知识图谱", ...] → "E:/知识图谱/..."
+  // 处理盘符场景：形如 ["E:", "dir", ...] → "E:/dir/..."
   const joined = stack.join('/');
   // 若首段是 "E:" 之类盘符，补成 "E:/..."
   const abs = /^[A-Za-z]:/.test(stack[0] || '') ? joined : ('/' + joined);
@@ -1227,12 +1230,72 @@ export default {
     const fsService = ctx.fs;
     const webServer = ctx.webServer;
     const cfg = config || {};
-    const KNOWLEDGE_BASE_PATH = cfg.knowledgeBasePath || 'E:/知识图谱/config';
-    const QUESTION_BANK_PATH = cfg.questionBankPath || 'E:/知识图谱/obsidian_vault/04_题目';
-    const OUTPUT_PATH = cfg.outputPath || 'E:/geo_edu_agent/outputs';
-    // 导出写盘用的沙箱策略：standing mount 无会话上下文，fs 服务会用默认 workspaceRoot
-    // （部署的 E:\DeepSeek\Harness），写项目内 outputs 会被拒；这里显式传入项目 workspace。
-    const WRITE_POLICY = { mode: 'workspace-write', workspaceRoot: cfg.workspaceRoot || 'E:/geo_edu_agent' };
+    // ── 数据路径解析 ────────────────────────────────────────────────────────────
+    // 优先级：插件 config（组合文件覆盖，留给其它部署）＞ 用户配置文件 ＞ 明确报错。
+    // 不用 cwd 推导：插件在 apply 期没有会话上下文，工具执行上下文（ToolExecutionInput）里也没有 cwd，
+    // 所以插件拿不到"用户的工作区"，只能由用户显式给出，或落在确定的锚点上。
+    //
+    // 用户配置文件：<DSH_HOME>/geo-teacher/config.json
+    //   DSH_HOME = process.env.DSH_HOME || <用户目录>/.dsh
+    //   键：knowledgeBasePath｜questionBankPath｜outputPath｜workspaceRoot（全部可选）
+    //   相对路径以该配置文件所在目录为基准。
+    // 考点库若已随包发布（<预设包>/knowledge/ 存在），knowledgeBasePath 缺省即指向它，无需配置。
+    const PKG_ROOT = join(HERE, '..', '..');
+    const PACKAGED_KNOWLEDGE_DIR = join(PKG_ROOT, 'knowledge');
+    const CONFIG_PATH = join(
+      process.env.DSH_HOME || join(homedir(), '.dsh'),
+      'geo-teacher',
+      'config.json'
+    );
+    const CONFIG_DIR = dirname(CONFIG_PATH);
+    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键（格式见项目 README「配置数据路径」一节）';
+
+    function readUserConfig() {
+      try {
+        if (!existsSync(CONFIG_PATH)) return {};
+        const parsed = JSON.parse(readFileSync(CONFIG_PATH, 'utf8').replace(/^\uFEFF/, ''));
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          console.error('geo-core: ' + CONFIG_PATH + ' 不是 JSON 对象，已忽略');
+          return {};
+        }
+        return parsed;
+      } catch (e) {
+        console.error('geo-core: 读取 ' + CONFIG_PATH + ' 失败：' + ((e && e.message) || e));
+        return {};
+      }
+    }
+
+    const fileCfg = readUserConfig();
+    const pick = (key) => {
+      const fromPlugin = cfg[key];
+      if (fromPlugin !== undefined && fromPlugin !== null && fromPlugin !== '') return fromPlugin;
+      const fromFile = fileCfg[key];
+      if (fromFile !== undefined && fromFile !== null && fromFile !== '') return fromFile;
+      return null;
+    };
+    const toAbs = (p) => (isAbsolute(p) ? p : join(CONFIG_DIR, p));
+
+    const KNOWLEDGE_BASE_PATH = pick('knowledgeBasePath')
+      ? toAbs(pick('knowledgeBasePath'))
+      : (existsSync(PACKAGED_KNOWLEDGE_DIR) ? PACKAGED_KNOWLEDGE_DIR : null);
+    const QUESTION_BANK_PATH = pick('questionBankPath') ? toAbs(pick('questionBankPath')) : null;
+    const OUTPUT_PATH = pick('outputPath') ? toAbs(pick('outputPath')) : join(CONFIG_DIR, 'outputs');
+    const WORKSPACE_ROOT = pick('workspaceRoot') ? toAbs(pick('workspaceRoot')) : CONFIG_DIR;
+
+    // 导出写盘用的沙箱策略：standing mount 无会话上下文，fs 服务会用部署默认 workspaceRoot，
+    // 写用户工作区会被拒；这里显式传入解析后的 workspaceRoot。
+    const WRITE_POLICY = { mode: 'workspace-write', workspaceRoot: WORKSPACE_ROOT };
+
+    // 未配置时的统一报错：绝不回落到作者路径，也不静默返回空数据。
+    function requirePath(value, what, key) {
+      if (!value) throw new Error('未配置' + what + '路径（' + key + '）：' + CONFIG_HINT);
+      try {
+        if (statSync(value).isDirectory()) return value;
+      } catch (e) {
+        throw new Error(what + '目录不可用（' + key + '）：' + value + '。' + CONFIG_HINT + '。原因：' + e.message);
+      }
+      throw new Error(what + '路径不是目录（' + key + '）：' + value + '。' + CONFIG_HINT);
+    }
 
     // ========== 题库索引（预构建 + 磁盘持久化 + 内存缓存） ==========
     let _bankCache = null; // 内存缓存：{ byId: Map, all: [], filesCount, builtAt }
@@ -1241,6 +1304,7 @@ export default {
     const INDEX_VERSION = 3;
 
     async function loadBank() {
+      requirePath(QUESTION_BANK_PATH, '真题库', 'questionBankPath');
       // 1. 内存缓存命中 → 直接返回
       if (_bankCache) return _bankCache;
 
@@ -1362,7 +1426,7 @@ export default {
       // 失败时仍返回 []（旧行为，不改变既有消费者）；需要"失败与无匹配分开"的调用方请用 getTaxonomy()。
       async getTaxonomyTree() {
         try {
-          const configDir = await fsService.resolve(KNOWLEDGE_BASE_PATH);
+          const configDir = await fsService.resolve(requirePath(KNOWLEDGE_BASE_PATH, '考点库', 'knowledgeBasePath'));
           const loaded = await loadTaxonomyAll(fsService, configDir);
           return buildTaxonomyTree(loaded.nodes);
         } catch (e) {
@@ -1378,7 +1442,7 @@ export default {
         const opts = options || {};
         let loaded;
         try {
-          const configDir = await fsService.resolve(KNOWLEDGE_BASE_PATH);
+          const configDir = await fsService.resolve(requirePath(KNOWLEDGE_BASE_PATH, '考点库', 'knowledgeBasePath'));
           loaded = await loadTaxonomyAll(fsService, configDir);
         } catch (e) {
           return {
@@ -1547,7 +1611,7 @@ export default {
           return results;
         } catch (e) {
           console.error('geo-core: searchQuestions failed', e);
-          return [];
+          throw e;
         }
       },
 
@@ -1629,7 +1693,7 @@ export default {
 
           // 降级：遍历题库找文件（兼容无 filePath 的旧索引）
           if (!mdDiskPath) {
-            const bankDir = await fsService.resolve(QUESTION_BANK_PATH);
+            const bankDir = await fsService.resolve(requirePath(QUESTION_BANK_PATH, '真题库', 'questionBankPath'));
             const files = [];
             await collectMdFiles(fsService, bankDir, files);
             for (const f of files) {
@@ -1790,36 +1854,55 @@ export default {
       },
 
       async health() {
-        try {
-          const bank = await loadBank();
-          let taxonomyNodes = 0;
-          let taxonomyFiles = 0;
-          try {
-            const configDir = await fsService.resolve(KNOWLEDGE_BASE_PATH);
-            const entries = await fsService.listDir(configDir);
-            for (const entry of entries) {
-              if (entry.name && entry.name.endsWith('.yaml')) {
-                const target = entry.target || entry;
-                const text = await fsService.readText(target);
-                taxonomyNodes += parseTaxonomyDocumentLegacy(text).nodes.length;
-                taxonomyFiles += 1;
-              }
-            }
-          } catch (e) {
-            console.error('geo-core: health taxonomy scan failed', e);
-            taxonomyNodes = -1;
-          }
+        // 先如实回显解析结果：用户自查"我配的路径插件到底认不认、存不存在"。
+        const configInfo = {
+          configPath: CONFIG_PATH,
+          configFileFound: existsSync(CONFIG_PATH),
+          packagedKnowledgeDir: PACKAGED_KNOWLEDGE_DIR,
+          packagedKnowledgeDirUsed: KNOWLEDGE_BASE_PATH === PACKAGED_KNOWLEDGE_DIR,
+          knowledgeBasePath: KNOWLEDGE_BASE_PATH,
+          questionBankPath: QUESTION_BANK_PATH,
+          outputPath: OUTPUT_PATH,
+          workspaceRoot: WORKSPACE_ROOT,
+          knowledgeBasePathExists: KNOWLEDGE_BASE_PATH ? existsSync(KNOWLEDGE_BASE_PATH) : false,
+          questionBankPathExists: QUESTION_BANK_PATH ? existsSync(QUESTION_BANK_PATH) : false
+        };
+        const missing = [];
+        if (!KNOWLEDGE_BASE_PATH) missing.push('knowledgeBasePath（考点库）');
+        if (!QUESTION_BANK_PATH) missing.push('questionBankPath（真题库）');
+        if (missing.length) {
           return {
-            status: 'success',
-            taxonomyFiles,
-            taxonomyNodes,
+            status: 'error',
+            configured: false,
+            message: '未配置：' + missing.join('、') + '。' + CONFIG_HINT,
+            config: configInfo
+          };
+        }
+        try {
+          const taxonomy = await this.getTaxonomy({});
+          if (taxonomy.status === 'error') {
+            throw new Error(taxonomy.message + (taxonomy.errors?.length ? '：' + taxonomy.errors.map(e => e.message).join('；') : ''));
+          }
+          const bank = await loadBank();
+          return {
+            status: taxonomy.status,
+            configured: true,
+            config: configInfo,
+            taxonomyFiles: taxonomy.meta.fileCount,
+            taxonomyNodes: taxonomy.meta.nodeCount,
+            taxonomyErrors: taxonomy.errors,
             bankFiles: bank.filesCount,
             bankQuestions: bank.all.length,
             indexBuiltAt: bank.builtAt || null,
             indexFromDisk: !!bank.fromIndex
           };
         } catch (e) {
-          return { status: 'error', message: '健康检查失败：' + (e && e.message ? e.message : e) };
+          return {
+            status: 'error',
+            configured: true,
+            message: '健康检查失败：' + (e && e.message ? e.message : e),
+            config: configInfo
+          };
         }
       }
     };

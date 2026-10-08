@@ -18,6 +18,7 @@
  */
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { join, dirname, resolve as resolvePath } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -290,10 +291,11 @@ async function checkApply() {
       }
       const cfg = {};
       if (f.includes(`${join('plugins', 'core')}`) || f.includes('plugins/core/')) {
-        cfg.knowledgeBasePath = 'E:/知识图谱/config';
-        cfg.questionBankPath = 'E:/知识图谱/obsidian_vault/04_题目';
-        cfg.outputPath = 'E:/geo_edu_agent/outputs';
-        cfg.workspaceRoot = 'E:/geo_edu_agent';
+        // 合成路径：apply 冒烟只验证"不抛错"，不依赖任何真实数据目录，也不得引用作者机器路径。
+        cfg.knowledgeBasePath = join(tmpdir(), 'geo-verify', 'knowledge');
+        cfg.questionBankPath = join(tmpdir(), 'geo-verify', 'bank');
+        cfg.outputPath = join(tmpdir(), 'geo-verify', 'outputs');
+        cfg.workspaceRoot = join(tmpdir(), 'geo-verify');
       }
       plugin.apply(ctx, cfg);
     } catch (e) {

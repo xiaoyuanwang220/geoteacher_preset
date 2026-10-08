@@ -176,8 +176,8 @@ DSH 会话可能使用不同能力层级的模型。Skill 应保存真正的领�
 
 | 数据源 | 默认位置或渠道 | 用途 | 写入权限 |
 | --- | --- | --- | --- |
-| 当前 taxonomy | `E:\知识图谱\config\knowledge_taxonomy_*.yaml` | 知识点定位、边界、ID、版本 | 只读 |
-| 已映射真题 | `E:\知识图谱\obsidian_vault\04_题目\`（由现有 geo 工具读取） | 风格例证、知识组合、选项与题组结构参考 | 只读 |
+| 当前 taxonomy | 由 `knowledgeBasePath` 指定的 `knowledge_taxonomy_*.yaml` | 知识点定位、边界、ID、版本 | 只读 |
+| 已映射真题 | 由 `questionBankPath` 指定的目录（由现有 geo 工具读取） | 风格例证、知识组合、选项与题组结构参考 | 只读 |
 | 真题统计与索引 | 现有 geo 工具与 core 维护的索引；不假定外部 processed 目录存在 | 描述当前样本与候选知识共现 | 只读 |
 | 课程标准与教材文本 | `E:\geo_edu_agent\课本与课标\`；教师补充资料另记来源 | 课标原文与共同知识核验 | 只读 |
 | 省份风格档案 | 待 WorkBuddy 产出后指定 | 风格技法输入 | 只读 |

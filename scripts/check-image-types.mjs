@@ -6,8 +6,8 @@
  * 与扩展名推定的格式比对，列出"扩展名与实际内容不符"的伪装文件
  * （典型：webp 内容 + .png 扩展名，会导致视觉识别按错误 mediaType 解码失败）。
  *
- * 用法：node scripts/check-image-types.mjs [--root <dir>] [--json]
- *   --root  要扫描的目录（默认 $env:GEO_KB_ROOT，未设置则 E:/知识图谱/obsidian_vault）
+ * 用法：node scripts/check-image-types.mjs --root <dir> [--json]
+ *   --root  要扫描的目录（必填；也可用环境变量 $env:GEO_KB_ROOT）
  *   --json  输出机器可读 JSON
  * 退出码：0=未发现伪装  1=发现伪装  2=用法/参数错误
  */
@@ -15,14 +15,14 @@ import { readdirSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';
 
 const args = process.argv.slice(2);
-let root = process.env.GEO_KB_ROOT || 'E:/知识图谱/obsidian_vault';
+let root = process.env.GEO_KB_ROOT || '';
 let json = false;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--json') json = true;
   else if (args[i] === '--root') { i++; root = args[i] || ''; }
-  else { console.error(`未知参数: ${args[i]}（用法: node scripts/check-image-types.mjs [--root <dir>] [--json]）`); process.exit(2); }
+  else { console.error(`未知参数: ${args[i]}（用法: node scripts/check-image-types.mjs --root <dir> [--json]）`); process.exit(2); }
 }
-if (!root) { console.error('缺少扫描目录（--root <dir>）'); process.exit(2); }
+if (!root) { console.error('缺少扫描目录：请用 --root <dir>，或设置环境变量 GEO_KB_ROOT'); process.exit(2); }
 
 // 扩展名 -> 推定 MIME
 const EXT_MIME = {

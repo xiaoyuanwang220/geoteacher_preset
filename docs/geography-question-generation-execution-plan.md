@@ -46,7 +46,7 @@ V1 支持两种题型，**一个题包只用一种题型**，由题包顶层 `qu
 | 桌面 profile 路径为 `$DSH_HOME/profiles/desktop`；Host 默认端口参数为 19387 | S2、S3 | 验收针对 desktop profile 和实际运行地址，不能把 CLI/Web 另一 profile 的成功当作桌面成功 |
 | 桌面初始化外部插件 profile，并与内置运行时安装目录分离 | S4、S5 | 在预设包声明依赖和导出；不向内置运行时或 app.asar 写文件 |
 | profile 按 bundle 列表装配各包 patch，再应用 profile 等覆盖层 | S5 | 生效配置要核对最终组合，不能只看预设文件 |
-| 本机 desktop manifest 的依赖为 `link:E:/geo_edu_agent/.agent-presets/geo-teacher`，bundle 列表包含该包 | 本机 `C:/Users/xxx/.dsh/profiles/desktop/package.json` | 当前无需 E:→C: 双副本同步；此结论属于本机开发部署方式，不是所有 DSH 安装的通用规则 |
+| 本机 desktop manifest 的依赖为 `link:<克隆路径>/.agent-presets/geo-teacher`，bundle 列表包含该包 | 本机 `$DSH_HOME\profiles\desktop\package.json` | 当前无需 E:→C: 双副本同步；此结论属于本机开发部署方式，不是所有 DSH 安装的通用规则 |
 | 预设注册时用声明上下文的 `baseUrl` 挂载其插件 | S6；本仓库 `cordis.patch.yml` | 本地插件继续使用包子路径导出，技能根继续从包位置解析，不使用依赖 profile 工作目录的相对插件名 |
 
 源码核对确认 Desktop 包版本为 `0.1.7-rc.2`。实施前仍需从本机“关于”或安装元数据记录实际版本；升级后重新核对关键行为，不沿用 rc.2 结论。

@@ -1,0 +1,13 @@
+{
+  "_说明": "本文件仅为字段示例，不能直接作为真实配置。用户向安装配置 Agent 提供下面四项的实际绝对路径，Agent 逐项写入 <DSH_HOME>/geo-teacher/config.json，不自动搜索、识别或推断目录，不省略字段。已有配置保留其他键。完整重启 DSH 后，通过 /geo/core/health 核对绑定结果。",
+  "_键说明": {
+    "knowledgeBasePath": "用户提供的考点库绝对目录，含 knowledge_taxonomy_*.yaml。",
+    "questionBankPath": "用户提供的真题库绝对根目录，保留题目 Markdown 与图片的相对位置。",
+    "outputPath": "用户指定的产物绝对目录，保存题库索引、真题分析导出等；必须位于 workspaceRoot 内或与其相同。",
+    "workspaceRoot": "用户指定的工作区绝对根目录，作为 workspace-write 的写盘范围。数据源可以位于该目录之外。"
+  },
+  "knowledgeBasePath": "D:/geo-data/knowledge",
+  "questionBankPath": "D:/geo-data/04_题目",
+  "outputPath": "D:/geo-workspace/outputs",
+  "workspaceRoot": "D:/geo-workspace"
+}

@@ -26,13 +26,13 @@
 
 两个样例里只有两类内容是从工作区真实文件读取的，其余均为占位。
 
-**选择题样例**：`knowledge.coreNodeIds` 与 `design.taxonomyRole` 使用的 `KU-NAT-ATM-HEAT-005`（大气热力环流）取自 `E:\知识图谱\config\knowledge_taxonomy_natural_geography.yaml:609`，其 `definition`、`includes`、`excludes` 为该文件真实内容，且源中 `needs_review: false`（:629）——因此该样例的 `knowledge.needsReviewNodeIds` 为空：
+**选择题样例**：`knowledge.coreNodeIds` 与 `design.taxonomyRole` 使用的 `KU-NAT-ATM-HEAT-005`（大气热力环流）取自 `<考点库>/knowledge_taxonomy_natural_geography.yaml:609`，其 `definition`、`includes`、`excludes` 为该文件真实内容，且源中 `needs_review: false`（:629）——因此该样例的 `knowledge.needsReviewNodeIds` 为空：
 
 - definition：由地面冷热不均引起的空气垂直与水平运动构成的闭合环流。
 - includes：热力环流的形成过程（受热上升、冷却下沉、水平补偿）；海陆风、山谷风、城市热岛环流等应用。
 - excludes：全球性大气环流（归入气压带和风带的形成）。
 
-**综合题样例**：`KU-REG-ECOFRAGILE-003`（生态脆弱区的综合治理）与 `-002`（土地退化及成因）取自 `E:\知识图谱\config\knowledge_taxonomy_regional_development.yaml:333`—`:378`；课标条目取自 `课本与课标/课标.md:370`；教材依据取自 `课本与课标/选必二.md:514`—`:618`。这两个节点在源中**均为 `needs_review: true`**（:353、:377），所以该样例的 `knowledge.needsReviewNodeIds` 非空，并在 `risks` 中以 `blocking: true` 明示——这是刻意选的：它演示「用到待复核节点时不得无提示地交付」这条规则。
+**综合题样例**：`KU-REG-ECOFRAGILE-003`（生态脆弱区的综合治理）与 `-002`（土地退化及成因）取自 `<考点库>/knowledge_taxonomy_regional_development.yaml:333`—`:378`；课标条目取自 `课本与课标/课标.md:370`；教材依据取自 `课本与课标/选必二.md:514`—`:618`。这两个节点在源中**均为 `needs_review: true`**（:353、:377），所以该样例的 `knowledge.needsReviewNodeIds` 非空，并在 `risks` 中以 `blocking: true` 明示——这是刻意选的：它演示「用到待复核节点时不得无提示地交付」这条规则。
 
 ## 样例覆盖的状态
 

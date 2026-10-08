@@ -119,8 +119,8 @@ profiles/desktop/package.json
 
 | 数据 | 路径 | 实测 |
 | :-- | :-- | :-- |
-| 考点树（KPS） | `E:\知识图谱\config\knowledge_taxonomy_*.yaml` | 4 份：natural_geography、human_geography、regional_development、resources_environment_national_security；`meta.version: v0.2-draft`、`meta.status: draft`、`constructed_at: 2026-07-28` |
-| 真题库 | `E:\知识图谱\obsidian_vault\04_题目` | 104 个题组单页，8 省（广东/山东/福建/湖南/浙江/安徽/海南/…）× 2024、2025 |
+| 考点树（KPS） | 由 `knowledgeBasePath` 指定的 `knowledge_taxonomy_*.yaml` | 4 份：natural_geography、human_geography、regional_development、resources_environment_national_security；`meta.version: v0.2-draft`、`meta.status: draft`、`constructed_at: 2026-07-28` |
+| 真题库 | 由 `questionBankPath` 指定的目录 | 104 个题组单页，8 省（广东/山东/福建/湖南/浙江/安徽/海南/…）× 2024、2025 |
 | 技术文档所列 `知识图谱\processed\*`、`03_考点统计\` | **不存在** | 与执行方案 §11 的修正项一致 |
 
 **版本事实**：taxonomy 为 `v0.2-draft`（草稿），任何交付物不得表述为"正式定稿"。

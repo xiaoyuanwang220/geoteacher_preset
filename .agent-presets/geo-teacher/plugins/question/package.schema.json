@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://geo-edu.local/schemas/question-package.schema.json",
+  "$id": "urn:geo-edu:dsh-geo-teacher:question-package.schema.json",
   "title": "出题任务包（outputs/出题/<taskId>/package.json）",
   "description": "唯一编辑源。Markdown、学生投影与教师投影均由本数据生成，不分别维护第二份权威内容。字段见 docs/geography-question-generation-execution-plan.md §6.1。schemaVersion 2 起支持两种题型：选择题组（single_choice）与材料型综合题（comprehensive）。题型由顶层 questionType 声明一次，一个题包只用一种题型——由本 schema 的 questionType 条件分支强制，不允许混排。",
   "type": "object",

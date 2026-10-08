@@ -88,7 +88,7 @@
 ## 八、取题与工具纪律
 
 - 取题一律走工具：真题检索用 `geo_search_questions`，真题详情用 `geo_question_detail`，风格档案用 `geo_style_profile`，考点树用 `geo_taxonomy`；命题研究用 `geo_analyze`，需要导出时用 `geo_export_analysis`。
-- 严禁用 read/glob/pwsh 直接读真题库 md 文件：`E:\知识图谱\obsidian_vault\04_题目` 下所有 md 均含答案与解析，直读等同读取答案，属流程违规。
+- 严禁用 read/glob/pwsh 直接读真题库 md 文件：已配置的真题库目录下所有 md 均含答案与解析，直读等同读取答案，属流程违规。生效路径见 `/geo/core/health`。
 - 生成的题包 ID（`taskId`/`questionSetId`/`itemId`/`subQuestionId`/`pointId`）不是现成题库 qid，不能直接传给 `geo_solve`、`geo_judge`、`geo_explain`；这三个入口面向题库 qid。
 - 「出题上下文已知答案」这一事实必须如实说明：答案核验采用教师审题，或另开只收到学生题面投影的独立验证会话。
 

@@ -90,7 +90,11 @@ export default {
       },
       async execute(args) {
         // 传整个 args 对象给 kernel（新接口），内部自动归一化
-        return { status: 'success', results: await kernel.searchQuestions(args) };
+        try {
+          return { status: 'success', results: await kernel.searchQuestions(args) };
+        } catch (e) {
+          return { status: 'error', message: '题库检索失败：' + ((e && e.message) || e) };
+        }
       }
     });
 

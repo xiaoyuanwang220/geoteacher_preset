@@ -18,6 +18,13 @@
       "patch": "./cordis.patch.yml"
     }
   },
+  "files": [
+    "cordis.patch.yml",
+    "plugins/",
+    "skills/",
+    "knowledge/"
+  ],
+  "license": "MIT",
   "dependencies": {
     "yaml": "^2.7.0"
   }

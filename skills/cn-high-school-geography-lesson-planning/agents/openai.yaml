@@ -1,4 +1,0 @@
-interface:
-  display_name: "中国高中地理课程设计"
-  short_description: "面向中国高中地理教师生成课标对齐的完整课堂教学材料包"
-  default_prompt: "使用 $cn-high-school-geography-lesson-planning 为我设计一节中国普通高中地理课。"

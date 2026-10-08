@@ -707,7 +707,7 @@
       "publishedAt": null,
       "eventTime": null,
       "accessedAt": "2026-10-04",
-      "urlOrPath": "E:\\geo_edu_agent\\课本与课标\\课标.md（第 370 行）",
+      "urlOrPath": "课本与课标/课标.md（第 370 行）",
       "accessScope": "full_text",
       "usedClaims": [
         "选择性必修2 内容要求 2.6 原文：以某生态脆弱区为例，说明该类地区存在的环境与发展问题，以及综合治理措施。",
@@ -724,7 +724,7 @@
       "publishedAt": null,
       "eventTime": null,
       "accessedAt": "2026-10-04",
-      "urlOrPath": "E:\\geo_edu_agent\\课本与课标\\选必二.md（第 514—522、534—580、600—618、648 行）",
+      "urlOrPath": "课本与课标/选必二.md（第 514—522、534—580、600—618、648 行）",
       "accessScope": "full_text",
       "usedClaims": [
         "生态脆弱区的定义与主要分布：生态系统抗干扰能力弱、易于退化且难以恢复，主要分布在干湿交替、农牧交错等地区",
@@ -740,11 +740,11 @@
       "sourceId": "S3",
       "type": "other",
       "title": "当前考点树节点 KU-REG-ECOFRAGILE-002 与 KU-REG-ECOFRAGILE-003",
-      "publisherOrInstitution": "E:\\知识图谱 taxonomy（v0.2-draft）",
+      "publisherOrInstitution": "考点库 taxonomy（v0.2-draft）",
       "publishedAt": null,
       "eventTime": null,
       "accessedAt": "2026-10-04",
-      "urlOrPath": "E:\\知识图谱\\config\\knowledge_taxonomy_regional_development.yaml（第 333—378 行）",
+      "urlOrPath": "<考点库>/knowledge_taxonomy_regional_development.yaml（第 333—378 行）",
       "accessScope": "full_text",
       "usedClaims": [
         "KU-REG-ECOFRAGILE-002（土地退化及成因）的包含项：土地退化的概念和表现、自然背景对土地稳定性和恢复能力的影响、过度开垦与过度放牧等人为活动、自然与人为因素共同作用的成因分析框架",

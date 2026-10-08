@@ -14,16 +14,9 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGE_PATH = join(HERE, 'page.html');
 
-// 主视觉「地球仪与书本」取图顺序：
-//   1. 本插件 assets\（推荐，与部署形态无关——放进即可）
-//   2. 本仓库内原型源目录（link 部署下的开发便利，原型目录可随时清掉）
+// 主视觉「地球仪与书本」取图：只从本插件 assets\ 取，与部署形态无关（放进即生效）。
 // 找不到就 404，页面只是缺一张插图，功能不受影响。
-const REPO_ROOT = join(HERE, '..', '..', '..', '..');
-const ASSET_DIRS = [
-  join(HERE, 'assets'),
-  join(REPO_ROOT, 'outputs', 'geo-ui-prototype', 'public', 'assets'),
-  join(REPO_ROOT, 'outputs', 'geo-ui-prototype', 'dist', 'client', 'assets')
-];
+const ASSET_DIRS = [join(HERE, 'assets')];
 
 // 与下方 register 的 path 字面量必须一致：geo-verify 的路由静态扫描只识别字面量，
 // 用变量会让该路由在检查里隐形。

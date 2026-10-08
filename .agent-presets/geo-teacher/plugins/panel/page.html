@@ -5,22 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>地理教师助手</title>
 <!--
-  本页 = outputs/geo-ui-prototype 原型的工作台部分（英雄区 + 上下文行 + 三标签输入区 + 结果弹窗）。
-  除下列有意差异外，视觉、文案与交互一律对齐原型。
+  独立任务受理台页面（英雄区 + 上下文行 + 三标签输入区 + 结果弹窗），纯 HTML/CSS/JS、零构建。
+  几点形制说明：
     1. 不含应用外壳（标题栏 / 侧栏 / 账户行）——由真实 DSH 外壳提供；故 main 去掉 margin-left，
-       且 min-height 用 100dvh 而非原型的 calc(100dvh - 42px)（42px/38px 正是原型的标题栏高度）。
-    2. 结果弹窗改成真能交付的形态：文案不再是"交互演示"，新增「复制需求」（主），
-       「返回调整」降为次级（原型里它是唯一按钮、带 ArrowRight 19，次级动作故去图标）。
-    3. 讲题对象默认 student——原型设计稿默认"教师"，与 persona「默认 student、不自动选 teacher」冲突，
-       而本页拼出的提示词是模型唯一可见的输入，故按契约取 student（见 docs/决策记录.md 2026-10-03）。
-    4. 下拉方向键：修掉原型"点击展开后按 ↑ 会跳过最后一项"的取模偏差；背景关闭改用 pointerdown，
+       且 min-height 直接取 100dvh（本页无标题栏，不减任何高度）。
+    2. 结果弹窗是真能交付的形态：「复制需求」为主按钮，「返回调整」降为次级（次级动作不用图标）。
+    3. 讲题对象默认 student——与 persona「默认 student、不自动选 teacher」一致；本页拼出的提示词
+       是模型唯一可见的输入，故不能取"教师"作默认（见 docs/决策记录.md 2026-10-03）。
+    4. 下拉方向键：修掉"点击展开后按 ↑ 会跳过最后一项"的取模偏差；背景关闭改用 pointerdown，
        避免"在弹窗内拖选文本、松手落在背景上"被误判为点击背景而关窗。
   图标是内联的 Phosphor 路径（regular；下拉勾选为 bold），主视觉走 /geo-teacher/assets/globe.png。
 -->
 <style>
 *{box-sizing:border-box}:root{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:#17212b;background:#fff;font-synthesis:none;-webkit-font-smoothing:antialiased}body{margin:0;min-width:320px}button,textarea{font:inherit}button{cursor:pointer;color:inherit;transition:background .18s,box-shadow .18s,transform .15s}button:focus-visible,textarea:focus-visible{outline:3px solid #8eb5a1;outline-offset:3px}button:active{transform:translateY(1px)}button:disabled{cursor:wait;opacity:.65}
 .app{min-height:100dvh}
-/* 原型此处为 calc(100dvh - 42px)：那 42px 是原型标题栏高度，本页无标题栏（见页首说明 1） */
+/* 本页无标题栏，故 min-height 直接取 100dvh（见页首说明 1） */
 main{min-height:100dvh;padding:0 7.1vw 140px;position:relative}
 .workbench{max-width:1100px;margin:auto;padding-top:clamp(45px,10.3vh,108px)}
 .hero{text-align:center}
@@ -198,7 +197,7 @@ const MODES = [
   }
 ];
 // 讲题对象默认 student：cordis.patch.yml 的 persona 明示"默认 student，不自动选 teacher"，
-// 而本页拼出的提示词是模型唯一可见的输入，故不能用原型设计稿里的"教师"默认值。
+// 而本页拼出的提示词是模型唯一可见的输入，故不能用"教师"作默认值。
 const INITIAL_VALUES = { audience: '学生', type: '选择题', difficulty: '中等', grade: '高一', duration: '45分钟' };
 const SUBMIT_DELAY_MS = 650;
 
@@ -339,7 +338,7 @@ function onPickerKeydown(event, id) {
   if (items.length === 0) return;
   const index = items.indexOf(document.activeElement);
   // 焦点还在触发键上（index < 0）时：↓ 进第一项，↑ 进最后一项；已在选项内则按 ±1 环绕。
-  // 原型的取模写法在 index = -1 时会让 ↑ 落到 items[len-2]，跳过最后一项。
+  // 取模写法在 index = -1 时会让 ↑ 落到 items[len-2]，跳过最后一项。
   const next = index < 0
     ? (event.key === 'ArrowDown' ? items[0] : items[items.length - 1])
     : items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length];
