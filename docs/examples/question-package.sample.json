@@ -1,8 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "taskId": "2026-0927-heat-circulation",
-  "revision": 7,
+  "revision": 8,
   "mode": "competition",
+  "questionType": "single_choice",
   "stage": "draft_ready",
   "readiness": "draft_complete",
 
@@ -29,32 +30,33 @@
     "supportingNodeIds": ["KU-NAT-ATM-HEAT-001"],
     "candidateNodeIds": ["KU-NAT-ATM-CIRC-001"],
     "unresolved": [],
-    "taxonomyGap": false
+    "taxonomyGap": false,
+    "needsReviewNodeIds": []
   },
 
   "learningHypotheses": [
     {
       "id": "LH-01",
-      "teacherInput": "学生对热力环流的概念不理解",
+      "teacherInput": "学生对热力环流的概念不理解，做题时容易把它和大气受热过程混在一起",
       "statement": "可能无法建立「冷热差异 → 垂直运动 → 气压差异 → 水平气流」的完整因果链，只记住单个环节",
       "observableErrors": ["只判断垂直运动，不判断水平气流", "把气温高直接判定为近地面高压"],
-      "candidateDistractorStrategy": "因果倒置或局部链条选项",
+      "candidateErrorStrategy": "因果倒置或局部链条选项",
       "status": "selected"
     },
     {
       "id": "LH-02",
-      "teacherInput": "容易把它和大气受热过程混在一起",
+      "teacherInput": "学生对热力环流的概念不理解，做题时容易把它和大气受热过程混在一起",
       "statement": "可能把热力环流的成因与大气受热过程的能量传递次序混淆，误把辐射环节当作环流环节",
       "observableErrors": ["用大气受热过程的环节解释环流方向", "把地面辐射当作环流的直接驱动力"],
-      "candidateDistractorStrategy": "邻近概念替换选项",
+      "candidateErrorStrategy": "邻近概念替换选项",
       "status": "selected"
     },
     {
       "id": "LH-03",
-      "teacherInput": "做题时容易出错",
+      "teacherInput": "学生对热力环流的概念不理解，做题时容易把它和大气受热过程混在一起",
       "statement": "待验证：可能能把原理复述出来，但无法迁移到城市热岛、海陆风等具体情境",
       "observableErrors": ["情境换新后仍按教材原话作答", "忽略材料给出的时间或尺度条件"],
-      "candidateDistractorStrategy": "忽略材料条件的表面匹配选项",
+      "candidateErrorStrategy": "忽略材料条件的表面匹配选项",
       "status": "proposed"
     }
   ],
@@ -175,6 +177,7 @@
     },
     "items": [
       {
+        "itemType": "single_choice",
         "itemId": "Q1",
         "stem": "午后，该城市近海面与内陆近地面相比，气温与气压的对应关系是",
         "options": {
@@ -201,6 +204,7 @@
         }
       },
       {
+        "itemType": "single_choice",
         "itemId": "Q2",
         "stem": "该城市午后近地面风的形成过程，正确的顺序是",
         "options": {
@@ -227,6 +231,7 @@
         }
       },
       {
+        "itemType": "single_choice",
         "itemId": "Q3",
         "stem": "若该城市在夜间于西侧内陆规划一片绿地，从热力环流角度看，其主要作用是",
         "options": {
@@ -452,7 +457,7 @@
   "reviews": [
     {
       "reviewId": "RV1",
-      "targetRevision": 7,
+      "targetRevision": 8,
       "checkType": "structural",
       "method": "题包结构校验（字段完整性、答案唯一性、干扰项映射、投影禁用字段）",
       "findings": ["结构项通过"],
@@ -460,11 +465,26 @@
     },
     {
       "reviewId": "RV2",
-      "targetRevision": 7,
+      "targetRevision": 8,
       "checkType": "semantic",
       "method": "独立作答：仅以 student 投影作答后与教师内容对照",
       "findings": ["三题答案唯一，材料足以支撑"],
       "pendingItems": ["语义评审尚未完成，本节结论不得当作最终质量结论"]
+    },
+    {
+      "reviewId": "RV3",
+      "targetRevision": 8,
+      "checkType": "structural",
+      "method": "schemaVersion 1 → 2 格式迁移核对（2026-10-04）",
+      "findings": [
+        "迁移项：schemaVersion 1→2；新增顶层 questionType=single_choice；三道小题补 itemType=single_choice；learningHypotheses[].candidateDistractorStrategy 改名 candidateErrorStrategy；knowledge 补 needsReviewNodeIds=[]",
+        "使用到的 KU-NAT-ATM-HEAT-005 在源中 needs_review=false（knowledge_taxonomy_natural_geography.yaml:629），故 needsReviewNodeIds 为空，无需在 risks 中提示",
+        "顺带修正一处 v2 之前的样例缺陷：三条 learningHypotheses[].teacherInput 原为原话的片段，其中 LH-03 的「做题时容易出错」在原话中并不存在；现已按 item-writing.md 的要求改为 request.learningStateRaw 的原话逐字复制",
+        "题面、选项、答案与来源未改动，故 RV1/RV2 的结论沿用；targetRevision 随本次递增改为 8"
+      ],
+      "pendingItems": [
+        "本次为格式迁移，未重跑任何自动校验：校验器与投影渲染尚未实现（属 M3）"
+      ]
     }
   ],
 

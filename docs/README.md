@@ -6,12 +6,14 @@
 | :-- | :-- | :-- |
 | 部署与使用 | [项目说明](../README.md)、[使用指南](使用指南.md) | profile 依赖挂载；本机 link 直连仓库 |
 | 共享术语 | [术语表](术语表.md) | 地理与交付术语的统一来源 |
-| 出题需求与设计 | [产品需求](geography-question-generation-product-requirements.md)、[技术设计](geography-question-generation-technical-design.md)、[执行方案](geography-question-generation-execution-plan.md) | V1 设计及 M0–M5 验收要求；不是全部功能完成声明 |
-| 出题实施状态 | [M0](geography-question-generation-m0-baseline.md)、[M1](geography-question-generation-m1-record.md) | M1 源码已落地，桌面及语义验收待补齐 |
-| 数据样例 | [样例说明](examples/README.md) | 含占位证据与模拟确认，不是真实交付物 |
+| 出题需求与设计 | [产品需求](geography-question-generation-product-requirements.md)、[技术设计](geography-question-generation-technical-design.md)、[执行方案](geography-question-generation-execution-plan.md) | V1 设计及 M0–M5 验收要求；不是全部功能完成声明。V1 范围含**两种题型**（材料型选择题组与材料型综合题，一包一题型），命题包格式为 `schemaVersion: 2`（[决策记录](决策记录.md) 2026-10-04 行）。**出题自 2026-10-08 起正在开发**（2026-10-04 之前的暂缓令已解除） |
+| 出题实施状态 | [M0](geography-question-generation-m0-baseline.md)、[M1](geography-question-generation-m1-record.md) | M1 源码已落地；命题包 schema v2 与选择题／综合题双样例已落地，但**校验器／投影／渲染未实现**（全仓无任何程序读取 `package.schema.json`）；**正在开发中**，M1 桌面验收、M2 端到端闭环与 M3 校验器均待补 |
+| 出题数据样例与迁移 | [样例说明](examples/README.md) | 选择题组与综合题各一份样例；含占位证据与模拟确认，不是真实交付物；附 `schemaVersion: 1 → 2` 迁移表 |
 | 讲题规范 | [功能设计](讲题功能设计.md)、[工作流约束](讲题工作流修复方案.md)、[评测方案](讲题评测方案.md) | 三对象规则、答案隔离、DeepSeek 原生图片输入与内容评测 |
-| 三对象实施状态 | [方案](讲题功能三对象改造方案-DSH-0.1.7-rc.2.md)、[实施记录](讲题三对象改造-实施记录.md) | M0–M2 源码改造已记录；M3 与第二阶段待完成 |
+| 三对象实施状态 | [方案](讲题功能三对象改造方案-DSH-0.1.7-rc.2.md)、[实施记录](讲题三对象改造-实施记录.md) | **讲题功能开发完成（2026-10-08），转入用户反馈迭代**；**仅剩「四题三对象内容评审」（人工学科评审）未做**——M3 的确定性命令与桌面全清单已于 2026-09-30 完成回填；§6.6 修复的运行时复验、核验材料交接形态与第二阶段「生成题包只读适配」仍待处理 |
 | 开发维护 | [Skills 应用方案](harness-skills-应用方案.md)、[简化候选](代码简化TODO.md)、[决策记录](决策记录.md) | 保留当前约束、待办和决策理由 |
+| 工作台与 UI 形态 | [原生 UI 插件方案](geo-teacher-原生UI插件方案.md)、[输入区 UI 插件说明](../packages/dsh-geo-teacher-ui/README.md) | 工作台（`plugins/panel`，任务受理台）**已完成**（2026-10-08）；桌面端输入区插件 `@geo-edu/dsh-geo-teacher-ui` **已成品化（2026-10-08，v0.1.0）**——探针代码与主机绝对路径已移除、素材收归包内、元数据补齐；原生 UI 插件方案文档仍保留槽位契约、路径分级与未验证项 |
+| 插件与技能归属 | [功能插件与技能归属方案](geo-teacher-功能插件与技能归属方案.md) | **方案阶段、未实施**：三功能载体的分层判据、技能收归功能插件的目标形态与代价（`geo-verify` 8 处断言重写、失去技能目录热更新）、官方 `dsh-skill-badge` 先例、未验证项；含「课程方案」技能未加载的缺口与三种修法（推荐物理移入预设技能根） |
 | 历史证据 | [归档索引](archive/README.md) | 已完成迁移与旧设计，仅供追溯 |
 
 ## 文档维护规则

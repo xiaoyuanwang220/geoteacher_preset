@@ -395,6 +395,31 @@ export function renderExplain(args, value) {
     if ((plan.guidance || []).length) for (const item of plan.guidance) lines.push(`- ${item}`);
   } else {
     lines.push('\n## 学生对象 audiencePlan（待填）');
+    // 设问先行六步：与教师分支渲染 nodeTemplate 同法，全部以 Markdown 列表项出现（不得成为顶层标题）。
+    const flow = plan.flow || [];
+    if (flow.length) lines.push(`- 段内教学流程：${flow.join(' → ')}`);
+    const placement = plan.stepPlacement || {};
+    if (placement.examine || placement.solve || placement.reflect) {
+      const placementNote = placement.note ? `（${placement.note}）` : '';
+      lines.push(`- 落位：审题＝${placement.examine || '—'}；破题＝${placement.solve || '—'}；反思与迁移＝${placement.reflect || '—'}${placementNote}`);
+    }
+    const stepTemplate = plan.stepTemplate || [];
+    if (stepTemplate.length) {
+      lines.push('- 推进步骤（每步：做什么／为什么这么做）：');
+      for (const step of stepTemplate) {
+        lines.push(`  - ${step.step}：${step.action}`);
+        lines.push(`    - 思维锚点（讲给学生听）：${step.anchor}`);
+      }
+    }
+    lines.push(`- 第一步想什么（待填）：${plan.entryQuestion || '拿到这道题第一步做什么、为什么'}`);
+    const planSteps = plan.steps || [];
+    if (planSteps.length) {
+      lines.push('- 推进步骤的具体内容（待填）：');
+      for (const item of planSteps) lines.push(`  - ${item}`);
+    } else {
+      lines.push('- 推进步骤的具体内容（待填）：按①—⑥逐步填：每步的动作＋证据/原理＋结论');
+    }
+    lines.push(`- 方法边界（待填）：${plan.methodBoundary || '这个方法适用什么条件、什么时候要换方法'}`);
     if ((plan.guidance || []).length) for (const item of plan.guidance) lines.push(`- ${item}`);
   }
 

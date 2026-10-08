@@ -1,6 +1,8 @@
 # Local backups and transient download workspaces
 .backups/
 .tmp-*/
+.work/
+.manus/
 
 # Generated outputs (keep the directory contract)
 outputs/*
@@ -38,7 +40,9 @@ secrets.yml
 .pypirc
 .git-msg.tmp
 
-# Download archives; extracted source may remain versioned
+# 第三方参考下载：不属于本项目产物，不随仓库发布
+# 需要时按 docs/harness-skills-应用方案.md 记录的来源与 commit 自行获取
+deepseek-harness-skills-master/
 deepseek-harness-skills-master.zip
 
 # Open-source publishing staging area (own git repo)

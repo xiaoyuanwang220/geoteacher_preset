@@ -1,0 +1,13 @@
+# geo-teacher 输入区 UI 插件 —— profile 级 bundle patch
+#
+# 插入一行：模块名即本包。宿主半边 index.js 只做一件事：从本包 assets/ 提供
+# 插件自带静态资源（/geo-teacher-ui/assets/<name>，只发栅格图）。
+#
+# 客户端半边由 dsh-client-modules 依据 package.json 的 dsh.client 声明发现，
+# 经 /plugins 提供 bundle，浏览器端 window.__ModuleLoader__.load({id, factory}) 注册；
+# 它负责会话输入区的功能选择与参数设置（conversation.input.left / .right）。
+#
+# 与预设内的 /geo-teacher、/geo-teacher/assets 不冲突：同一路径重复注册会让 preset 挂载失败。
+- insert:
+    - id: geo-teacher-ui
+      name: '@geo-edu/dsh-geo-teacher-ui'

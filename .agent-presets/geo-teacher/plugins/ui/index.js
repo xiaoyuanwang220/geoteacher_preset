@@ -1,31 +1,16 @@
-// GeoTeacher Agent — UI 仪表盘插件（geo-ui）
-// 服务 /geo-teacher 页面（纯 HTML/JS 仪表盘，前端调用各功能插件 /geo/* API）。
+// 已退役：本插件（geo-ui，/geo-teacher 仪表盘）已被 plugins/panel（geo-panel 工作台）取代。
+//
+// 保留这个文件只为一件事：让 geo-verify 的 plugins/*/index.js 扫描在物理删除前后都通过。
+// 它不注册任何路由，因此不会与新工作台争夺 /geo-teacher——同一路径被两个插件注册会让整个
+// preset 挂载失败（重复路由）。
+//
+// 退役前原文：.backups/geo-ui-retired-20261003/index.js
+// 完成物理删除（需本地 shell 执行一次，本会话无 shell 且无删除/移动类工具）：
+//   Move-Item -Recurse -Force `
+//     E:\geo_edu_agent\.agent-presets\geo-teacher\plugins\ui `
+//     E:\geo_edu_agent\.backups\geo-ui-retired-20261003\plugin-dir
 
 export default {
-  name: 'geo-ui',
-  inject: ['fs', 'webServer'],
-  apply(ctx) {
-    const fsService = ctx.fs;
-    const webServer = ctx.webServer;
-    const PAGE_PATH = decodeURIComponent(new URL('./page.html', import.meta.url).pathname).replace(/^\/+/, '');
-
-    webServer.register({
-      kind: 'exact',
-      path: '/geo-teacher',
-      handler: (req, res) => {
-        fsService.resolve(PAGE_PATH)
-          .then(target => fsService.readText(target))
-          .then(html => {
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(html || '<h1>geo-teacher: page not found</h1>');
-          })
-          .catch(() => {
-            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end('geo-teacher: failed to load page');
-          });
-      }
-    });
-
-    console.log('geo-ui: /geo-teacher 页面已注册');
-  }
+  name: 'geo-ui-retired',
+  apply() {}
 };

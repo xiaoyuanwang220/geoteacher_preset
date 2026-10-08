@@ -1,0 +1,38 @@
+{
+  "name": "@geo-edu/dsh-geo-teacher-ui",
+  "version": "0.1.0",
+  "description": "geo-teacher 桌面端原生 UI 插件：在 DSH 输入区提供「讲题／出题／课程方案」的功能选择与参数设置，并把选定的功能与参数写进原生输入框。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "assets/"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "geography",
+    "education"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}

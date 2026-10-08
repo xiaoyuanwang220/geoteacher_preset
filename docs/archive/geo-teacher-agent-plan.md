@@ -19,7 +19,7 @@
 
 | 资产 | 位置 | 状态 |
 | --- | --- | --- |
-| 地理教师预设 `geo-teacher` | `C:\Users\xxx\.dsh\.agent-presets\geo-teacher\`（用户自有，可改） | ✅ 挂载中；内置单插件 + 1 技能 |
+| 地理教师预设 `geo-teacher` | `$DSH_HOME\.agent-presets\geo-teacher\`（用户自有，可改） | ✅ 挂载中；内置单插件 + 1 技能 |
 | 单插件实现 | `geo-teacher-plugin/index.js`（673 行：解析器 + 题库加载 + 分析/蓝图引擎 + `/geo-teacher` 页面 + `/geo-teacher/api/*`） | ✅ 可用，待拆分 |
 | 出题技能 | `skills/geo-question-generator.md` | ⚠️ **无 frontmatter**，skill-filesystem 会以 "missing YAML frontmatter" 忽略——当前很可能实际未被发现，需修复 |
 | 课程方案技能包 | `E:\geo_edu_agent\cn-high-school-geography-lesson-planning\`（SKILL.md + references/ + scripts/ 渲染管线 → docx/html） | ✅ 资产完整，但 SKILL.md 依赖 ima/WorkBuddy MCP（DSH 中不存在），需适配 |
@@ -37,7 +37,7 @@
 
 ## 三、总体架构
 
-一个 agent preset = 一个 agent。所有地理能力都收在 `C:\Users\xxx\.dsh\.agent-presets\geo-teacher\` 内：
+一个 agent preset = 一个 agent。所有地理能力都收在 `$DSH_HOME\.agent-presets\geo-teacher\` 内：
 
 ```
 geo-teacher/
@@ -188,14 +188,14 @@ geo-teacher/
 **决策**：用户 C 盘空间紧张，将 `geo-teacher` 预设主目录迁至项目工作区，统一纳入项目管理。
 
 **已执行**：
-1. `C:\Users\xxx\.dsh\.agent-presets\geo-teacher\` → 复制到 `E:\geo_edu_agent\.agent-presets\geo-teacher\`（6 个文件，SHA256 字节一致校验通过）。
-2. 在 host 组成补丁 `C:\Users\xxx\.dsh\profiles\web\cordis.patch.yml` 为 `agent-presets` 行配置 `roots: [{ path: 'E:/geo_edu_agent/.agent-presets', trust: user }]`，并照抄回 `default: standard`（patch 整段替换 config）。YAML 已用 `yaml` 包解析校验。
+1. `$DSH_HOME\.agent-presets\geo-teacher\` → 复制到 `E:\geo_edu_agent\.agent-presets\geo-teacher\`（6 个文件，SHA256 字节一致校验通过）。
+2. 在 host 组成补丁 `$DSH_HOME\profiles\web\cordis.patch.yml` 为 `agent-presets` 行配置 `roots: [{ path: 'E:/geo_edu_agent/.agent-presets', trust: user }]`，并照抄回 `default: standard`（patch 整段替换 config）。YAML 已用 `yaml` 包解析校验。
 
 **原理依据**（dsh-agent-presets README）：`roots` 支持任意路径；配置根目录按序优先于推导出的 `<dshHome>/.agent-presets` 用户根（重复 id 靠前根胜出）；相对路径插件行与 `skills/` 均相对预设自身目录解析，迁移后无需改内部路径；包名从宿主组装解析，不受位置影响。
 
 **待办（需 DSH web 进程重启后生效）**：
 - 重启后 roster 将从 E: 根解析 `geo-teacher`（E: 根优先，C: 旧副本被遮蔽）。
-- 确认新会话能选到「地理教师辅助」预设后，删除 C: 旧副本 `C:\Users\xxx\.dsh\.agent-presets\geo-teacher\`（约 66KB）以彻底释放 C 盘；删除需 C 盘写权限。
+- 确认新会话能选到「地理教师辅助」预设后，删除 C: 旧副本 `$DSH_HOME\.agent-presets\geo-teacher\`（约 66KB）以彻底释放 C 盘；删除需 C 盘写权限。
 - 此后预设的权威副本 = `E:\geo_edu_agent\.agent-presets\geo-teacher\`，建议纳入 git 管理；`agent.cordis.yml` 注释中说明"这是项目内副本"以免误改 C: 遗留目录。
 - 本方案的实施（插件化重构 P0–P6）仍按上文各阶段进行，操作对象改为 E: 副本。
 
@@ -212,7 +212,7 @@ geo-teacher/
 
 **最终架构**：
 - 权威源：`E:\geo_edu_agent\.agent-presets\geo-teacher\`（git 管理、开发编辑）。
-- 运行时副本：`C:\Users\xxx\.dsh\.agent-presets\geo-teacher\`（DSH 实际加载，约 110KB）。
+- 运行时副本：`$DSH_HOME\.agent-presets\geo-teacher\`（DSH 实际加载，约 110KB）。
 - 同步命令：`Copy-Item 'E:\...\geo-teacher\*' 'C:\...\geo-teacher\' -Recurse -Force`。
 - `profiles\web\cordis.patch.yml` 已还原为 `[]`（无效配置已撤销）。
 

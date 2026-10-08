@@ -2,16 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://geo-edu.local/schemas/question-package.schema.json",
   "title": "出题任务包（outputs/出题/<taskId>/package.json）",
-  "description": "唯一编辑源。Markdown、学生投影与教师投影均由本数据生成，不分别维护第二份权威内容。字段见 docs/geography-question-generation-execution-plan.md §6.1。",
+  "description": "唯一编辑源。Markdown、学生投影与教师投影均由本数据生成，不分别维护第二份权威内容。字段见 docs/geography-question-generation-execution-plan.md §6.1。schemaVersion 2 起支持两种题型：选择题组（single_choice）与材料型综合题（comprehensive）。题型由顶层 questionType 声明一次，一个题包只用一种题型——由本 schema 的 questionType 条件分支强制，不允许混排。",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schemaVersion", "taskId", "revision", "mode", "stage", "readiness",
+    "schemaVersion", "taskId", "revision", "mode", "questionType", "stage", "readiness",
     "request", "taxonomySources", "knowledge", "learningHypotheses",
     "concepts", "sources", "visuals", "confirmations", "reviews", "risks"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "taskId": {
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$",
@@ -19,6 +19,10 @@
     },
     "revision": { "type": "integer", "minimum": 1, "description": "单调递增修订号；并发修改时停止覆盖并重新读取" },
     "mode": { "enum": ["competition", "targeted_practice"] },
+    "questionType": {
+      "enum": ["single_choice", "comprehensive"],
+      "description": "题型，在题包顶层声明一次：single_choice 材料型选择题组；comprehensive 材料型综合题。放在顶层而非 questionSet 内，是因为题型在阶段 0 就由教师确定，早于 questionSet 存在，且 simulations 与 concepts 的形态也由它决定。术语表规定「题型」只指这一对结构取值，不用于指设问方式。"
+    },
     "stage": {
       "enum": ["input_normalized", "concepts_proposed", "concept_selected", "draft_ready", "visuals_approved", "finalized"]
     },
@@ -68,7 +72,8 @@
         "supportingNodeIds": { "type": "array", "items": { "type": "string" } },
         "candidateNodeIds": { "type": "array", "items": { "type": "string" }, "description": "近似匹配候选，须由教师选择，不自动替换" },
         "unresolved": { "type": "array", "items": { "type": "string" }, "description": "未收录或待确认的考点描述" },
-        "taxonomyGap": { "type": "boolean", "description": "true 表示指定考点未收录；不得自行生成 ID" }
+        "taxonomyGap": { "type": "boolean", "description": "true 表示指定考点未收录；不得自行生成 ID" },
+        "needsReviewNodeIds": { "type": "array", "items": { "type": "string" }, "description": "本次实际使用、且源中 needs_review=true 的节点。非空时不得无提示地交付为最终作品，须在 risks 中明示" }
       }
     },
 
@@ -86,7 +91,10 @@
           "teacherInput": { "type": "string" },
           "statement": { "type": "string", "pattern": "可能|待验证" },
           "observableErrors": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-          "candidateDistractorStrategy": { "type": ["string", "null"] },
+          "candidateErrorStrategy": {
+            "type": ["string", "null"],
+            "description": "这条假设将来对应哪类错误作答。选择题：可解释的干扰项策略；综合题：典型错答或漏点策略。字段名在 v2 由 candidateDistractorStrategy 改名，以覆盖两种题型。"
+          },
           "status": { "enum": ["proposed", "selected", "rejected", "revised"] }
         }
       }
@@ -153,7 +161,7 @@
               "type": "object", "additionalProperties": false,
               "required": ["item", "cognitiveLevel"],
               "properties": {
-                "item": { "type": "integer", "minimum": 1 },
+                "item": { "type": "integer", "minimum": 1, "description": "认知递进的序号：选择题为题组内第 N 道小题；综合题为第 N 个小问" },
                 "cognitiveLevel": { "type": "string" }
               }
             }
@@ -183,7 +191,7 @@
     "questionSet": {
       "type": ["object", "null"],
       "additionalProperties": false,
-      "description": "题组；stage >= draft_ready 时必填",
+      "description": "题组；stage >= draft_ready 时必填。题组形态由顶层 questionType 决定：single_choice 为 1—3 道选择题小题；comprehensive 为 1 道综合题，其小问嵌在该项的 subQuestions[] 内。",
       "required": ["questionSetId", "material", "items"],
       "properties": {
         "questionSetId": { "type": "string" },
@@ -197,35 +205,12 @@
         },
         "items": {
           "type": "array", "minItems": 1, "maxItems": 3,
+          "description": "选择题题组：1—3 项小题。综合题题组：恰好 1 项，其内置 subQuestions[]。两种形态由 questionType 条件分支收窄，不混排。",
           "items": {
-            "type": "object", "additionalProperties": false,
-            "required": ["itemId", "stem", "options", "answer", "analysis", "distractorMap", "coreExamPoint", "cognitiveLevel", "fourWings"],
-            "properties": {
-              "itemId": { "type": "string", "pattern": "^Q[0-9]+$" },
-              "stem": { "type": "string" },
-              "options": {
-                "type": "object", "additionalProperties": false,
-                "required": ["A", "B", "C", "D"],
-                "properties": { "A": { "type": "string" }, "B": { "type": "string" }, "C": { "type": "string" }, "D": { "type": "string" } }
-              },
-              "answer": { "enum": ["A", "B", "C", "D"], "description": "答案唯一" },
-              "analysis": { "type": "string" },
-              "distractorMap": {
-                "type": "object", "additionalProperties": false,
-                "description": "每个干扰项对应一种可解释的认知错误；正确项不得出现",
-                "properties": {
-                  "A": { "$ref": "#/$defs/distractor" },
-                  "B": { "$ref": "#/$defs/distractor" },
-                  "C": { "$ref": "#/$defs/distractor" },
-                  "D": { "$ref": "#/$defs/distractor" }
-                }
-              },
-              "coreExamPoint": { "type": "string" },
-              "supportingKnowledge": { "type": "array", "items": { "type": "string" } },
-              "materialClues": { "type": "array", "items": { "type": "string" } },
-              "cognitiveLevel": { "type": "string" },
-              "fourWings": { "$ref": "#/$defs/fourWings" }
-            }
+            "oneOf": [
+              { "$ref": "#/$defs/singleChoiceItem" },
+              { "$ref": "#/$defs/comprehensiveItem" }
+            ]
           }
         }
       }
@@ -279,7 +264,8 @@
             "knowledgeBasis": { "type": ["string", "null"] },
             "informationLoad": { "type": ["string", "null"] },
             "cognitiveLevel": { "type": ["string", "null"] },
-            "distractorDiscrimination": { "type": ["string", "null"] }
+            "distractorDiscrimination": { "type": ["string", "null"], "description": "第四个维度（选择题用）：每个干扰项指向的认知障碍，以及排除它需要的理解水平" },
+            "scoringDiscrimination": { "type": ["string", "null"], "description": "第四个维度（综合题用）：采分点能否把不同水平的学生区分开，答案边界是否可判定。综合题不得把该维度写成干扰项分析" }
           }
         },
         "innovationBoundary": { "type": "array", "items": { "type": "string" } }
@@ -288,7 +274,7 @@
 
     "simulations": {
       "type": "array",
-      "description": "默认 3 名（A/B/C 各 1）；须标注为预测性认知路径，不得冒充真实试测",
+      "description": "默认 3 名（A/B/C 各 1）；须标注为预测性认知路径，不得冒充真实试测。作答形态由 questionType 决定：选择题记选项，综合题记书面答案与命中采分点。",
       "items": {
         "type": "object", "additionalProperties": false,
         "required": ["profile", "cognitiveDescription", "responses", "disclaimer"],
@@ -297,18 +283,7 @@
           "cognitiveDescription": { "type": "string" },
           "responses": {
             "type": "array", "minItems": 1,
-            "items": {
-              "type": "object", "additionalProperties": false,
-              "required": ["itemId", "selected", "reasoning"],
-              "properties": {
-                "itemId": { "type": "string" },
-                "selected": { "enum": ["A", "B", "C", "D"] },
-                "reasoning": { "type": "string" },
-                "correctUnderstanding": { "type": ["string", "null"] },
-                "errorStep": { "type": ["string", "null"] },
-                "misconceptionId": { "type": ["string", "null"], "description": "必须与所选干扰项的 misconceptionId 一致" }
-              }
-            }
+            "items": { "$ref": "#/$defs/simulationResponseBase" }
           },
           "teacherInterpretation": { "type": ["string", "null"] },
           "intervention": { "type": ["string", "null"] },
@@ -354,7 +329,7 @@
           "content": { "type": "string" },
           "itemFunction": { "type": "string" },
           "necessity": { "type": "string", "description": "为何不能用文字替代" },
-          "linkedItems": { "type": "array", "items": { "type": "string" } },
+          "linkedItems": { "type": "array", "items": { "type": "string" }, "description": "关联对象 id：选择题写小题 id（Q1）；综合题写小问 id（Q1-1）" },
           "candidateSourceIds": { "type": "array", "items": { "type": "string" } },
           "plannedMethod": { "enum": ["python_plot", "paper_redraw", "official_map_overlay", "teacher_provided", "none"] },
           "risks": {
@@ -451,6 +426,40 @@
         },
         "description": "可使用：不得存在 blocking 风险；依赖未制作图表的题组只能到 draft_complete/pending"
       }
+    },
+    {
+      "if": { "properties": { "questionType": { "const": "single_choice" } }, "required": ["questionType"] },
+      "then": {
+        "properties": {
+          "questionSet": {
+            "properties": {
+              "items": {
+                "minItems": 1, "maxItems": 3,
+                "items": { "$ref": "#/$defs/singleChoiceItem" }
+              }
+            }
+          },
+          "simulations": { "items": { "properties": { "responses": { "items": { "$ref": "#/$defs/singleChoiceResponse" } } } } }
+        },
+        "description": "选择题组：1—3 道小题，逐题 ABCD 与干扰项映射；模拟作答记选项"
+      }
+    },
+    {
+      "if": { "properties": { "questionType": { "const": "comprehensive" } }, "required": ["questionType"] },
+      "then": {
+        "properties": {
+          "questionSet": {
+            "properties": {
+              "items": {
+                "minItems": 1, "maxItems": 1,
+                "items": { "$ref": "#/$defs/comprehensiveItem" }
+              }
+            }
+          },
+          "simulations": { "items": { "properties": { "responses": { "items": { "$ref": "#/$defs/comprehensiveResponse" } } } } }
+        },
+        "description": "材料型综合题：题组恰好 1 项，其内置 2—4 个小问、各问分值与采分点；模拟作答记书面答案与命中采分点"
+      }
     }
   ],
 
@@ -466,13 +475,192 @@
         "evidence": { "type": "array", "items": { "type": "string" }, "description": "每项要求对应的题面证据" }
       }
     },
+
     "distractor": {
       "type": "object",
       "additionalProperties": false,
+      "description": "选择题干扰项：对应一种可解释的认知错误。综合题不用本结构，改用 subQuestion.misconceptionPatterns。",
       "required": ["misconceptionId", "errorType"],
       "properties": {
         "misconceptionId": { "type": ["string", "null"], "description": "映射到 learningHypotheses[].id" },
         "errorType": { "type": "string", "description": "如 概念混淆 / 因果倒置 / 证据遗漏 / 时空尺度错误 / 表面信息匹配" }
+      }
+    },
+
+    "singleChoiceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "选择题小题：questionSet.items[] 的一项。",
+      "required": ["itemType", "itemId", "stem", "options", "answer", "analysis", "distractorMap", "coreExamPoint", "cognitiveLevel", "fourWings"],
+      "properties": {
+        "itemType": { "const": "single_choice", "description": "题型判别字段，与顶层 questionType 一致" },
+        "itemId": { "type": "string", "pattern": "^Q[0-9]+$" },
+        "stem": { "type": "string" },
+        "options": {
+          "type": "object", "additionalProperties": false,
+          "required": ["A", "B", "C", "D"],
+          "properties": { "A": { "type": "string" }, "B": { "type": "string" }, "C": { "type": "string" }, "D": { "type": "string" } }
+        },
+        "answer": { "enum": ["A", "B", "C", "D"], "description": "答案唯一" },
+        "analysis": { "type": "string" },
+        "distractorMap": {
+          "type": "object", "additionalProperties": false,
+          "description": "每个干扰项对应一种可解释的认知错误；正确项不得出现",
+          "properties": {
+            "A": { "$ref": "#/$defs/distractor" },
+            "B": { "$ref": "#/$defs/distractor" },
+            "C": { "$ref": "#/$defs/distractor" },
+            "D": { "$ref": "#/$defs/distractor" }
+          }
+        },
+        "coreExamPoint": { "type": "string" },
+        "supportingKnowledge": { "type": "array", "items": { "type": "string" } },
+        "materialClues": { "type": "array", "items": { "type": "string" } },
+        "cognitiveLevel": { "type": "string" },
+        "fourWings": { "$ref": "#/$defs/fourWings" }
+      }
+    },
+
+    "comprehensiveItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "材料型综合题：questionSet.items[] 唯一的一项。分值自洽由校验器核对（M3）：totalPoints 必须等于各小问 points 之和；每个小问的 points 必须等于该问 answerKey 各点 points 之和。JSON Schema 不表达跨字段求和。",
+      "required": ["itemType", "itemId", "stem", "totalPoints", "subQuestions", "coreExamPoint", "cognitiveLevel", "fourWings"],
+      "properties": {
+        "itemType": { "const": "comprehensive", "description": "题型判别字段，与顶层 questionType 一致" },
+        "itemId": { "type": "string", "pattern": "^Q[0-9]+$" },
+        "stem": { "type": "string", "description": "大题引导语；无引导语时写空串，不留空字段" },
+        "totalPoints": { "type": "number", "exclusiveMinimum": 0 },
+        "subQuestions": {
+          "type": "array", "minItems": 2, "maxItems": 4,
+          "items": { "$ref": "#/$defs/subQuestion" }
+        },
+        "coreExamPoint": { "type": "string" },
+        "supportingKnowledge": { "type": "array", "items": { "type": "string" } },
+        "materialClues": { "type": "array", "items": { "type": "string" } },
+        "cognitiveLevel": { "type": "string" },
+        "fourWings": { "$ref": "#/$defs/fourWings" }
+      }
+    },
+
+    "subQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "综合题的一个小问。术语表规定综合题内的独立设问称「小问」，不得用「第N题」指代。",
+      "required": ["subQuestionId", "stem", "points", "answerKey", "rubric", "answerBoundary", "cognitiveLevel"],
+      "properties": {
+        "subQuestionId": { "type": "string", "pattern": "^Q[0-9]+-[0-9]+$", "description": "如 Q1-1；与 visuals[].linkedItems、simulations[].responses[].subQuestionId 共用同一套 id" },
+        "stem": { "type": "string", "description": "本小问题干：动词 + 对象 + 限定词，一问一个设问动作" },
+        "points": { "type": "number", "exclusiveMinimum": 0, "description": "本小问分值；须等于本问 answerKey 各点 points 之和（由校验器核对）" },
+        "answerKey": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/answerKeyPoint" } },
+        "rubric": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/rubricLevel" } },
+        "answerBoundary": { "$ref": "#/$defs/answerBoundary" },
+        "misconceptionPatterns": { "type": "array", "items": { "$ref": "#/$defs/misconceptionPattern" } },
+        "materialClues": { "type": "array", "items": { "type": "string" } },
+        "cognitiveLevel": { "type": "string" },
+        "fourWings": { "$ref": "#/$defs/fourWings" }
+      }
+    },
+
+    "answerKeyPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "采分点：要素（statement）＋证据链（evidenceChain）＋分值（points）。术语表规定说「采分点」，不说「得分点」。只写结论不写证据的采分点不合格。",
+      "required": ["pointId", "statement", "points", "evidenceChain"],
+      "properties": {
+        "pointId": { "type": "string", "pattern": "^KP-[0-9]+$", "description": "本包内唯一；被 simulations[].responses[].hitPointIds / missedPointIds 引用" },
+        "statement": { "type": "string", "description": "采分要素：学生答案中必须出现的地理要素、判断或结论" },
+        "points": { "type": "number", "exclusiveMinimum": 0 },
+        "evidenceChain": { "type": "string", "description": "该要素成立所依据的材料证据与推理结论；须落到材料具体字句" },
+        "acceptableVariants": { "type": "array", "items": { "type": "string" }, "description": "可接受的等价表述；只放宽措辞，不放宽答案边界" }
+      }
+    },
+
+    "rubricLevel": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "评分标准的一档。至少 2 档，否则无法区分水平；档位描述须能依据采分点判定，不得写成「认真分析即可」式措辞。",
+      "required": ["level", "description"],
+      "properties": {
+        "level": { "type": "string", "description": "如 满分／良好／待改进；措辞自定但须可判定" },
+        "scoreRange": { "type": ["string", "null"], "description": "该档对应的分值区间，如「6 分」或「4—5 分」" },
+        "description": { "type": "string", "description": "达到该档的答案特征" }
+      }
+    },
+
+    "answerBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "开放答案边界：说清什么算对、什么不算对。边界不可判定时，该小问不得随题包标为可使用（语义条件，由评审而非结构检查判定）。",
+      "required": ["acceptable", "unacceptable"],
+      "properties": {
+        "acceptable": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "可判为正确的答案面向或表述方式" },
+        "unacceptable": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "常见但应判为错答或不给分的情形；须与 misconceptionPatterns 呼应" },
+        "notes": { "type": ["string", "null"], "description": "仍需教师裁定的灰区；不得用本字段代替边界" }
+      }
+    },
+
+    "misconceptionPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "综合题的典型错答或漏点模式，对应 learningHypotheses[]；与选择题的 distractorMap 同源不同形。",
+      "required": ["pattern", "howItLosesPoints"],
+      "properties": {
+        "misconceptionId": { "type": ["string", "null"], "description": "映射到 learningHypotheses[].id；无对应障碍的错答应删改，不为凑数保留" },
+        "pattern": { "type": "string", "description": "可观察的错答或漏点样子" },
+        "howItLosesPoints": { "type": "string", "description": "该答法落在哪个采分点或哪条答案边界上失分" }
+      }
+    },
+
+    "simulationResponseBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "模拟作答的一条记录。实际形态由 questionType 收窄：选择题用 singleChoiceResponse，综合题用 comprehensiveResponse。",
+      "required": ["itemId", "reasoning"],
+      "properties": {
+        "itemId": { "type": "string", "pattern": "^Q[0-9]+$", "description": "选择题的小题 id；综合题的大题 id（与 subQuestionId 搭配）" },
+        "subQuestionId": { "type": ["string", "null"] },
+        "selected": { "enum": ["A", "B", "C", "D", null] },
+        "writtenAnswer": { "type": ["string", "null"] },
+        "hitPointIds": { "type": "array", "items": { "type": "string" } },
+        "missedPointIds": { "type": "array", "items": { "type": "string" } },
+        "reasoning": { "type": "string", "description": "简短自然的作答思路" },
+        "correctUnderstanding": { "type": ["string", "null"] },
+        "errorStep": { "type": ["string", "null"] },
+        "misconceptionId": { "type": ["string", "null"], "description": "选择题须与所选干扰项的 misconceptionId 一致" }
+      }
+    },
+
+    "singleChoiceResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "选择题的模拟作答：记选项。",
+      "required": ["itemId", "selected", "reasoning"],
+      "properties": {
+        "itemId": { "type": "string", "pattern": "^Q[0-9]+$" },
+        "selected": { "enum": ["A", "B", "C", "D"] },
+        "reasoning": { "type": "string" },
+        "correctUnderstanding": { "type": ["string", "null"] },
+        "errorStep": { "type": ["string", "null"] },
+        "misconceptionId": { "type": ["string", "null"], "description": "选错时须与所选干扰项的 misconceptionId 一致" }
+      }
+    },
+
+    "comprehensiveResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "综合题的模拟作答：记书面答案与命中的采分点。不写预估得分数字——命中的采分点 id 已足以按 answerKey 推导得分，写数字容易被误读为试测数据。",
+      "required": ["itemId", "subQuestionId", "writtenAnswer", "hitPointIds", "reasoning"],
+      "properties": {
+        "itemId": { "type": "string", "pattern": "^Q[0-9]+$" },
+        "subQuestionId": { "type": "string", "pattern": "^Q[0-9]+-[0-9]+$" },
+        "writtenAnswer": { "type": "string", "description": "该水平的书面答案；须带模拟声明，不得冒充真实学生作答" },
+        "hitPointIds": { "type": "array", "items": { "type": "string", "pattern": "^KP-[0-9]+$" }, "description": "命中的采分点；可为空数组，表示该问未得点" },
+        "missedPointIds": { "type": "array", "items": { "type": "string", "pattern": "^KP-[0-9]+$" } },
+        "reasoning": { "type": "string", "description": "简短自然的作答思路" },
+        "correctUnderstanding": { "type": ["string", "null"] },
+        "errorStep": { "type": ["string", "null"] },
+        "misconceptionId": { "type": ["string", "null"], "description": "须与 misconceptionPatterns[] 或答案边界中的错答情形呼应" }
       }
     }
   }

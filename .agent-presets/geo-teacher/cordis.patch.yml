@@ -107,7 +107,8 @@
           # ── 地理教师辅助（插件化：geo group，isolate realm）────────────
           # geo-core 发布 geo.kernel 服务，功能插件在同一 group 内消费它；
           # `isolate: geoKernel` 使该服务仅本 preset 私有，不与其它 preset/会话冲突。
-          # 功能插件（taxonomy/bank/analysis/generator/lesson/ui）各自注册 /geo/* 路由。
+          # 功能插件（taxonomy/bank/analysis/generator）各自注册 /geo/* 路由；
+          # geo-panel 只交付界面：/geo-teacher 工作台页面 + /geo-teacher/assets 静态资源（不消费 geoKernel）。
           - id: geo
             name: cordis:group
             group: true
@@ -128,8 +129,8 @@
                 name: '@geo-edu/dsh-geo-teacher-preset/plugins/analysis'
               - id: geo-generator
                 name: '@geo-edu/dsh-geo-teacher-preset/plugins/generator'
-              - id: geo-ui
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/ui'
+              - id: geo-panel
+                name: '@geo-edu/dsh-geo-teacher-preset/plugins/panel'
 
           # ── goals ───────────────────────────────────────────────────────────────────
 

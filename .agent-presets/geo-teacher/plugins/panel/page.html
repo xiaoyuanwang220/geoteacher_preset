@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>地理教师助手</title>
+<!--
+  本页 = outputs/geo-ui-prototype 原型的工作台部分（英雄区 + 上下文行 + 三标签输入区 + 结果弹窗）。
+  除下列有意差异外，视觉、文案与交互一律对齐原型。
+    1. 不含应用外壳（标题栏 / 侧栏 / 账户行）——由真实 DSH 外壳提供；故 main 去掉 margin-left，
+       且 min-height 用 100dvh 而非原型的 calc(100dvh - 42px)（42px/38px 正是原型的标题栏高度）。
+    2. 结果弹窗改成真能交付的形态：文案不再是"交互演示"，新增「复制需求」（主），
+       「返回调整」降为次级（原型里它是唯一按钮、带 ArrowRight 19，次级动作故去图标）。
+    3. 讲题对象默认 student——原型设计稿默认"教师"，与 persona「默认 student、不自动选 teacher」冲突，
+       而本页拼出的提示词是模型唯一可见的输入，故按契约取 student（见 docs/决策记录.md 2026-10-03）。
+    4. 下拉方向键：修掉原型"点击展开后按 ↑ 会跳过最后一项"的取模偏差；背景关闭改用 pointerdown，
+       避免"在弹窗内拖选文本、松手落在背景上"被误判为点击背景而关窗。
+  图标是内联的 Phosphor 路径（regular；下拉勾选为 bold），主视觉走 /geo-teacher/assets/globe.png。
+-->
+<style>
+*{box-sizing:border-box}:root{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:#17212b;background:#fff;font-synthesis:none;-webkit-font-smoothing:antialiased}body{margin:0;min-width:320px}button,textarea{font:inherit}button{cursor:pointer;color:inherit;transition:background .18s,box-shadow .18s,transform .15s}button:focus-visible,textarea:focus-visible{outline:3px solid #8eb5a1;outline-offset:3px}button:active{transform:translateY(1px)}button:disabled{cursor:wait;opacity:.65}
+.app{min-height:100dvh}
+/* 原型此处为 calc(100dvh - 42px)：那 42px 是原型标题栏高度，本页无标题栏（见页首说明 1） */
+main{min-height:100dvh;padding:0 7.1vw 140px;position:relative}
+.workbench{max-width:1100px;margin:auto;padding-top:clamp(45px,10.3vh,108px)}
+.hero{text-align:center}
+.hero img{width:180px;height:151px;object-fit:contain;display:block;margin:0 auto 10px}
+.hero h1{font-family:'Songti SC','SimSun',serif;color:#064a35;font-size:46px;line-height:1.3;font-weight:700;letter-spacing:1px;margin:13px 0 12px}
+.hero p{font-size:23px;line-height:1.6;color:#747e8d;margin:0}
+.context{display:flex;gap:28px;margin:34px 12px 16px;font-size:16px}
+.context span{display:flex;align-items:center;gap:9px}
+.context span>svg:last-child{color:#8d98a5}
+.composer{border:1px solid #d9e0df;border-radius:21px;padding:16px 19px;background:#fff;box-shadow:0 3px 8px #203f3310,inset 0 1px 1px #fff}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #e3e6ec;border-radius:15px;box-shadow:0 2px 4px #182f4210;padding:2px;background:#fafbfc}
+.tabs button{height:54px;border:0;border-radius:12px;background:transparent;display:flex;gap:15px;align-items:center;justify-content:center;font-size:20px}
+.tabs button:hover{background:#f0f5f1}
+.tabs button.active{color:#064d37;background:#e2ece5;box-shadow:inset 0 1px 2px #fff,0 1px 3px #23473321;font-weight:600}
+.writing{margin-top:14px;border-top:1px solid #dce3df;position:relative;padding-top:23px;height:153px}
+textarea{width:100%;height:100%;resize:none;border:0;background:transparent;color:#263d34;font-size:18px;line-height:1.75;padding:0 3px}
+textarea::placeholder{color:#788498;opacity:1}
+.placeholder-helper{position:absolute;top:55px;left:3px;right:3px;margin:8px 0 0;color:#8b98aa;font-size:17px;pointer-events:none;line-height:1.65}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.settings{display:flex;gap:15px}
+.picker{position:relative}
+.select-trigger{display:flex;align-items:center;gap:18px;white-space:nowrap;font-size:18px;min-height:51px;padding:0 16px;background:#fefefe;border:1px solid #d8deea;border-radius:13px;box-shadow:0 2px 3px #263e4810}
+.select-trigger:hover{background:#f6f9f7}
+.dropdown{position:absolute;top:calc(100% + 5px);left:0;min-width:100%;width:max-content;z-index:15;padding:7px;border:1px solid #dce1e9;border-radius:17px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);box-shadow:0 8px 20px #172c3917,0 2px 5px #172c3909}
+.dropdown button{border:0;background:none;display:flex;gap:40px;align-items:center;justify-content:space-between;min-width:150px;width:100%;text-align:left;padding:11px 13px;border-radius:10px;font-size:18px;min-height:44px}
+.dropdown button:hover{background:#f1f5f2}
+.dropdown button.chosen{background:#e8f0ea;color:#08513b}
+.primary{border:1px solid #105b46;border-radius:13px;background:#07513b;box-shadow:inset 0 2px 3px #ffffff28,0 3px 6px #154e3620;color:#fff;display:flex;justify-content:center;align-items:center;gap:13px;padding:0 24px;min-height:53px;min-width:195px;font-size:19px;white-space:nowrap}
+.primary:hover{background:#086649;box-shadow:inset 0 2px 3px #ffffff28,0 5px 12px #154e3629}
+.error{font-size:14px;color:#b44939;margin:12px 4px}
+.error:empty{display:none}
+.backdrop{position:fixed;inset:0;background:#142b252b;backdrop-filter:blur(7px);display:grid;place-items:center;z-index:30;padding:24px}
+.backdrop[hidden]{display:none}
+.result{width:560px;max-width:100%;background:#fff;border:1px solid #e1e7e3;border-radius:25px;padding:35px;position:relative;box-shadow:0 22px 80px #10271f26;max-height:90dvh;overflow:auto;outline:none}
+.close{position:absolute;right:18px;top:18px;border:0;background:#f3f5f3;border-radius:50%;width:32px;height:32px;display:grid;place-items:center}
+.result-icon{width:51px;height:51px;display:grid;place-items:center;background:#e5efe8;color:#07513b;border-radius:16px}
+.result h2{font-size:25px;color:#104c39;margin:20px 0 10px}
+.muted{color:#7a8590;font-size:14px}
+.summary-options{display:flex;gap:9px;flex-wrap:wrap;margin:22px 0 15px}
+.summary-options span{padding:7px 10px;background:#f0f5f1;border-radius:9px;font-size:14px}
+.summary-content{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;max-height:260px;overflow:auto;padding:17px;background:#fafbfa;border:1px solid #e7ece8;border-radius:12px;margin-bottom:25px}
+.result .primary{margin-left:auto;font-size:16px;min-height:45px;min-width:150px}
+.result-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.result-actions .primary{margin-left:0}
+.ghost{border:1px solid #d8deea;border-radius:13px;background:#fff;padding:0 20px;min-height:45px;font-size:16px;white-space:nowrap}
+.ghost:hover{background:#f6f9f7}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(min-width:1700px){.workbench{padding-top:12vh}
+.hero img{width:205px;height:175px}
+.writing{height:180px}
+}
+@media(max-width:1100px){main{padding-left:35px;padding-right:35px}
+.workbench{padding-top:50px}
+.hero h1{font-size:37px}
+.context{font-size:13px;gap:14px}
+.settings{gap:8px}
+.select-trigger{font-size:15px;padding:0 10px;gap:8px}
+.primary{font-size:16px;min-width:150px;padding:0 16px}
+.placeholder-helper,textarea{font-size:15px}
+.hero p{font-size:19px}
+.tabs button{font-size:17px}
+}
+@media(max-width:760px){main{padding:0 20px 140px;min-height:100dvh}
+.workbench{padding-top:22px}
+.hero img{width:132px;height:112px}
+.hero h1{font-size:31px;margin-top:6px}
+.hero p{font-size:16px}
+.context{margin:24px 3px 12px;gap:12px;font-size:11px}
+.context svg{width:15px}
+.context span{gap:5px}
+.composer{padding:10px 12px 14px;border-radius:19px}
+.tabs button{font-size:15px;gap:7px;height:48px}
+.tabs svg{width:21px}
+.writing{height:172px;padding-top:20px}
+.placeholder-helper{top:80px;font-size:13px;line-height:1.6}
+.toolbar{flex-wrap:wrap;gap:14px}
+.settings{width:100%}
+.primary{margin-left:auto;min-height:46px}
+.select-trigger{min-height:43px;font-size:14px}
+.dropdown button{font-size:15px;min-width:125px;padding:10px}
+.result{padding:27px}
+.result h2{font-size:23px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<main>
+<section class="workbench">
+<header class="hero">
+<img src="/geo-teacher/assets/globe.png" width="1374" height="1145" alt="地球仪与书本">
+<h1>地理教师助手</h1>
+<p>今天的备课，从这里开始。</p>
+</header>
+<div class="context">
+<span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="21" height="21" fill="currentColor" aria-hidden="true" focusable="false"><path d="M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM40,56H92.69l16,16H40ZM216,200H40V88H216Z"/></svg>geo_edu_agent<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="12" height="12" fill="currentColor" aria-hidden="true" focusable="false"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span>
+<span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="21" height="21" fill="currentColor" aria-hidden="true" focusable="false"><path d="M201.89,54.66A103.43,103.43,0,0,0,128.79,24H128A104,104,0,0,0,24,128v56a24,24,0,0,0,24,24H64a24,24,0,0,0,24-24V144a24,24,0,0,0-24-24H40.36A88.12,88.12,0,0,1,190.54,65.93,87.39,87.39,0,0,1,215.65,120H192a24,24,0,0,0-24,24v40a24,24,0,0,0,24,24h24a24,24,0,0,1-24,24H136a8,8,0,0,0,0,16h56a40,40,0,0,0,40-40V128A103.41,103.41,0,0,0,201.89,54.66ZM64,136a8,8,0,0,1,8,8v40a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V136Zm128,56a8,8,0,0,1-8-8V144a8,8,0,0,1,8-8h24v56Z"/></svg>地理教师助手（预设）<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="12" height="12" fill="currentColor" aria-hidden="true" focusable="false"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span>
+</div>
+<form class="composer" id="composer" novalidate>
+<div class="tabs" role="tablist" aria-label="教学功能" id="tabs">
+<button type="button" role="tab" id="tab-explain" aria-controls="task-panel" aria-selected="true" tabindex="0" class="active"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="27" height="27" fill="currentColor" aria-hidden="true" focusable="false"><path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"/></svg>讲题</button>
+<button type="button" role="tab" id="tab-questions" aria-controls="task-panel" aria-selected="false" tabindex="-1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="27" height="27" fill="currentColor" aria-hidden="true" focusable="false"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-32-80a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,136Zm0,32a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,168Z"/></svg>出题</button>
+<button type="button" role="tab" id="tab-lesson" aria-controls="task-panel" aria-selected="false" tabindex="-1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="27" height="27" fill="currentColor" aria-hidden="true" focusable="false"><path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L32,117.87v48.42a15.91,15.91,0,0,0,4.06,10.65C49.16,191.53,78.51,216,128,216a130,130,0,0,0,48-8.76V240a8,8,0,0,0,16,0V199.51a115.63,115.63,0,0,0,27.94-22.57A15.91,15.91,0,0,0,224,166.29V117.87l27.76-14.81a8,8,0,0,0,0-14.12ZM128,200c-43.27,0-68.72-21.14-80-33.71V126.4l76.24,40.66a8,8,0,0,0,7.52,0L176,143.47v46.34C163.4,195.69,147.52,200,128,200Zm80-33.75a97.83,97.83,0,0,1-16,14.25V134.93l16-8.53ZM188,118.94l-.22-.13-56-29.87a8,8,0,0,0-7.52,14.12L171,128l-43,22.93L25,96,128,41.07,231,96Z"/></svg>课程方案</button>
+</div>
+<div id="task-panel" role="tabpanel" aria-labelledby="tab-explain">
+<div class="writing">
+<textarea id="draft" aria-label="讲题需求" aria-describedby="input-helper" aria-invalid="false" placeholder="请输入试题的年份、省份及题号，例如：2025年广东卷第10题。"></textarea>
+<p class="placeholder-helper" id="input-helper">可补充需要重点讲解的知识点或具体疑问。</p>
+</div>
+<div class="toolbar">
+<div class="settings" id="settings"></div>
+<button class="primary" type="submit" id="submit">开始讲题<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="25" height="25" fill="currentColor" aria-hidden="true" focusable="false"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></svg></button>
+</div>
+</div>
+</form>
+<p class="error" id="error" role="alert"></p>
+<noscript><p class="error" style="color:#7a8590">此页面需要 JavaScript 才能使用。</p></noscript>
+</section>
+</main>
+</div>
+<div class="backdrop" id="backdrop" hidden>
+<section class="result" role="dialog" aria-modal="true" aria-labelledby="result-title" tabindex="-1" id="dialog">
+<button class="close" type="button" id="result-close" aria-label="关闭需求预览"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
+<div class="result-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="27" height="27" fill="currentColor" aria-hidden="true" focusable="false"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg></div>
+<h2 id="result-title"></h2>
+<p class="muted">需求已整理。点「复制需求」粘贴到对话，即可交给地理教师助手。</p>
+<div class="summary-options" id="result-options"></div>
+<div class="summary-content" id="result-content"></div>
+<div class="result-actions">
+<button class="ghost" type="button" id="result-back">返回调整</button>
+<button class="primary" type="button" id="result-copy">复制需求</button>
+</div>
+<p class="sr-only" role="status" aria-live="polite" id="copy-status"></p>
+</section>
+</div>
+<script>
+(function () {
+'use strict';
+
+// ── 与预设工作流一致的三功能定义 ─────────────────────────────
+// fields 元素为 [参数键, 显示名, 可选项]；empty 是空需求时的校验提示。
+const MODES = [
+  {
+    id: 'explain',
+    name: '讲题',
+    action: '开始讲题',
+    placeholder: '请输入试题的年份、省份及题号，例如：2025年广东卷第10题。',
+    helper: '可补充需要重点讲解的知识点或具体疑问。',
+    empty: '请先填写试题的年份、省份和题号。',
+    fields: [['audience', '讲题对象', ['教师', '学生', '命题人']]]
+  },
+  {
+    id: 'questions',
+    name: '出题',
+    action: '开始出题',
+    placeholder: '请说明学生学情、要考查的知识点及题目数量。',
+    helper: '可补充学生年级、已有基础、常见薄弱点及命题情境要求。',
+    empty: '请先说明学生学情和要考查的知识点。',
+    fields: [
+      ['type', '题型', ['选择题', '综合题']],
+      ['difficulty', '难度', ['简单', '中等', '困难']]
+    ]
+  },
+  {
+    id: 'lesson',
+    name: '课程方案',
+    action: '生成课程方案',
+    placeholder: '请提供课本、课标等 Markdown 文档。',
+    helper: '请补充具体学情、教学目标及课堂活动要求等信息。',
+    empty: '请先补充课本、课标文档信息及具体学情。',
+    fields: [
+      ['grade', '年级', ['高一', '高二', '高三']],
+      ['duration', '时间', ['45分钟', '10分钟']]
+    ]
+  }
+];
+// 讲题对象默认 student：cordis.patch.yml 的 persona 明示"默认 student，不自动选 teacher"，
+// 而本页拼出的提示词是模型唯一可见的输入，故不能用原型设计稿里的"教师"默认值。
+const INITIAL_VALUES = { audience: '学生', type: '选择题', difficulty: '中等', grade: '高一', duration: '45分钟' };
+const SUBMIT_DELAY_MS = 650;
+
+const ICONS = {
+  caretDown: 'M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z',
+  checkBold: 'M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z',
+  arrowRight: 'M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z'
+};
+
+function icon(name, size) {
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="' + size + '" height="' + size +
+    '" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + ICONS[name] + '"/></svg>';
+}
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+// ── 元素引用 ────────────────────────────────────────────────
+const el = function (id) { return document.getElementById(id); };
+const tabsBox = el('tabs');
+const panel = el('task-panel');
+const textarea = el('draft');
+const helper = el('input-helper');
+const settingsBox = el('settings');
+const submitButton = el('submit');
+const errorBox = el('error');
+const form = el('composer');
+const backdrop = el('backdrop');
+const dialog = el('dialog');
+const resultTitle = el('result-title');
+const resultOptions = el('result-options');
+const resultContent = el('result-content');
+const resultClose = el('result-close');
+const resultBack = el('result-back');
+const resultCopy = el('result-copy');
+const copyStatus = el('copy-status');
+
+// ── 状态 ────────────────────────────────────────────────────
+const state = {
+  active: 'explain',
+  values: Object.assign({}, INITIAL_VALUES),
+  drafts: { explain: '', questions: '', lesson: '' },
+  open: null,
+  error: '',
+  busy: false,
+  result: null
+};
+let submitTimer = null;
+
+function currentMode() {
+  for (const mode of MODES) if (mode.id === state.active) return mode;
+  return MODES[0];
+}
+function fieldOf(mode, id) {
+  for (const field of mode.fields) if (field[0] === id) return field;
+  return null;
+}
+function pickerOf(id) {
+  return settingsBox.querySelector('[data-picker="' + id + '"]');
+}
+function triggers() {
+  return tabsBox.querySelectorAll('[role="tab"]');
+}
+
+// ── 下拉参数选择器 ──────────────────────────────────────────
+function closeDropdown() {
+  const menu = settingsBox.querySelector('.dropdown');
+  if (menu) menu.remove();
+  for (const trigger of settingsBox.querySelectorAll('.select-trigger')) {
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+  state.open = null;
+}
+function openDropdown(id, focusFirst) {
+  closeDropdown();
+  const picker = pickerOf(id);
+  if (!picker) return;
+  const field = fieldOf(currentMode(), id);
+  if (!field) return;
+  const label = field[1];
+  const options = field[2];
+  const menu = document.createElement('div');
+  menu.className = 'dropdown';
+  menu.id = 'menu-' + id;
+  menu.setAttribute('role', 'listbox');
+  menu.setAttribute('aria-label', label);
+  for (const value of options) {
+    const chosen = value === state.values[id];
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', chosen ? 'true' : 'false');
+    if (chosen) option.className = 'chosen';
+    option.innerHTML = '<span>' + escapeHtml(value) + '</span>' + (chosen ? icon('checkBold', 20) : '');
+    option.addEventListener('click', function () { chooseValue(id, value); });
+    menu.appendChild(option);
+  }
+  picker.appendChild(menu);
+  const trigger = picker.querySelector('.select-trigger');
+  if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  state.open = id;
+  if (focusFirst) {
+    const first = menu.querySelector('[role="option"]');
+    if (first) first.focus();
+  }
+}
+function chooseValue(id, value) {
+  state.values[id] = value;
+  closeDropdown();
+  const picker = pickerOf(id);
+  if (picker) {
+    const trigger = picker.querySelector('.select-trigger');
+    const text = trigger && trigger.querySelector('span');
+    const field = fieldOf(currentMode(), id);
+    if (text && field) text.textContent = field[1] + '：' + value;
+    if (trigger) trigger.focus();
+  }
+}
+function onPickerKeydown(event, id) {
+  const picker = pickerOf(id);
+  if (!picker) return;
+  const trigger = picker.querySelector('.select-trigger');
+  if (event.key === 'Escape') {
+    closeDropdown();
+    if (trigger) trigger.focus();
+    return;
+  }
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+  event.preventDefault();
+  const menu = picker.querySelector('.dropdown');
+  if (state.open !== id || !menu) {
+    openDropdown(id, true);
+    return;
+  }
+  const items = Array.prototype.slice.call(menu.querySelectorAll('[role="option"]'));
+  if (items.length === 0) return;
+  const index = items.indexOf(document.activeElement);
+  // 焦点还在触发键上（index < 0）时：↓ 进第一项，↑ 进最后一项；已在选项内则按 ±1 环绕。
+  // 原型的取模写法在 index = -1 时会让 ↑ 落到 items[len-2]，跳过最后一项。
+  const next = index < 0
+    ? (event.key === 'ArrowDown' ? items[0] : items[items.length - 1])
+    : items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length];
+  if (next) next.focus();
+}
+function renderSettings() {
+  closeDropdown();
+  settingsBox.innerHTML = '';
+  const mode = currentMode();
+  for (const field of mode.fields) {
+    const id = field[0];
+    const label = field[1];
+    const picker = document.createElement('div');
+    picker.className = 'picker';
+    picker.dataset.picker = id;
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'select-trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', 'menu-' + id);
+    trigger.innerHTML = '<span>' + escapeHtml(label + '：' + state.values[id]) + '</span>' + icon('caretDown', 16);
+    trigger.disabled = state.busy;
+    trigger.addEventListener('click', function () {
+      if (state.open === id) closeDropdown();
+      else openDropdown(id, false);
+    });
+    picker.appendChild(trigger);
+    picker.addEventListener('keydown', function (event) { onPickerKeydown(event, id); });
+    settingsBox.appendChild(picker);
+  }
+}
+
+// ── 渲染 ────────────────────────────────────────────────────
+function renderTabs() {
+  for (const trigger of triggers()) {
+    const id = trigger.id.replace(/^tab-/, '');
+    const selected = id === state.active;
+    trigger.setAttribute('aria-selected', selected ? 'true' : 'false');
+    trigger.tabIndex = selected ? 0 : -1;
+    if (selected) trigger.classList.add('active');
+    else trigger.classList.remove('active');
+    trigger.disabled = state.busy;
+  }
+}
+function renderPanel() {
+  const mode = currentMode();
+  textarea.setAttribute('aria-label', mode.name + '需求');
+  textarea.placeholder = mode.placeholder;
+  textarea.disabled = state.busy;
+  textarea.value = state.drafts[mode.id];
+  helper.textContent = mode.helper;
+  syncHelper();
+  textarea.setAttribute('aria-invalid', state.error ? 'true' : 'false');
+  panel.setAttribute('aria-labelledby', 'tab-' + state.active);
+}
+function syncHelper() {
+  helper.className = textarea.value ? 'sr-only' : 'placeholder-helper';
+}
+function renderError() {
+  errorBox.textContent = state.error;
+}
+function renderSubmit() {
+  submitButton.disabled = state.busy;
+  submitButton.innerHTML = state.busy
+    ? '正在整理…'
+    : escapeHtml(currentMode().action) + icon('arrowRight', 25);
+}
+function render() {
+  renderTabs();
+  renderPanel();
+  renderSettings();
+  renderError();
+  renderSubmit();
+}
+function switchMode(id) {
+  if (state.busy || id === state.active) return;
+  state.active = id;
+  closeDropdown();
+  state.error = '';
+  render();
+}
+
+// ── 提交流程 ────────────────────────────────────────────────
+function buildPrompt(mode, content) {
+  const lines = ['请按「' + mode.name + '」功能处理：'];
+  for (const field of mode.fields) lines.push(field[1] + '：' + state.values[field[0]]);
+  lines.push('', '需求：' + content);
+  return lines.join('\n');
+}
+function handleSubmit() {
+  if (state.busy) return;
+  const mode = currentMode();
+  const content = state.drafts[mode.id].trim();
+  if (!content) {
+    state.error = mode.empty;
+    renderError();
+    textarea.setAttribute('aria-invalid', 'true');
+    textarea.focus();
+    return;
+  }
+  state.error = '';
+  renderError();
+  textarea.setAttribute('aria-invalid', 'false');
+  closeDropdown();
+  state.busy = true;
+  renderTabs();
+  renderPanel();
+  renderSettings();
+  renderSubmit();
+  window.clearTimeout(submitTimer);
+  submitTimer = window.setTimeout(function () {
+    state.busy = false;
+    renderTabs();
+    renderPanel();
+    renderSettings();
+    renderSubmit();
+    const options = mode.fields.map(function (field) { return [field[1], state.values[field[0]]]; });
+    state.result = { mode: mode, content: content, options: options, prompt: buildPrompt(mode, content) };
+    showResult();
+  }, SUBMIT_DELAY_MS);
+}
+function showResult() {
+  const result = state.result;
+  if (!result) return;
+  resultTitle.textContent = result.mode.name + '需求已整理';
+  resultOptions.innerHTML = result.options.map(function (pair) {
+    return '<span>' + escapeHtml(pair[0] + '：' + pair[1]) + '</span>';
+  }).join('');
+  resultContent.textContent = result.prompt;
+  copyStatus.textContent = '';
+  resultCopy.textContent = '复制需求';
+  backdrop.hidden = false;
+  dialog.focus();
+}
+function closeResult() {
+  backdrop.hidden = true;
+  state.result = null;
+  window.setTimeout(function () { submitButton.focus(); }, 0);
+}
+function legacyCopy(text) {
+  try {
+    const scratch = document.createElement('textarea');
+    scratch.value = text;
+    scratch.setAttribute('readonly', '');
+    scratch.style.position = 'fixed';
+    scratch.style.top = '-1000px';
+    document.body.appendChild(scratch);
+    scratch.select();
+    const ok = document.execCommand('copy');
+    scratch.remove();
+    return ok;
+  } catch (err) {
+    return false;
+  }
+}
+function copyPrompt() {
+  const result = state.result;
+  if (!result) return;
+  const text = result.prompt;
+  const finish = function (ok) {
+    resultCopy.textContent = ok ? '已复制' : '复制失败，请手动选择';
+    copyStatus.textContent = ok
+      ? '需求已复制到剪贴板，可粘贴到对话中。'
+      : '复制失败，请在上方文本框中手动选择并复制。';
+    if (ok) {
+      window.setTimeout(function () {
+        if (state.result) resultCopy.textContent = '复制需求';
+      }, 2000);
+    }
+    // 兜底复制会临时聚焦一个离屏 textarea 再移除，焦点会掉到 body；而 Esc/Tab 处理挂在 dialog 上，
+    // 焦点必须在弹窗内，否则复制失败后弹窗就再也关不掉、Tab 也不再被锁。
+    if (!dialog.contains(document.activeElement)) dialog.focus();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      navigator.clipboard.writeText(text).then(function () { finish(true); }, function () { finish(legacyCopy(text)); });
+      return;
+    } catch (err) {
+      finish(legacyCopy(text));
+      return;
+    }
+  }
+  finish(legacyCopy(text));
+}
+
+// ── 事件接线 ────────────────────────────────────────────────
+tabsBox.addEventListener('click', function (event) {
+  const target = event.target;
+  const trigger = target && target.closest ? target.closest('[role="tab"]') : null;
+  if (!trigger) return;
+  switchMode(trigger.id.replace(/^tab-/, ''));
+});
+tabsBox.addEventListener('keydown', function (event) {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  const target = event.target;
+  const trigger = target && target.closest ? target.closest('[role="tab"]') : null;
+  if (!trigger) return;
+  event.preventDefault();
+  if (state.busy) return;
+  const index = Array.prototype.indexOf.call(triggers(), trigger);
+  const step = event.key === 'ArrowRight' ? 1 : MODES.length - 1;
+  const next = MODES[(index + step) % MODES.length];
+  switchMode(next.id);
+  const nextTrigger = el('tab-' + next.id);
+  if (nextTrigger) nextTrigger.focus();
+});
+textarea.addEventListener('input', function () {
+  state.drafts[state.active] = textarea.value;
+  if (state.error) {
+    state.error = '';
+    renderError();
+    textarea.setAttribute('aria-invalid', 'false');
+  }
+  syncHelper();
+});
+textarea.addEventListener('keydown', function (event) {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault();
+    handleSubmit();
+  }
+});
+form.addEventListener('submit', function (event) {
+  event.preventDefault();
+  handleSubmit();
+});
+document.addEventListener('pointerdown', function (event) {
+  if (state.open === null) return;
+  const picker = pickerOf(state.open);
+  if (picker && !picker.contains(event.target)) closeDropdown();
+});
+resultClose.addEventListener('click', closeResult);
+resultBack.addEventListener('click', closeResult);
+resultCopy.addEventListener('click', copyPrompt);
+// 用 pointerdown 而不是 click：click 的 target 是按下点与抬起点的最近公共祖先，
+// 所以"在 .summary-content 里拖选文本、松手落在背景上"也会命中，弹窗会在拖选中途被关掉。
+backdrop.addEventListener('pointerdown', function (event) {
+  if (event.target === backdrop) closeResult();
+});
+dialog.addEventListener('keydown', function (event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeResult();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const buttons = Array.prototype.slice.call(dialog.querySelectorAll('button'));
+  if (buttons.length === 0) return;
+  const first = buttons[0];
+  const last = buttons[buttons.length - 1];
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+
+render();
+})();
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@
 > 目标模型：`deepseek-official/deepseek-v4-flash-vision-exp`
 > 实施状态：2026-08-21 已完成生产链切换、双副本同步、DSH 重启与真实双图题冒烟；旧插件源码已从预设删除，独立插件目录和历史缓存按观察期策略保留在生产调用链之外。
 >
-> 后续处置（2026-09-30）：观察期结束，`C:\Users\xxx\.dsh\plugins\dsh-plugin-vision` 已按第十一节删除（这是当时现存的唯一一份源码副本，`E:\dsh_plugin_vision` 早已不存在）；删除前确认两个 profile 的 `package.json` 与 `cordis.patch.yml` 均无该插件引用。按用户明确选择未留备份。执行记录见第十一节。
+> 后续处置（2026-09-30）：观察期结束，`$DSH_HOME\plugins\dsh-plugin-vision` 已按第十一节删除（这是当时现存的唯一一份源码副本，`E:\dsh_plugin_vision` 早已不存在）；删除前确认两个 profile 的 `package.json` 与 `cordis.patch.yml` 均无该插件引用。按用户明确选择未留备份。执行记录见第十一节。
 
 ## 一、目标与完成标准
 
@@ -66,9 +66,9 @@ geo_solve
 - `.agent-presets/geo-teacher/agent.cordis.yml` 中的 `geoVision` isolate 和 `geo-vision` 行；
 - `.agent-presets/geo-teacher/plugins/ui/page.html` 中的图像转录状态与开关；
 - `scripts/geo-verify.mjs` 中的视觉插件断言；
-- `C:\Users\xxx\.dsh\profiles\web\cordis.patch.yml` 中的 `dsh-plugin-vision` insert；
-- `C:\Users\xxx\.dsh\settings.yaml` 中的 SiliconFlow/Qwen 配置；
-- `E:\dsh_plugin_vision` 与 `C:\Users\xxx\.dsh\plugins\dsh-plugin-vision`；
+- `$DSH_HOME\profiles\web\cordis.patch.yml` 中的 `dsh-plugin-vision` insert；
+- `$DSH_HOME\settings.yaml` 中的 SiliconFlow/Qwen 配置；
+- `E:\dsh_plugin_vision` 与 `$DSH_HOME\plugins\dsh-plugin-vision`；
 - `outputs/visionCache` 及相关说明文档。
 
 ### 3.2 目标链路
@@ -126,10 +126,10 @@ E:\geo_edu_agent\.backups\native-multimodal-cutover-<timestamp>\
 
 至少备份：
 
-- `C:\Users\xxx\.dsh\profiles\web\cordis.patch.yml`；
-- `C:\Users\xxx\.dsh\settings.yaml`；
-- `C:\Users\xxx\.dsh\.agent-presets\geo-teacher`；
-- `C:\Users\xxx\.dsh\plugins\dsh-plugin-vision`；
+- `$DSH_HOME\profiles\web\cordis.patch.yml`；
+- `$DSH_HOME\settings.yaml`；
+- `$DSH_HOME\.agent-presets\geo-teacher`；
+- `$DSH_HOME\plugins\dsh-plugin-vision`；
 - DSH 会话数据库和附件目录；
 - `E:\dsh_plugin_vision` 的版本、哈希和必要源码副本；
 - 当前真实题评测输出与验证日志。
@@ -415,12 +415,12 @@ agent-default-model:
 
 ### 9.4 DSH Web profile
 
-修改 `C:\Users\xxx\.dsh\profiles\web\cordis.patch.yml`：
+修改 `$DSH_HOME\profiles\web\cordis.patch.yml`：
 
 - 删除 `dsh-plugin-vision` insert；
 - 确认没有其他 profile bundle 或 patch 再次加载同一插件。
 
-修改 `C:\Users\xxx\.dsh\settings.yaml`：
+修改 `$DSH_HOME\settings.yaml`：
 
 - 默认模型指向 `deepseek-official/deepseek-v4-flash-vision-exp`；
 - 确认没有其他功能使用 SiliconFlow 后，删除仅为视觉链路配置的 `siliconflow` provider；
@@ -439,7 +439,7 @@ agent-default-model:
 
 ### 9.6 运行时副本
 
-源码验证通过后，将 `E:\geo_edu_agent\.agent-presets\geo-teacher` 同步到 `C:\Users\xxx\.dsh\.agent-presets\geo-teacher`。同步后逐文件校验哈希，不以复制命令成功代替一致性检查。
+源码验证通过后，将 `E:\geo_edu_agent\.agent-presets\geo-teacher` 同步到 `$DSH_HOME\.agent-presets\geo-teacher`。同步后逐文件校验哈希，不以复制命令成功代替一致性检查。
 
 ## 十、阶段 5：重启后运行时验收
 
@@ -487,7 +487,7 @@ agent-default-model:
 
 可清理对象：
 
-- `C:\Users\xxx\.dsh\plugins\dsh-plugin-vision`；
+- `$DSH_HOME\plugins\dsh-plugin-vision`；
 - `E:\dsh_plugin_vision`；
 - `outputs/visionCache`；
 - 仅用于旧视觉链路的 SiliconFlow 凭证引用。
@@ -498,7 +498,7 @@ agent-default-model:
 
 | 清理对象 | 结果 |
 | :-- | :-- |
-| `C:\Users\xxx\.dsh\plugins\dsh-plugin-vision` | ✅ 已删除（122 文件 / 约 20.7 MB）；删后 `$DSH_HOME\plugins\` 为空 |
+| `$DSH_HOME\plugins\dsh-plugin-vision` | ✅ 已删除（122 文件 / 约 20.7 MB）；删后 `$DSH_HOME\plugins\` 为空 |
 | `E:\dsh_plugin_vision` | 执行时已不存在 |
 | `outputs/visionCache` | 执行时已不存在 |
 | 仅用于旧链路的 SiliconFlow 凭证引用 | `$DSH_HOME\settings.yaml` 不存在，无需清理 |

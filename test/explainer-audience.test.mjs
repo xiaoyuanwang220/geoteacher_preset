@@ -384,3 +384,92 @@ test('toJudgeReportJson 在 scaffold 缺失或含 undefined 时仍产出合法 J
   assert.equal(empty.standard, null);
   assert.equal(empty.questionId, '');
 });
+
+// ========== 学生对象「设问先行六步」：段内骨架与渲染落位 ==========
+// 依据 docs/讲题学生版结构方案.md §六 第 6 项：六步是外层四段式内部的推进序列，
+// 不是新的顶层目录。期望值以 audiencePlan 的结构为准，渲染文本只用来证明六步真的
+// 落成了段内列表项（结构→行为的对应关系），而不是把提示词字符串当作唯一证据。
+
+test('学生 audiencePlan 给出设问先行六步骨架，首末步与三个待填字段保留', () => {
+  const student = buildExplainerReport(QUESTION, true, null, [], 'student');
+  const plan = student.audiencePlan;
+
+  // flow：六步动作序列，顺序即教学顺序
+  assert.equal(plan.flow.length, 6);
+  assert.deepEqual(plan.flow, ['设问先行', '定向读材料', '知识选择', '推理链', '作答与检查', '方法提炼']);
+  for (const [i, name] of plan.flow.entries()) {
+    assert.equal(typeof name, 'string', `flow[${i}] 应为字符串`);
+    assert.ok(name.trim().length > 0, `flow[${i}] 不应为空`);
+  }
+
+  // stepPlacement：六步落进外层四段的位置
+  assert.deepEqual(plan.stepPlacement, { examine: '①', solve: '②③④⑤', reflect: '⑥', note: '外层仍为四段式' });
+
+  // stepTemplate：与 flow 同步的六步模板，每步都有动作与思维锚点
+  assert.equal(plan.stepTemplate.length, plan.flow.length, '六步模板应与 flow 一一对应');
+  for (const [i, step] of plan.stepTemplate.entries()) {
+    for (const key of ['step', 'action', 'anchor']) {
+      assert.equal(typeof step[key], 'string', `stepTemplate[${i}].${key} 应为字符串`);
+      assert.ok(step[key].trim().length > 0, `stepTemplate[${i}].${key} 不应为空`);
+    }
+  }
+  assert.ok(plan.stepTemplate[0].step.includes('拆设问'), '首步应是设问先行');
+  assert.match(plan.stepTemplate[0].step, /①/);
+  assert.ok(plan.stepTemplate[5].step.includes('方法提炼'), '末步应是方法提炼');
+  assert.match(plan.stepTemplate[5].step, /⑥/);
+
+  // 六步是段内序列：三个由讲题阶段填写的字段与 guidance 保持原样
+  assert.equal(plan.entryQuestion, '');
+  assert.deepEqual(plan.steps, []);
+  assert.equal(plan.methodBoundary, '');
+  assert.equal(plan.guidance.length, 4);
+});
+
+test('学生渲染把六步落在段内列表项、未成为顶层标题；教师分支不变', () => {
+  const report = buildExplainerReport(QUESTION, true, null, [], 'student');
+  const plan = report.audiencePlan;
+  const studentValue = {
+    status: 'success',
+    questionId: QUESTION.questionId,
+    audience: 'student',
+    report,
+    variants: [],
+    verification: buildVerification({ qid: QUESTION.questionId }, null)
+  };
+  const text = renderExplain({ qid: QUESTION.questionId }, studentValue)[0].text;
+
+  // 正向：六步流程与落位按契约文本出现在段内
+  assert.match(text, /段内教学流程：设问先行 → 定向读材料 → 知识选择 → 推理链 → 作答与检查 → 方法提炼/);
+  assert.ok(
+    text.includes(`落位：审题＝${plan.stepPlacement.examine}；破题＝${plan.stepPlacement.solve}；反思与迁移＝${plan.stepPlacement.reflect}（${plan.stepPlacement.note}）`),
+    '渲染缺少六步在外层四段中的落位'
+  );
+
+  // 正向：六步与思维锚点逐条出现（期望值取自 audiencePlan，渲染不得自成一套）
+  for (const step of plan.stepTemplate) {
+    assert.ok(text.includes(`${step.step}：${step.action}`), `渲染缺少步骤：${step.step}`);
+    assert.ok(text.includes(`思维锚点（讲给学生听）：${step.anchor}`), `渲染缺少思维锚点：${step.step}`);
+  }
+  assert.match(text, /① 拆设问（先行）/);
+  assert.match(text, /⑥ 方法提炼/);
+
+  // 反向：六步只作段内列表项，不得升格为顶层标题
+  assert.doesNotMatch(text, /^##\s*[①②③④⑤⑥]/m);
+
+  // 顶层四段仍在（六步嵌在段内，不替换四段式）
+  for (const title of ['题目定位', '审题提示', '破题', '反思与迁移']) {
+    assert.match(text, new RegExp(`^## ${title}$`, 'm'), `顶层四段缺少 ${title}`);
+  }
+
+  // 教师分支对照：无六步模板，渲染里也不出现学生的段内流程与思维锚点
+  const teacher = buildExplainerReport(QUESTION, true, null, [], 'teacher');
+  assert.ok(!('stepTemplate' in teacher.audiencePlan), '教师对象不应有六步模板');
+  const teacherText = renderExplain({ qid: QUESTION.questionId }, {
+    ...studentValue,
+    audience: 'teacher',
+    report: teacher
+  })[0].text;
+  assert.doesNotMatch(teacherText, /段内教学流程/);
+  assert.doesNotMatch(teacherText, /思维锚点（讲给学生听）/);
+  assert.match(teacherText, /^## 题目定位$/m);
+});

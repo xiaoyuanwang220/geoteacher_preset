@@ -4,6 +4,8 @@
 > 对应阶段：M1「数据与最小技能」（见 [执行方案](geography-question-generation-execution-plan.md) §9）
 > M1 完成标准：**数据样例可表达完整初稿；旧 taxonomy 消费者正常；只出现一个技能入口**
 > 前置：M0 已结（见 [M0 基线与可用性记录](geography-question-generation-m0-baseline.md)）
+> 状态说明（2026-10-03）：出题助手已决定**暂缓开发**（当前优先完善讲题）。本记录保留当时的实现状态与证据，**不代表当前推进方向**；桌面验收与后续阶段留待恢复开发时再做。  
+> **后续更新（2026-10-08）：出题已转入开发，上述「暂缓」口径失效。** 本记录正文仍保持当时原貌；进度与状态以 [决策记录](决策记录.md) 2026-10-08 行与 [执行方案](geography-question-generation-execution-plan.md) 为准。
 
 ---
 

@@ -11,7 +11,7 @@
     "./plugins/bank": "./plugins/bank/index.js",
     "./plugins/analysis": "./plugins/analysis/index.js",
     "./plugins/generator": "./plugins/generator/index.js",
-    "./plugins/ui": "./plugins/ui/index.js"
+    "./plugins/panel": "./plugins/panel/index.js"
   },
   "dsh": {
     "bundle": {

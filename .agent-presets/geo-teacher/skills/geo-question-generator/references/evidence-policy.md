@@ -2,7 +2,7 @@
 
 > **何时读这份文件**：进入阶段 0「输入归一与依据检查」时；填写或复核 `package.json` 的 `sources[]`、`design.curriculumBasis[]`、`design.textbookBasis[]` 时；判断热点是否符合时间规则、论文 `accessScope` 该填哪一级时；以及在证据缺失、渠道不可用时决定降级口径与交付声明时。纯题面润色不必读本文件。
 >
-> **事实来源**：`docs/geography-question-generation-m0-baseline.md` §2.1—§2.5 的**实测记录**，字段以 `plugins/question/package.schema.json` 为准，术语以 `docs/术语表.md` 为准。本文件不把"通道存在"写成"内容已读到"，不把失败美化为成功。
+> **事实来源**：`docs/geography-question-generation-m0-baseline.md` §2.1—§2.5 的**实测记录**，字段以 `plugins/question/package.schema.json`（schemaVersion 2）为准，术语以 `docs/术语表.md` 为准。本文件不把"通道存在"写成"内容已读到"，不把失败美化为成功。
 
 ## 1. 来源不等于证据
 
@@ -87,7 +87,7 @@
 
 ## 8. 课标与教材
 
-- `design.curriculumBasis[]` 每条记 `statement`（课标内容要求与行为动词）、`behaviorVerb`、`evidenceInItem`（题面中实际承载该要求的证据）、`sourceId`、`verification`。行为动词须与设问、任务对应；`evidenceInItem` 要指向材料或题干中的具体信息，不写"本题考查了……"式口号。
+- `design.curriculumBasis[]` 每条记 `statement`（课标内容要求与行为动词）、`behaviorVerb`、`evidenceInItem`（题面中实际承载该要求的证据）、`sourceId`、`verification`。行为动词须与设问、任务对应；`evidenceInItem` 要指向材料或题干中的具体信息，不写"本题考查了……"式口号。**综合题须逐小问指出承载处**，不得只写"整道大题体现"。
 - **无法核验课标原文时填 `verification: "pending"`**：可作一般性表述，**不得加引号伪造课标原句**，不得声称完成课标对齐，不得用二手解读替代条目原文。
 - `design.textbookBasis[]` 每条记 `prerequisite`（作为答案必要前提的知识）与 `basis`（其属高中地理共同知识的书目/资料定位与适用范围）。
 - **答案必要前提知识必须能在高中地理教材共同知识中找到依据**：允许情境超纲，禁止必备知识暗中超纲。材料外术语如影响作答必须在题面解释，不要求学生预先掌握大学地理知识。
@@ -106,4 +106,5 @@
 | 无官方地图或审图号 | 无官方地图/行政区划数据，或拿不到审图号与适用范围 | **只提供配图需求说明，不生成正式地图**；`visuals[].type = "map"` 时 `status` 保持 `proposed`、`files` 为空、`risks.mapCompliance` 写明缺口；不使用 AI 生成的行政区划轮廓；必须读图才能作答时 `readiness` 至多 `draft_complete`/`pending` |
 
 - 降级必须写进题包（`limitations`、`risks[]`、`verification`、门状态），`package.json` 是唯一编辑源：只在对话里口头说明、不落字段，视为未降级。
-- 本文件不承诺 V1 之外的交付形式：综合题、正式制图、Word/PDF 均不在 V1 范围，涉及时只能给出提案与缺口说明。
+- 本文件不承诺 V1 之外的交付形式：**正式制图与 Word/PDF 不在 V1 范围**，涉及时只能给出提案与缺口说明。
+- V1 的题型为材料型选择题组与材料型综合题两种。综合题的评分体系同样受本文件的来源规则约束：**采分点的 `evidenceChain` 必须落到已读到的来源或材料字句，且 `authorityLevel` 不为 `lead_only`**；不得依据只有链接的来源给分，也不得把 `notes` 里的待裁定灰区当作已核验证据。

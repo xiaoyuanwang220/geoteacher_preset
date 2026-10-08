@@ -1,7 +1,9 @@
 # 高中地理出题功能技术设计文档
 
 > 状态：DSH 技术基线；M1 数据与技能已落地，后续实现和验收按执行方案推进。  
-> 更新日期：2026-09-23  
+> 更新日期：2026-10-08  
+> 范围（2026-10-04 决策）：出题范围含两种题型——材料型选择题组（`single_choice`）与材料型综合题（`comprehensive`），一个题包只用一种题型，不支持混排；命题包数据格式升 `schemaVersion: 2`。依据 [决策记录](决策记录.md) 2026-10-04 行。**出题自 2026-10-08 起正在开发**（2026-10-04 之前的暂缓令已解除），本文档的实现与验收按执行方案推进。  
+> 进度（如实区分）：**已落地（源码）**——技能目录包、命题包 schema v2、双样例、术语表；**未实现**——命题包校验与渲染实现、学生与教师投影、`geo_question_validate` 工具（`plugins/question/` 下只有 schema，全仓无任何程序读取它）；**未验收**——M1 桌面重启验收（`/geo/taxonomy/meta`、`/geo/taxonomy/query` 与 `geo_taxonomy` 的 `query`/`ids` 参数当时探测为 404，需完整重启桌面）与 4 份 references 的语义评审（只做过禁用词静态扫描）；**未跑通**——M2 端到端闭环。  
 > 对应产品文档：[产品需求](geography-question-generation-product-requirements.md)  
 > 实施目标：在 DSH Desktop 中运行的两阶段高中地理命题 Skill
 
@@ -39,7 +41,7 @@ Skill 不重复教授通用的检索、阅读、归纳、写作、工具调用�
 - 当前项目特有的数据位置、数据语义和所有权边界；
 - 课标、taxonomy、热点、论文、图表和地图之间的非显然关系；
 - 必须保留的教师决策点；
-- 版权、地图、数据真实性和答案唯一性等高风险约束；
+- 版权、地图、数据真实性、答案唯一性（选择题）与采分点／开放答案边界可判定（综合题）等高风险约束；
 - 可观察、可验证的交付标准和失败降级方式。
 
 如果一条指令只是要求 Agent “认真分析”“仔细检查”或“按步骤思考”，且没有提供本项目独有的判断标准，应删除而不是保留。
@@ -84,7 +86,7 @@ Skill 不重复教授通用的检索、阅读、归纳、写作、工具调用�
 1. 未定位知识点和学情假设，不生成命题构思；
 2. 未经教师选择构思，不生成完整题组；
 3. 未说明图表内容、作用和必要性并获得确认，不制作正式图表；
-4. 未核验答案唯一性和来源证据，不交付最终参赛稿。
+4. 未核验答案唯一性（选择题）或采分点与开放答案边界可判定（综合题），以及来源证据，不交付最终参赛稿；
 
 这些顺序是产品决策和风险边界，不是为了约束 Agent 的所有内部工作方式。
 
@@ -110,7 +112,7 @@ taxonomy、真题映射、统计、课标、教材、热点、论文和省份风
 
 ### 2.7 判断交给 Agent，确定性工作交给代码
 
-Agent 负责需要语义理解和专业判断的工作，包括学情转译、构思比较、论文教学化转化、设问设计、干扰项诊断和科学性解释。
+Agent 负责需要语义理解和专业判断的工作，包括学情转译、构思比较、论文教学化转化、设问设计、科学性解释，以及按题型分叉的错因与评分判断：**选择题**的干扰项诊断，**综合题**的采分点与证据链设计、评分标准与开放答案边界判定。
 
 脚本只用于适合确定性执行的任务：
 
@@ -124,7 +126,7 @@ Agent 负责需要语义理解和专业判断的工作，包括学情转译、�
 
 ### 2.8 验证真实行为，不锁死输出措辞
 
-测试聚焦可观察行为和不变量，例如是否先给构思、是否读取当前 taxonomy、是否在图表确认前停止制图、答案是否唯一、来源是否可追溯。不要用正则匹配固定标题、固定句式或长模板来证明质量。
+测试聚焦可观察行为和不变量，例如是否先给构思、是否读取当前 taxonomy、是否在图表确认前停止制图、答案是否唯一（综合题则为采分点与开放答案边界是否可判定）、来源是否可追溯。不要用正则匹配固定标题、固定句式或长模板来证明质量。
 
 失败样例只有在跨主题复现并能归纳出稳定机制后，才进入 Skill 规则。个别题目的特殊修订保留在测试记录中，避免 Skill 逐渐膨胀成历史补丁集合。
 
@@ -189,15 +191,18 @@ DSH 会话可能使用不同能力层级的模型。Skill 应保存真正的领�
 
 当前技能根是 `.agent-presets/geo-teacher/skills/geo-question-generator/`，包含 `SKILL.md` 和四份 references：workflow、evidence-policy、item-writing、delivery-format。根入口按阶段、任务与风险路由，不要求每次全文加载。
 
-命题包结构以 [package.schema.json](../.agent-presets/geo-teacher/plugins/question/package.schema.json) 为准。taxonomy 解析集中在 core，通过 `geo_taxonomy` 获取；命题包校验与渲染按执行方案采用单一 Node 实现，CLI 与可选工具复用同一实现，不增加独立 Python 校验器。Python 仅留给后续经确认的数据处理与制图；V1 不承诺正式制图。校验与渲染实现的完成状态须另行验收。
+命题包结构以 [package.schema.json](../.agent-presets/geo-teacher/plugins/question/package.schema.json) 为准，该 schema 现为 **`schemaVersion: 2`**（2026-10-04 决策）：题型在题包顶层由 `questionType` 声明一次，取 `single_choice`（材料型选择题组）或 `comprehensive`（材料型综合题），一个题包只用一种题型，不支持混排，题组项与模拟作答的形态由 schema 的 `questionType` 条件分支收窄。综合题没有干扰项，其错因与判定由典型错答模式（`misconceptionPatterns`）与开放答案边界（`answerBoundary`）承载。taxonomy 解析集中在 core，通过 `geo_taxonomy` 获取；命题包校验与渲染按执行方案采用单一 Node 实现，CLI 与可选工具复用同一实现，不增加独立 Python 校验器。Python 仅留给后续经确认的数据处理与制图；V1 不承诺正式制图。
+
+**校验与渲染实现当前并不存在**：`plugins/question/` 下只有 `package.schema.json` 这一个文件，全仓没有任何程序读取它；学生与教师投影、`geo_question_validate` 工具（原 M3 交付物）同样未实现。因此“命题包满足 schema”目前只能由人工或临时脚本核对，须待校验器实现后另行验收。
 
 只有规则稳定且能降低重复上下文或提高确定性时才拆分支持文件；每份 reference 必须有明确读取条件。
 
 ## 6. 运行状态
 
-命题包是唯一编辑源，字段、枚举与约束由 [schema](../.agent-presets/geo-teacher/plugins/question/package.schema.json) 定义，完整数据示例见 [样例](examples/question-package.sample.json)。不另维护与 schema 不一致的 YAML/frontmatter 状态模型。
+命题包是唯一编辑源，字段、枚举与约束由 [schema](../.agent-presets/geo-teacher/plugins/question/package.schema.json)（`schemaVersion: 2`）定义。完整数据示例有两份，各代表一种题型：[选择题组样例](examples/question-package.sample.json) 与 [综合题样例](examples/question-package-comprehensive.sample.json)；两个样例的覆盖状态与 `schemaVersion: 1 → 2` 迁移说明见 [样例说明](examples/README.md)。**`schemaVersion: 1` 的题包不能直接通过 v2 校验**，须按该迁移表升级（补顶层 `questionType`、补题组项 `itemType`、把 `learningHypotheses[].candidateDistractorStrategy` 改名为 `candidateErrorStrategy`）；迁移会改动文件，须递增 `revision` 并使受影响评审失效，不是无损操作。不另维护与 schema 不一致的 YAML/frontmatter 状态模型。
 
-- `request` 保留教师输入与原始学情；`taxonomySources` 记录各源版本和指纹，`knowledge` 保存考点映射与未解决项。
+- `request` 保留教师输入与原始学情；`taxonomySources` 记录各源版本和指纹，`knowledge` 保存考点映射、未解决项，以及本次实际使用且源中 `needs_review=true` 的节点（`knowledge.needsReviewNodeIds`；非空时不得无提示地交付为最终作品，须在 `risks` 中明示）。
+- `questionType` 在阶段 0 由教师确定、写入题包顶层后不改（中途换题型等于换任务，须新建 `taskId`）；`concepts[].itemProgression`、`questionSet` 与 `simulations` 的形态都由它决定。`design.expectedDifficulty` 的第四个维度按题型取一个且不得互换：选择题用 `distractorDiscrimination`，综合题用 `scoringDiscrimination`。
 - `learningHypotheses`、`concepts`、`selectedConcept`、`visuals` 分别保存学情假设、候选构思、选定构思与图表状态；具体合法状态以 schema 为准。
 - `stage` 表示流程阶段；`readiness` 为构思待选择、初稿完成、可使用、待补充四态，不能把阶段推进等同质量通过。
 - 教师通过自然语言选择构思、审批图表，确认记录绑定对象 revision；关键变更使相关确认或评审失效。跨会话恢复读取题包，不要求教师维护状态文件。
@@ -227,7 +232,7 @@ DSH 会话可能使用不同能力层级的模型。Skill 应保存真正的领�
 3. 为节点建立 `id/name/aliases/definition/includes/excludes/source_refs/status/confidence/needs_review` 索引；
 4. 以名称、别名和定义匹配教师主题；
 5. 输出精确匹配、近似候选或未收录；
-6. 记录本次使用的文件、版本和节点；
+6. 记录本次使用的文件、版本和节点，以及源中 `needs_review=true` 且本次实际使用的节点（写入 `knowledge.needsReviewNodeIds`）；
 7. 不生成或写回新 ID。
 
 异常策略：
@@ -236,7 +241,7 @@ DSH 会话可能使用不同能力层级的模型。Skill 应保存真正的领�
 | --- | --- |
 | 精确匹配且无需复核 | 正常进入构思 |
 | 多个近似匹配 | 展示候选节点及差异，等待教师选择 |
-| 节点 `needs_review=true` | 允许构思，最终参赛稿前必须显著提示并确认 |
+| 节点 `needs_review=true` | 允许构思；记入 `knowledge.needsReviewNodeIds`，最终参赛稿前必须显著提示并确认，不得无提示地交付 |
 | 未收录 | 标记 taxonomy gap，教师决定换点或待确认继续 |
 | taxonomy 不可读 | 停止声称知识图谱对齐；可在教师授权后生成非最终草案 |
 
@@ -266,11 +271,11 @@ hypothesis: 无法建立冷热差异、垂直运动、气压差异和水平气�
 observable_error:
   - 把气温高直接判断为近地面高压
   - 只判断垂直运动，不判断水平气流
-candidate_distractor_strategy: 因果倒置或局部链条选项
+candidate_error_strategy: 因果倒置或局部链条选项   # v2 由 candidate_distractor_strategy 改名；选择题写干扰项策略，综合题写典型错答或漏点策略
 status: proposed
 ```
 
-系统必须使用“可能”“待验证”等表述。教师选择后，选中的障碍才进入题组测量目标。
+系统必须使用“可能”“待验证”等表述。教师选择后，选中的障碍才进入题组测量目标。**按题型分叉**：选择题的 `observable_error` 写选项层面的错误表现、`candidate_error_strategy` 写将来对应哪类错因的干扰项；综合题写答卷层面的漏点或错答表现，以及典型错答或漏点策略。
 
 ### 7.5 现实证据检索器
 
@@ -338,7 +343,7 @@ distortion_risk: low | medium | high
 - 材料类型与平均结构；
 - 题组题量；
 - 常见设问认知层级；
-- 选项构造特征；
+- 选项构造特征（选择题组）与小问分层、分值结构特征（综合题）；
 - 图表类型；
 - 知识组合方式；
 - 明确的证据题例；
@@ -387,21 +392,35 @@ risks:
 
 ### 7.9 题组生成器
 
-教师选择或组合构思后生成题组。生成顺序建议为：
+教师选择或组合构思后生成题组。题型在阶段 0 由教师确定并写入题包顶层 `questionType`，此后不改；一个题包只用一种题型（`single_choice` 或 `comprehensive`），不支持混排。生成顺序建议按题型分叉：
+
+**选择题组（`single_choice`）**
 
 1. 固定测量目标和认知障碍；
 2. 固定每题核心考点、认知水平和“四翼”主次；
 3. 确定材料中的必要证据；
 4. 编写题干；
 5. 先写正确答案及成立条件；
-6. 根据认知障碍构造干扰项；
+6. 根据认知障碍构造干扰项（`distractorMap`，正确项不得出现在其中，每个干扰项映射一种可解释的认知错误）；
 7. 回查材料是否足以支持唯一答案；
 8. 检查题间独立性和递进；
-9. 生成解析、选项分析和设计说明。
+9. 生成解析、逐题选项分析（含错因类型与 `misconceptionId`）和设计说明。
+
+**材料型综合题（`comprehensive`）**
+
+1. 固定测量目标和认知障碍；
+2. 先定各小问的设问层级与分值分配，再写题干；
+3. 逐小问列采分点：先写采分要素（`statement`），再写它依据的材料字句（`evidenceChain`），最后分配分值（`points`）——顺序反过来会出现“有分无据”的采分点；
+4. 写参考答案（分档），据此写评分标准（`rubric`，至少 2 档，每档须能依据采分点判定）；
+5. 写开放答案边界（`answerBoundary` 的 `acceptable`／`unacceptable`，灰区只能进 `notes`）与典型错答模式（`misconceptionPatterns`，每条指明落在哪个采分点或哪条边界上失分）；
+6. 回查三级求和与独立性：各问 `answerKey` 各点 `points` 之和 = 该问 `points`；各小问 `points` 之和 = `totalPoints`；采分点之间不重复给分，小问之间不串答案。
+
+综合题没有干扰项，测量目标的独立性靠**采分点互不重叠**保证。上述分值与采分点的三级求和是跨字段约束，JSON Schema 不表达，必须由校验器实现（该校验器尚未实现，见 §5）。
 
 题组内每题建议维护结构化记录：
 
 ```yaml
+# 选择题：记选项与干扰项映射
 item_id: Q1
 stem: "..."
 options:
@@ -426,6 +445,36 @@ distractors:
     error_type: 证据遗漏
 ```
 
+综合题项没有选项与干扰项，其结构化记录是「1 道大题 + 2—4 个小问」形态，小问承载分值、采分点、评分标准与答案边界（层级示意如下，字段名与枚举以 schema v2 为准）：
+
+```yaml
+item_type: comprehensive
+item_id: Q1
+stem: "大题引导语；无引导语时写空串"
+total_points: 20
+sub_questions:
+  - sub_question_id: Q1-1
+    stem: "..."
+    points: 4
+    answer_key:
+      - point_id: KP-1
+        statement: "采分要素"
+        evidence_chain: "该要素成立所依据的材料具体字句与推理结论"
+        points: 2
+    rubric:            # 至少 2 档，档位描述须能依据采分点判定
+      - level: 满分
+        score_range: "4 分"
+        description: "..."
+    answer_boundary:
+      acceptable: ["..."]
+      unacceptable: ["..."]
+      notes: null      # 灰区记录；不得用本字段代替边界
+    misconception_patterns:
+      - misconception_id: LH-01
+        pattern: "可观察的错答或漏点样子"
+        how_it_loses_points: "落在哪个采分点或哪条边界上失分"
+```
+
 ### 7.10 难度与“四翼”分析器
 
 难度分析使用四个维度：
@@ -433,7 +482,7 @@ distractors:
 - 考查知识与教材依据；
 - 信息加工负荷；
 - 认知水平；
-- 干扰项区分度。
+- 第四个维度按题型取一个，两者不得互换：选择题用干扰项区分度（`distractorDiscrimination`：每个干扰项指向的认知障碍，以及排除它需要达到何种理解水平）；综合题用采分点区分度（`scoringDiscrimination`：采分点能否把不同水平的学生区分开，答案边界是否在常见作答上可判定），**综合题不得把这一维度写成干扰项分析**。
 
 不得把推理步骤数量作为单独难度指标，不把材料长度等同于难度，不把“四翼”相加形成难度分数。
 
@@ -441,11 +490,12 @@ distractors:
 
 ### 7.11 学生模拟器
 
-默认生成 A、B、C 三名典型学生。模拟器输入为学情假设、题目、答案和干扰项映射，而不是随机编写三段答案。
+默认生成 A、B、C 三名典型学生。模拟器输入为学情假设、题目与答案，以及**按题型**的错因与评分材料——选择题为干扰项映射，综合题为采分点（`answerKey`）与开放答案边界（`answerBoundary`）；不是随机编写三段答案。
 
 每名学生记录：
 
 ```yaml
+# 选择题：记选项
 profile: A | B | C
 cognitive_description: "..."
 responses:
@@ -459,7 +509,25 @@ teacher_interpretation: "..."
 intervention: "..."
 ```
 
-模拟必须内部一致：如果水平 C 被设定为存在 LH-01，其错误选项应确实对应 LH-01。不得生成比例或统计指标。
+```yaml
+# 综合题：记书面答案与命中的采分点，不写预估得分数字
+profile: A | B | C
+cognitive_description: "..."
+responses:
+  - item_id: Q1
+    sub_question_id: Q1-1
+    written_answer: "该水平的书面答案"
+    hit_point_ids: [KP-1, KP-2]
+    missed_point_ids: [KP-3]
+    reasoning: "..."
+    correct_understanding: "..."
+    error_step: "..."
+    misconception_id: LH-01
+teacher_interpretation: "..."
+intervention: "..."
+```
+
+模拟必须内部一致：如果水平 C 被设定为存在 LH-01，其错误选项应确实对应 LH-01。综合题的同一条纪律是：该水平的书面答案所命中的采分点（`hitPointIds`）与漏掉的采分点（`missedPointIds`）必须与它被设定的认知障碍一致，并落在该问的 `misconceptionPatterns` 或 `answerBoundary.unacceptable` 上；三档必须在命中采分点上真正分开。综合题的模拟作答**不写预估得分数字**——命中的采分点 id 已足以按 `answerKey` 推导得分，写数字容易被误读为试测数据。不得生成比例或统计指标。
 
 ## 8. 图表工作流
 
@@ -474,7 +542,7 @@ type: line_chart | bar_chart | scatter | process_diagram | map | remote_sensing 
 content: "图中包含的数据、变量、单位或图像信息"
 item_function: "图在测量中的作用"
 necessity: "为什么不能用文字替代"
-linked_items: [Q1, Q2]
+linked_items: [Q1, Q2]   # 选择题写小题 id（Q1）；综合题写小问 id（Q1-1）
 candidate_sources: [S03]
 planned_method: python_plot | paper_redraw | official_map_overlay
 risks:
@@ -542,7 +610,7 @@ status: proposed
 ### 9.3 版权和原创性
 
 - 真题仅用于风格参照和质量检查；
-- 题干、材料组织和选项不得从真题改写；
+- 题干、材料组织和选项（选择题组）或小问（综合题）不得从真题改写；
 - 论文图片采用教学化改绘并引用；
 - 不大量复制论文、新闻或教材原文；
 - 第三方题目和论文保留原版权状态；
@@ -559,7 +627,7 @@ status: proposed
 
 - 核心考点映射到当前 taxonomy；
 - taxonomy 版本已记录；
-- 未收录、近似匹配和 `needs_review` 已处理；
+- 未收录、近似匹配和 `needs_review` 已处理；本次实际使用且源中 `needs_review=true` 的节点已记入 `knowledge.needsReviewNodeIds`，非空时不得无提示地交付为最终作品；
 - 答案所需知识属于高中地理共同知识。
 
 ### G2：证据可用
@@ -578,12 +646,28 @@ status: proposed
 
 ### G4：题目质量
 
-- 每题答案唯一；
+按题型分列。两类题型共同要求：
+
 - 材料证据充分；
 - 题间递进自然且不泄露答案；
-- 干扰项对应认知障碍；
 - 无科学错误、歧义、偏题和暗中超纲；
 - 热点与论文不是装饰。
+
+**选择题组**：
+
+- 每题答案唯一（A/B/C/D 之一）、选项齐全；
+- 每个干扰项对应一种可解释的认知错误，且能解析到 `learningHypotheses[].id`（`misconceptionId`）。
+
+**材料型综合题**（综合题没有干扰项，对应物是典型错答模式与开放答案边界）：
+
+- 各小问 `points` 之和 = 该问 `answerKey` 各点 `points` 之和；
+- 各小问 `points` 之和 = `totalPoints`；
+- `rubric` 至少 2 档；
+- `answerBoundary` 的 `acceptable`／`unacceptable` 均非空；
+- `misconceptionId` 能在 `learningHypotheses` 中解析；
+- `hitPointIds`／`missedPointIds` 能在 `answerKey` 中解析。
+
+**分值与采分点的三级求和是跨字段约束，JSON Schema 不表达，必须由校验器实现；该校验器（原 M3 交付物 `geo_question_validate`）尚未实现。**
 
 ### G5：图表审批
 
@@ -595,7 +679,7 @@ status: proposed
 ### G6：参赛说明
 
 - 设计理念、课标、taxonomy、核心素养、四翼、难度和创新点均有题面证据；
-- 3 名模拟学生的认知路径与干扰项一致；
+- 3 名模拟学生的认知路径与错因材料一致：选择题与所选干扰项的 `misconceptionId` 一致，综合题与命中采分点及典型错答模式（`misconceptionPatterns`／答案边界）一致；
 - 来源与限制完整；
 - 未伪造真实试测或统计结果。
 
@@ -627,7 +711,7 @@ status: proposed
 - 用现有 `npm run verify:geo -- --source` 检查技能入口、frontmatter 与预设结构；
 - `geo_taxonomy` 能读取实际 YAML 并输出版本与指定节点，旧消费者仍能取得树结构；
 - Markdown 输出包含约定章节；
-- 命题包满足 schema，来源记录可解析；后续 Node 校验器必须区分结构检查与语义评审，不把结构通过当作可使用；
+- 命题包满足 schema，来源记录可解析；后续 Node 校验器必须区分结构检查与语义评审，不把结构通过当作可使用。**该校验器尚未实现**：当前 `plugins/question/` 下只有 `package.schema.json`，全仓没有任何程序读取它；schema v2 的分值与采分点三级求和属跨字段约束，JSON Schema 不表达，须由该校验器实现；综合题的两条语义条件（采分点与分值三级自洽并覆盖参考答案的每一条推理；答案边界在常见作答上可判定、未由 `notes` 兜底）同样只能由评审给出；
 - 图表未批准时不存在正式制图副作用。
 
 ### 13.2 行为场景
@@ -643,9 +727,10 @@ status: proposed
 7. 论文只有摘要时不使用论文图和具体数据；
 8. 图表提案未确认时不绘图；
 9. 地图无审图号时降级；
-10. 三名模拟学生与三个干扰路径一致；
+10. 三名模拟学生与三个干扰路径一致（选择题为干扰项映射，综合题为采分点命中与典型错答模式一致）；
 11. 专项训练模式压缩说明但保留诊断链；
-12. 省份风格档案缺失时不伪称特定省份风格。
+12. 省份风格档案缺失时不伪称特定省份风格；
+13. 材料型综合题题包：分值与采分点三级求和自洽（各问 `points` 之和 = 该问 `answerKey` 各点 `points` 之和，且各小问 `points` 之和 = `totalPoints`）、`rubric` 至少 2 档、答案边界在常见作答上可判定，且模拟作答不写预估得分数字。
 
 ### 13.3 内容验证
 
@@ -655,7 +740,8 @@ status: proposed
 - 课标或教材边界错误；
 - 科学事实错误；
 - 材料不足以支持答案；
-- 干扰项无效；
+- 干扰项无效（选择题组）；
+- 采分点无证据链、评分标准少于 2 档、分值三级不等或答案边界不可判定（综合题）；
 - 图表与题目脱节；
 - 热点牵强；
 - 论文转化失真；
@@ -670,11 +756,11 @@ status: proposed
 2. 明确 WorkBuddy 省份风格档案格式；
 3. 重构 `geo-question-generator/SKILL.md`，先实现二阶段流程和知识图谱只读接入；
 4. 增加证据、构思卡、难度/四翼、学生模拟和视觉提案 references；
-5. 增加 taxonomy 检查和命题包校验脚本；
+5. 增加 taxonomy 检查和命题包校验脚本（须覆盖 schema v2 的两种题型分支、分值与采分点的三级求和；**尚未实现**，“命题包满足 schema”目前无法自动校验）；
 6. 用“热力环流”完成第一个端到端行为测试；
 7. 扩展到 12—15 个题组并回写稳定规则；
 8. V1 稳定后再建设正式制图和 Word/PDF 作品包；
-9. 最后进入 V2 综合题。
+9. V2 的具体范围待 V1 稳定后另行定义——原 V2 的「材料型综合题」已按 2026-10-04 决策并入 V1，不再单列步骤。
 
 ## 15. 尚待技术确认
 
