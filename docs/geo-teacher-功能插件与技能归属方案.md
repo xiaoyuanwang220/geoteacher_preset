@@ -1,9 +1,9 @@
 # geo-teacher 功能插件与技能归属方案
 
-> 日期：2026-10-08
-> 状态：**方案（未实施，本文件不含任何代码改动）**
+> 日期：2026-10-08（状态更新：2026-11-02）
+> 状态：**方案（未实施，本文件不含任何代码改动）**；其中「目标 A：修课程方案缺口」已按 §6 修法 ① 落地——2026-10-24 技能物理移入预设技能根、2026-10-28 对齐修订，其余部分仍是待决方案
 > 触发：用户问「preset 里的三个功能大部分是工具与 skill 的形式，集合成各个插件会不会更合适」
-> 现行对照物：`.agent-presets/geo-teacher/cordis.patch.yml`（`geo` group 六个 entry）、预设技能根 `.agent-presets/geo-teacher/skills/`
+> 现行对照物：`.agent-presets/geo-teacher/cordis.patch.yml`（`geo` group 七个 entry，2026-11-02 现状；方案撰写时为六个）、预设技能根 `.agent-presets/geo-teacher/skills/`
 > 证据来源：DSH 官方子系统文档与包文档（§11 列出链接）；本机宿主 `skills` 服务契约与 profile 配置实测；源码核对 `plugins/*/index.js`、`scripts/geo-verify.mjs`、`plugins/panel/page.html`；`docs/术语表.md`、`docs/决策记录.md`
 
 ---

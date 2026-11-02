@@ -1,9 +1,11 @@
 # 高中地理出题功能 DSH 桌面端执行方案
 
-> 状态：M0 已记录；M1 数据契约（`plugins/question/package.schema.json`，schemaVersion 2）、目录包技能和考点树扩展已落地（源码），桌面验收待补齐；M2 端到端闭环**未跑通**；M3 的命题包校验/渲染、学生与教师投影、`geo_question_validate` **未实现**，且全仓没有任何程序读取 `package.schema.json`。见 [M1 实施记录](geography-question-generation-m1-record.md)。  
-> 更新（2026-10-08）：**出题已转入开发**——2026-10-04 的两项前置（① 材料型综合题已纳入 V1 范围；② 命题包数据格式已升为 `schemaVersion: 2`，支持 `single_choice` 与 `comprehensive` 两种题型、一个题包只用一种题型）已定案，**2026-10-04 之前的暂缓令解除**，本方案的阶段划分与验收要求继续有效并按 M 阶段推进。进度口径：已落地（源码）的是技能目录包（`SKILL.md` + 4 份 references）、命题包 schema v2、选择题与综合题双样例、术语表口径；**未验收**的是 M1 的桌面重启验收（`/geo/taxonomy/meta`、`/geo/taxonomy/query` 与 `geo_taxonomy` 的 `query`/`ids` 参数当时探测为 404，需完整重启桌面）与 4 份 references 的语义评审（只做过禁用词静态扫描）；**未跑通**的是 M2 端到端闭环；**未实现**的是命题包校验/渲染、学生与教师投影、`geo_question_validate` 工具（原 M3 交付物，全仓没有任何程序读取 `package.schema.json`）。详见 [决策记录](决策记录.md) 2026-10-08 行与 2026-10-04 行、[使用指南](使用指南.md) §一.3。  
-> 目标环境：官方 DSH Desktop `0.1.7-rc.2`，Windows，`desktop` profile  
-> 源码基线：`deepseek-ai/deepseek-harness`，标签 `dsh-v0.1.7-rc.2`，commit `477b4f420553e8a52c2fbccc464d7561b239c443`  
+> 状态（2026-11-02）：M0 已记录；**M1 数据契约与桌面验收均已完成**（schemaVersion 2、目录包技能、考点树扩展；`needs_review` 归一化与路由遮蔽两个缺陷已于 2026-10-20 修复并实测）；**M2 首个完整题组已跑通**（2026-10-21，两阶段流程 + 校验修复闭环）；**M3 已落地并在运行时复跑通过**（2026-10-21，`geo_question_validate` 同一会话调用 7 次全部 ok；55 项行为测试）。仍未做的是语义内容评审、`contentHash` 回填与 M4 跨主题/恢复验证。见 [M1 实施记录](geography-question-generation-m1-record.md)。  
+> 更新（2026-10-08）：**出题已转入开发**——2026-10-04 的两项前置（① 材料型综合题已纳入 V1 范围；② 命题包数据格式已升为 `schemaVersion: 2`，支持 `single_choice` 与 `comprehensive` 两种题型、一个题包只用一种题型）已定案，**2026-10-04 之前的暂缓令解除**，本方案的阶段划分与验收要求继续有效并按 M 阶段推进。进度口径：已落地（源码）的是技能目录包（`SKILL.md` + 4 份 references）、命题包 schema v2、选择题与综合题双样例、术语表口径；**未验收**的是 M1 的桌面重启验收（`/geo/taxonomy/meta`、`/geo/taxonomy/query` 与 `geo_taxonomy` 的 `query`/`ids` 参数当时探测为 404，需完整重启桌面）与 4 份 references 的语义评审（只做过禁用词静态扫描）；**未跑通**的是 M2 端到端闭环。**M3 已于 2026-10-12 实现（源码）**：`plugins/question/package.js`（JSON Schema 子集校验器 + 跨字段不变式 + 双投影 + 六章节渲染）、`plugins/question/index.js`（`geo_question_validate`）、`skills/geo-question-generator/scripts/check-package.mjs`（CLI）、`test/question-package.test.mjs`（55 项，含逐条反例）；**桌面会话已实测工具注册且可调用**（2026-10-13，入参 `taskId: 2026-0927-water-cycle-01`），但首次调用因返回值含 `undefined` 被工具边界判 `INVALID_TOOL_OUTPUT`，已修并补回归测试；**修后复跑待再次重启桌面**。详见 [决策记录](决策记录.md) 2026-10-08 行与 2026-10-04 行、[使用指南](使用指南.md) §一.3。
+> 后续进展（覆盖上一段的验收状态）：2026-10-20 的 M1 桌面验收、2026-10-21 的 M3 运行时复跑与 M2 首个完整题组均已通过，见 [决策记录](决策记录.md) 2026-10-20、2026-10-21 各行与文末附录 B。  
+> 目标环境：官方 DSH Desktop **`0.2.1-rc.2`**（2026-10-21 重定基线；此前为 `0.1.7-rc.2`），Windows，`desktop` profile。版本相关事实以 [DSH 0.2.1-rc.2 基线记录](DSH-0.2.1-rc.2-基线.md) 为准。  
+> 源码基线：`deepseek-ai/deepseek-harness`，标签 **`dsh-v0.2.1-rc.2`**，commit **`687f282e8625c6b8d11ff58211a90524be2e4317`**（2026-10-17 发布）。安装为打包形态 `app.asar`，源码不可直接读取，核对走 asar 文本扫描或按该 commit 读 GitHub。  
+> 旧基线（已作废、仅供追溯）：标签 `dsh-v0.1.7-rc.2`，commit `477b4f420553e8a52c2fbccc464d7561b239c443`——附录 A 的 S1—S16 链接仍指向它，**那些链接证明的是旧版行为**。  
 > 核对日期：2026-09-27  
 > 需求依据：[产品需求](geography-question-generation-product-requirements.md)、[技术设计](geography-question-generation-technical-design.md)  
 > 范围：独立实现出题流程，保留与讲题衔接的数据边界；不实施 WorkBuddy 适配。
@@ -43,13 +45,13 @@ V1 支持两种题型，**一个题包只用一种题型**，由题包顶层 `qu
 | 已核对事项 | 源码或本机证据 | 实施约束 |
 | --- | --- | --- |
 | Electron 启动独立 Desktop Host，Host 使用共享 `runProfile` 启动 Web 应用 | S1、S2 | 业务能力扩展现有预设及宿主插件，不修改 Electron 主进程、preload 或安装包 |
-| 桌面 profile 路径为 `$DSH_HOME/profiles/desktop`；Host 默认端口参数为 19387 | S2、S3 | 验收针对 desktop profile 和实际运行地址，不能把 CLI/Web 另一 profile 的成功当作桌面成功 |
+| 桌面 profile 路径为 `$DSH_HOME/profiles/desktop`；0.2.1 起 Host 端口由系统分配（旧版默认 19387 已失效） | S2、S3 | 验收针对 desktop profile 和实际运行地址，不能把 CLI/Web 另一 profile 的成功当作桌面成功；检查脚本读 `DSH_WEB_URL` |
 | 桌面初始化外部插件 profile，并与内置运行时安装目录分离 | S4、S5 | 在预设包声明依赖和导出；不向内置运行时或 app.asar 写文件 |
 | profile 按 bundle 列表装配各包 patch，再应用 profile 等覆盖层 | S5 | 生效配置要核对最终组合，不能只看预设文件 |
 | 本机 desktop manifest 的依赖为 `link:<克隆路径>/.agent-presets/geo-teacher`，bundle 列表包含该包 | 本机 `$DSH_HOME\profiles\desktop\package.json` | 当前无需 E:→C: 双副本同步；此结论属于本机开发部署方式，不是所有 DSH 安装的通用规则 |
 | 预设注册时用声明上下文的 `baseUrl` 挂载其插件 | S6；本仓库 `cordis.patch.yml` | 本地插件继续使用包子路径导出，技能根继续从包位置解析，不使用依赖 profile 工作目录的相对插件名 |
 
-源码核对确认 Desktop 包版本为 `0.1.7-rc.2`。实施前仍需从本机“关于”或安装元数据记录实际版本；升级后重新核对关键行为，不沿用 rc.2 结论。
+源码核对确认 Desktop 包版本为 **`0.2.1-rc.2`**（2026-10-21 重定基线；本方案最初核对的 `0.1.7-rc.2` 已被升级取代，其结论不再直接沿用）。实施前仍需从本机“关于”或安装元数据记录实际版本；**每次升级后都要重定基线并重新核对关键行为**，详见 [DSH 0.2.1-rc.2 基线记录](DSH-0.2.1-rc.2-基线.md)。
 
 ### 2.2 修改何时生效
 
@@ -258,12 +260,12 @@ G5 无图且题目不需要图时为 not_applicable；依赖未制作的图时�
 
 ### 7.2 单一实现与工具接入
 
-先实现一个预设包内的 Node 校验/渲染模块，再由 CLI 和可选模型工具薄封装调用同一实现。没有第二套 Python 校验逻辑，不要求一开始就创建空插件占位。
+**已实现（2026-10-12，源码）**：一个预设包内的 Node 校验/渲染模块作为唯一实现，CLI 与模型工具薄封装调用同一实现。没有第二套 Python 校验逻辑。
 
-建议模块归属：
-- `plugins/question/package.js`：纯数据校验、学生/教师投影和 Markdown 渲染，无 DSH 生命周期副作用。
-- `skills/geo-question-generator/scripts/check-package.mjs`：CLI 包装；只读校验默认不写文件，显式 render 子命令生成投影。
-- `plugins/question/index.js`：核心闭环稳定后注册 `geo_question_validate`；读取文件经 DSH fs 服务与明确策略，不绕过宿主文件权限。
+模块归属（✅ = 已落地）：
+- ✅ `plugins/question/package.js`：JSON Schema 2020-12 **子集**校验器（直接按 schema 求值，不另抄字段表）、跨字段不变式、学生/教师投影、六章节 Markdown 渲染；无 DSH 生命周期副作用（IO 由调用方注入）。
+- ✅ `skills/geo-question-generator/scripts/check-package.mjs`：CLI 包装；只读校验默认不写盘，`--render` 才生成投影与报告。
+- ✅ `plugins/question/index.js`：注册 `geo_question_validate`；读取文件经 DSH fs 服务与明确策略，不绕过宿主文件权限。默认只校验，`render: true` 才写盘。
 
 工具输入使用 `{ taskId, target: "concepts" | "draft" | "usable" }`，不接受任意 packageDir。taskId 限定格式，解析后的真实路径必须位于配置的输出根；拒绝路径穿越、越界链接与未知 schemaVersion。对 `schemaVersion: 1` 的旧题包不按 v2 放行，报出待迁移项（迁移表见 [样例说明](examples/README.md)）。CLI 同样约束输出根，使用桌面返回的 Node 或已确认可用的本地 Node。
 
@@ -292,7 +294,7 @@ V1 的工具只校验，不下载来源、不生成图、不自动修稿；报�
 | core | 考点树可靠解析、相关节点查询、源元数据及显式失败；保持旧树接口兼容 |
 | taxonomy | 兼容扩展查询参数与简短元数据输出，避免整树截断 |
 | generator | 继续消费现有风格能力，不另建风格数据库 |
-| question | 一个校验/渲染实现；需要工具入口时新增薄插件 |
+| question | ✅ 一个校验/渲染实现已落地（`package.js` + `index.js` + CLI），不再需要空插件占位 |
 | preset package.json | 声明实际运行依赖；新增工具插件时添加 `./plugins/question` 导出 |
 | cordis.patch.yml | 工具插件完成后加入 geo group；按证据需求启用 fetch；补齐出题路由 |
 | scripts/geo-verify.mjs | 改成针对有效 bundle/profile 的验证，保留讲题回归断言 |
@@ -315,9 +317,9 @@ V1 以桌面对话作为主入口；暂不新增 `/geo/question/status?dir=` 或
 | 阶段 | 交付物 | 完成标准 |
 | --- | --- | --- |
 | M0 基线与可用性 | 记录桌面版本/profile/预设解析路径；修正 geo-verify 对旧形态的依赖；证据渠道检查记录 | source 检查不依赖旧副本；真正的 desktop 预设可加载；知道每个证据渠道可用到哪一层 |
-| M1 数据与最小技能 | 命题包 schema（schemaVersion 2，含两种题型）、学生/教师边界、确认失效规则；技能迁目录包；必要 references；考点树接口兼容扩展 | 数据样例可表达两种题型的完整初稿（选择题与综合题各一份样例）；旧 taxonomy 消费者正常；只出现一个技能入口。**截至 2026-10-08 的进度**：交付物已落地（源码），但桌面重启验收与 4 份 references 的语义评审未完成 |
+| M1 数据与最小技能 | 命题包 schema（schemaVersion 2，含两种题型）、学生/教师边界、确认失效规则；技能迁目录包；必要 references；考点树接口兼容扩展 | 数据样例可表达两种题型的完整初稿（选择题与综合题各一份样例）；旧 taxonomy 消费者正常；只出现一个技能入口。**截至 2026-10-20 的进度：三条完成标准均已在运行时验收**——① 两份样例（选择题／综合题）结构零 fail；② 旧消费者正常：`/geo/taxonomy/tree` 200、`/geo/core/health` 200、面板可用；③ 技能入口唯一（平铺 2 / 目录包 1，无同名）。4 份 references 的语义评审已于同期完成，产出「校验器与技能脱节」并已补齐（见 [决策记录](决策记录.md) 2026-10-20 行）。**过程中修掉两个桌面才发现的问题**：`/geo/taxonomy/meta`、`/query` 因变量遮蔽恒 500；降级解析路径未归一化 `needs_review`，使 `meta.needsReview` 把全部 162 个节点列为待复核（修复后为 5，逐节点为布尔） |
 | M2 首个完整题组 | 输入、依据、三构思、教师选择、初稿、来源与风险记录 | 正常场景跑通；拒绝或修改构思也能继续；缺必要图表时不会宣称可使用。**截至 2026-10-08 的进度**：未跑通 |
-| M3 确定性检查与桌面工具 | 单一 Node 校验/渲染实现、正反样例；需要时封装 geo_question_validate 并接线 | 错引用、旧确认、投影不同版等能被检出；桌面工具实际调用成功；不会把结构通过当质量通过。综合题另需检出：分值三级求和（各小问 `points` 之和 = 该问采分点 `points` 之和 = `totalPoints`）、`rubric` 少于 2 档、`answerBoundary` 的 `acceptable`／`unacceptable` 为空、`subQuestionId`／`pointId` 引用无法解析。**截至 2026-10-08 的进度**：未实现，全仓没有任何程序读取 `package.schema.json` |
+| M3 确定性检查与桌面工具 | 单一 Node 校验/渲染实现、正反样例；需要时封装 geo_question_validate 并接线 | 错引用、旧确认、投影不同版等能被检出；桌面工具实际调用成功；不会把结构通过当质量通过。综合题另需检出：分值三级求和（各小问 `points` 之和 = 该问采分点 `points` 之和 = `totalPoints`）、`rubric` 少于 2 档、`answerBoundary` 的 `acceptable`／`unacceptable` 为空、`subQuestionId`／`pointId` 引用无法解析。**截至 2026-10-13 的进度**：**已实现（源码，2026-10-12）**——`plugins/question/package.js`、`plugins/question/index.js`、`skills/geo-question-generator/scripts/check-package.mjs`、`test/question-package.test.mjs`（55 项通过）；两份样例零 fail 已并入 `geo-verify.mjs` 常驻检查。**桌面会话实测**：工具已注册、可调用（入参 `taskId: 2026-0927-water-cycle-01`），但**首次调用因返回值含 `undefined` 键被工具边界判 `INVALID_TOOL_OUTPUT`**，已修根因并补回归测试；**修后复跑仍待再次重启桌面** |
 | M4 跨主题与恢复验证 | 原十二类场景及新增异常场景；12—15 个候选题组的前向测试记录 | 覆盖四个领域；无未解决红线；稳定问题才进入技能规则 |
 | M5 可选体验完善 | 任务状态面板或原生工作台接入 | 有真实使用需求，任务隔离明确；不影响对话核心流程 |
 | V1.x / V2 | V1.x：正式图表制作与 Word/PDF 作品包导出（不变）。V2：待 V1 稳定后另行定义 | 各自单独定义输入、审批、副作用和验收。**不要把 V2 预设成新的具体范围**：原 V2 的「材料型综合题」已按 2026-10-04 决策并入 V1，不再属于 V2 |
@@ -397,9 +399,11 @@ M0 不挂空插件，不把九份 references 全部写完作为首个题组的�
 
 2026-10-04 决策的范围与数据格式口径，本次已对齐本文档（执行方案）自身。上表的对应修订中，**PRD、技术设计与运行时技能已于同日按同一决策对齐**（见 [决策记录](决策记录.md) 2026-10-04 行），README 与术语表同步更新；本表继续作为对齐范围清单使用，不再逐条标注完成时点。仍未完成的是**实现项而非文档项**——命题包校验器，见 §9 的 M3 行与附录 B。
 
-## 附录 A：官方 rc.2 源码依据
+## 附录 A：官方 rc.2 源码依据（**绑定 0.1.7-rc.2，已作废**）
 
-所有链接固定到 commit `477b4f420553e8a52c2fbccc464d7561b239c443`，避免 master 漂移。标签见 [官方 rc.2 发布页](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-rc.2)。
+所有链接固定到 commit `477b4f420553e8a52c2fbccc464d7561b239c443`，避免 master 漂移。标签见 [官方 0.1.7-rc.2 发布页](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-rc.2)。
+
+> ⚠️ **这些链接证明的是 `0.1.7-rc.2` 的源码行为，不是现行版本。** 桌面已于 2026-10-21 升级到 `0.2.1-rc.2`（tag `dsh-v0.2.1-rc.2`，commit `687f282e8625c6b8d11ff58211a90524be2e4317`）。本附录保留原貌用于追溯，**引用任何一条 S 编号结论前必须按新 commit 重新核对**；已确认至少有一处行为改变（persona 模板变量）。见 [DSH 0.2.1-rc.2 基线记录](DSH-0.2.1-rc.2-基线.md)。
 
 | 编号 | 源码 | 核对位置 |
 | --- | --- | --- |
@@ -424,16 +428,16 @@ M0 不挂空插件，不把九份 references 全部写完作为首个题组的�
 
 已完成：官方 rc.2 源码只读核对；本机 desktop manifest、预设 patch/导出、考点树与讲题工具源码、旧校验脚本引用核对。
 
-截至 2026-10-04 的进度口径（与头部状态行一致，不夸大也不缩小）：
+截至 2026-11-02 的进度口径（与头部状态行一致，不夸大也不缩小）：
 
-- **已落地（源码）**：技能目录包（`SKILL.md` + 4 份 references）、命题包 schema v2、选择题与综合题双样例（`docs/examples/`）、术语表口径。
-- **未验收**：M1 的桌面重启验收（`/geo/taxonomy/meta`、`/geo/taxonomy/query` 与 `geo_taxonomy` 的 `query`/`ids` 参数当时探测为 404，需完整重启桌面）；4 份 references 的语义评审（只做过禁用词静态扫描）。两项截止本次文档改动仍未重跑。
-- **未实现**：命题包校验/渲染实现、学生与教师投影、`geo_question_validate` 工具（原 M3 交付物）。全仓没有任何程序读取 `package.schema.json`。
-- **未跑通**：M2 端到端闭环。
+- **已落地**：技能目录包（`SKILL.md` + 4 份 references + CLI）、命题包 schema v2、选择题与综合题双样例（`docs/examples/`）、术语表口径；**M3 的单一 Node 校验/渲染实现**（`plugins/question/package.js`）、**`geo_question_validate` 工具**（`plugins/question/index.js`）、**CLI**（`skills/geo-question-generator/scripts/check-package.mjs`）与**行为测试**（`test/question-package.test.mjs`，55 项含逐条反例）。
+- **已验收（2026-10-20/21）**：M1 桌面验收（考点树路由 500 与 `needs_review` 未归一化两个缺陷修复后实测）；4 份 references 的语义评审（禁用词与字段名合规，但发现「技能不知道要用校验器」，已补三处接线）；M3 工具在预设会话中的实际调用（同一会话 7 次全部 ok，`render: true` 写出 5 个文件）；M2 首个完整题组（两阶段流程 + 校验修复闭环，期间修掉校验器三处设计缺陷与一条 `taskId` 流程漏洞）。
+- **未实现**：无。**但校验器只给结构结论**：语义项恒为 `pending`，「结构通过」不等于「质量通过」。
+- **未做**：语义内容评审（四翼、难度、答案唯一性）、`contentHash` 回填、M4 跨主题与恢复验证；正式制图与 Word/PDF 作品包仍属 V1.x。
 
-尚未完成：桌面运行时重启验收、联网提供方可用性测试、技能目录刷新与长会话裁剪实验、真实题组前向测试。上述项目是实施验收任务，不以文档或源码推导代替实际通过记录。
+尚未完成：输入区 UI 插件在 0.2.1 下的槽位复验、技能目录刷新与长会话裁剪实验、真实题组的前向教学使用反馈。上述项目是实施验收任务，不以文档或源码推导代替实际通过记录。
 
-**出题已自 2026-10-08 转入开发**（2026-10-04 之前的暂缓令已解除），按 M 阶段推进；上表四条进度口径是**当时快照**，不代表 M1 已验收或 M2／M3 已完成。本次改动只对齐范围、数据格式与状态的文档口径。
+**出题已自 2026-10-08 转入开发**（2026-10-04 之前的暂缓令已解除），2026-10-12 完成 M3 实现（源码）。上表口径仍以「源码落地 ≠ 运行时验收」为准——2026-10-13 的桌面实测正好印证：工具**能被调用**，但首次调用因返回值含 `undefined` 被工具边界拒绝，源码测试全绿也没能替代这一步。随后两轮真实桌面验收（2026-10-20 的考点树修复、2026-10-21 的 M2 完整题组）把 M1、M2、M3 从「未验收」推到「已验收」，同一条教训再次成立：单元测试全绿不等于能交付。
 
 本方案不包含：WorkBuddy 适配、自动知识图谱写回、题库入库、讲题接口改造、通用规则引擎、整卷组卷与分值结构设计、正式制图、Word/PDF 作品包、无真实试测数据时输出正确率／难度系数／区分度，以及把论文或真题改写后冒充原创。
 

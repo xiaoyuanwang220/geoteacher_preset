@@ -1,9 +1,9 @@
 # 高中地理出题功能技术设计文档
 
-> 状态：DSH 技术基线；M1 数据与技能已落地，后续实现和验收按执行方案推进。  
-> 更新日期：2026-10-08  
+> 状态：DSH 技术基线；M1 数据与技能已落地并完成桌面验收（2026-10-20），后续实现与验收按执行方案推进。  
+> 更新日期：2026-10-13（进度行于 2026-11-02 按 10-20/10-21 验收结果更新）  
 > 范围（2026-10-04 决策）：出题范围含两种题型——材料型选择题组（`single_choice`）与材料型综合题（`comprehensive`），一个题包只用一种题型，不支持混排；命题包数据格式升 `schemaVersion: 2`。依据 [决策记录](决策记录.md) 2026-10-04 行。**出题自 2026-10-08 起正在开发**（2026-10-04 之前的暂缓令已解除），本文档的实现与验收按执行方案推进。  
-> 进度（如实区分）：**已落地（源码）**——技能目录包、命题包 schema v2、双样例、术语表；**未实现**——命题包校验与渲染实现、学生与教师投影、`geo_question_validate` 工具（`plugins/question/` 下只有 schema，全仓无任何程序读取它）；**未验收**——M1 桌面重启验收（`/geo/taxonomy/meta`、`/geo/taxonomy/query` 与 `geo_taxonomy` 的 `query`/`ids` 参数当时探测为 404，需完整重启桌面）与 4 份 references 的语义评审（只做过禁用词静态扫描）；**未跑通**——M2 端到端闭环。  
+> 进度（如实区分）：**已落地**——技能目录包、命题包 schema v2、双样例、术语表；**M3 的命题包校验与渲染实现、学生与教师投影、`geo_question_validate` 工具**（`plugins/question/package.js` + `index.js` + CLI `check-package.mjs` + `test/question-package.test.mjs` 55 项）；**已验收（2026-10-20/21）**——M1 桌面验收（考点树路由 500 与 `needs_review` 未归一化两个缺陷修复后实测）、4 份 references 的语义评审、**M3 工具运行时复跑**（同一会话 7 次调用全部 ok）、**M2 首个完整题组**（两阶段流程 + 校验修复闭环）；**未做**——语义内容评审、`contentHash` 回填、M4 跨主题与恢复验证。  
 > 对应产品文档：[产品需求](geography-question-generation-product-requirements.md)  
 > 实施目标：在 DSH Desktop 中运行的两阶段高中地理命题 Skill
 
@@ -193,7 +193,7 @@ DSH 会话可能使用不同能力层级的模型。Skill 应保存真正的领�
 
 命题包结构以 [package.schema.json](../.agent-presets/geo-teacher/plugins/question/package.schema.json) 为准，该 schema 现为 **`schemaVersion: 2`**（2026-10-04 决策）：题型在题包顶层由 `questionType` 声明一次，取 `single_choice`（材料型选择题组）或 `comprehensive`（材料型综合题），一个题包只用一种题型，不支持混排，题组项与模拟作答的形态由 schema 的 `questionType` 条件分支收窄。综合题没有干扰项，其错因与判定由典型错答模式（`misconceptionPatterns`）与开放答案边界（`answerBoundary`）承载。taxonomy 解析集中在 core，通过 `geo_taxonomy` 获取；命题包校验与渲染按执行方案采用单一 Node 实现，CLI 与可选工具复用同一实现，不增加独立 Python 校验器。Python 仅留给后续经确认的数据处理与制图；V1 不承诺正式制图。
 
-**校验与渲染实现当前并不存在**：`plugins/question/` 下只有 `package.schema.json` 这一个文件，全仓没有任何程序读取它；学生与教师投影、`geo_question_validate` 工具（原 M3 交付物）同样未实现。因此“命题包满足 schema”目前只能由人工或临时脚本核对，须待校验器实现后另行验收。
+**校验与渲染实现已落地（2026-10-12，源码）**：`plugins/question/package.js`（JSON Schema 子集校验器 + 跨字段不变式 + 学生/教师投影 + 六章节 Markdown 渲染）、`plugins/question/index.js`（注册 `geo_question_validate`）、`skills/geo-question-generator/scripts/check-package.mjs`（CLI）、`test/question-package.test.mjs`（55 项，含逐条反例）。校验器**直接按 `package.schema.json` 求值、不另抄字段表**，因此「命题包满足 schema」已可自动判定；但**只给结构结论**，语义项恒为 `pending`。工具**已在预设会话实测注册且可调用**（2026-10-13），但首次调用因返回值含 `undefined` 被工具边界判 `INVALID_TOOL_OUTPUT`，已修并补回归测试；**修后复跑待再次重启桌面**。
 
 只有规则稳定且能降低重复上下文或提高确定性时才拆分支持文件；每份 reference 必须有明确读取条件。
 
@@ -415,7 +415,7 @@ risks:
 5. 写开放答案边界（`answerBoundary` 的 `acceptable`／`unacceptable`，灰区只能进 `notes`）与典型错答模式（`misconceptionPatterns`，每条指明落在哪个采分点或哪条边界上失分）；
 6. 回查三级求和与独立性：各问 `answerKey` 各点 `points` 之和 = 该问 `points`；各小问 `points` 之和 = `totalPoints`；采分点之间不重复给分，小问之间不串答案。
 
-综合题没有干扰项，测量目标的独立性靠**采分点互不重叠**保证。上述分值与采分点的三级求和是跨字段约束，JSON Schema 不表达，必须由校验器实现（该校验器尚未实现，见 §5）。
+综合题没有干扰项，测量目标的独立性靠**采分点互不重叠**保证。上述分值与采分点的三级求和是跨字段约束，JSON Schema 不表达，必须由校验器实现（**已落地**，见 `plugins/question/package.js` 的 `checkInvariants`）。
 
 题组内每题建议维护结构化记录：
 
@@ -667,7 +667,7 @@ status: proposed
 - `misconceptionId` 能在 `learningHypotheses` 中解析；
 - `hitPointIds`／`missedPointIds` 能在 `answerKey` 中解析。
 
-**分值与采分点的三级求和是跨字段约束，JSON Schema 不表达，必须由校验器实现；该校验器（原 M3 交付物 `geo_question_validate`）尚未实现。**
+**分值与采分点的三级求和是跨字段约束，JSON Schema 不表达，必须由校验器实现；该校验器已落地（2026-10-12）**：`plugins/question/package.js`，由 `geo_question_validate` 与 CLI `check-package.mjs` 共用同一实现。
 
 ### G5：图表审批
 
@@ -711,7 +711,7 @@ status: proposed
 - 用现有 `npm run verify:geo -- --source` 检查技能入口、frontmatter 与预设结构；
 - `geo_taxonomy` 能读取实际 YAML 并输出版本与指定节点，旧消费者仍能取得树结构；
 - Markdown 输出包含约定章节；
-- 命题包满足 schema，来源记录可解析；后续 Node 校验器必须区分结构检查与语义评审，不把结构通过当作可使用。**该校验器尚未实现**：当前 `plugins/question/` 下只有 `package.schema.json`，全仓没有任何程序读取它；schema v2 的分值与采分点三级求和属跨字段约束，JSON Schema 不表达，须由该校验器实现；综合题的两条语义条件（采分点与分值三级自洽并覆盖参考答案的每一条推理；答案边界在常见作答上可判定、未由 `notes` 兜底）同样只能由评审给出；
+- 命题包满足 schema，来源记录可解析；Node 校验器必须区分结构检查与语义评审，不把结构通过当作可使用。**该校验器已实现（2026-10-12，`plugins/question/package.js`）**：schema v2 的分值与采分点三级求和、ID 引用、投影禁用字段、确认与评审的版本绑定均在其中；综合题的两条语义条件（采分点与分值三级自洽并覆盖参考答案的每一条推理；答案边界在常见作答上可判定、未由 `notes` 兜底）仍只能由评审给出，报告中保持 `pending`；
 - 图表未批准时不存在正式制图副作用。
 
 ### 13.2 行为场景
@@ -756,7 +756,7 @@ status: proposed
 2. 明确 WorkBuddy 省份风格档案格式；
 3. 重构 `geo-question-generator/SKILL.md`，先实现二阶段流程和知识图谱只读接入；
 4. 增加证据、构思卡、难度/四翼、学生模拟和视觉提案 references；
-5. 增加 taxonomy 检查和命题包校验脚本（须覆盖 schema v2 的两种题型分支、分值与采分点的三级求和；**尚未实现**，“命题包满足 schema”目前无法自动校验）；
+5. 增加 taxonomy 检查和命题包校验脚本（覆盖 schema v2 的两种题型分支、分值与采分点的三级求和；**已实现（源码）**：`plugins/question/package.js` + `geo_question_validate` + CLI `check-package.mjs` + `test/question-package.test.mjs` 55 项；工具在预设会话中的调用待完整重启后验收）；
 6. 用“热力环流”完成第一个端到端行为测试；
 7. 扩展到 12—15 个题组并回写稳定规则；
 8. V1 稳定后再建设正式制图和 Word/PDF 作品包；

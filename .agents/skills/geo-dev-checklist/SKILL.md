@@ -1,6 +1,6 @@
 ---
 name: geo-dev-checklist
-description: Use when modifying geo-teacher plugins, composition, or skills — before committing changes and after restarting the DSH Desktop host. Runs `npm run verify:geo` for deterministic checks, then guides through manual review items the script cannot cover. Semantic code review (judging whether code and design are correct) belongs to geo-code-review; this skill covers deterministic verification and pre-commit / post-restart checks only. Not a teacher-facing skill.
+description: Use when modifying geo-teacher plugins, composition, or skills — before committing and after restarting the DSH Desktop host. Covers three verification layers — `npm run verify:geo` deterministic static and runtime checks, manual review items the script cannot cover, and session-trajectory review of what the model actually did in a real preset session. Semantic code review belongs to geo-code-review. Not a teacher-facing skill.
 ---
 
 # 地理教师 Agent 开发自检
@@ -33,6 +33,46 @@ description: Use when modifying geo-teacher plugins, composition, or skills — 
 | 运行时 | `/geo/core/health` + `/geo-teacher`（仅 `--runtime`） |
 
 **⚠️ 静态检查边界**：`cordis.patch.yml` 含 `!!js` 表达式，脚本只做**结构扫描、不求值**——表达式语义与 Loader 实际挂载结果只能靠重启后验收。路由静态扫描也只能发现当前源码内的重复路径，不能发现运行进程中旧路径仍被占用的问题。
+
+## 会话轨迹审查（端到端，第三层）
+
+`verify:geo` 查的是静态结构，代码审查查的是代码写得对不对；**两者都查不出模型在真实会话里到底做了什么**。凡是改动**模型可见行为**（技能正文与 `references`、工具 `description`、persona／系统提示、校验器的判定与返回措辞），跑一轮真实任务再回来读轨迹。
+
+**为什么需要这一层**——2026-10-21 的 M2 实测，三个缺陷全部躲过了 89 项单元测试与 28 项静态检查：
+
+| 现象 | 静态检查为何看不见 |
+| :-- | :-- |
+| 构思阶段没有题组却被判 `fail`，模型连改三轮修不掉、换包重来 | 单元测试只喂「合理输入」，覆盖不到「合法但为空」的阶段状态 |
+| 语义项全 `pending` 时仍输出 `effectiveReadiness: usable`，还提示「声明保守」 | 这是**产物内部自相矛盾**，不在任何断言里 |
+| 模型在同一任务里换了 `taskId`，旧包成孤儿 | 这是**模型行为**，不是代码 |
+
+### 做法
+
+1. 跑之前先写下**预期行为**（该调哪些工具、该出现几次校验、完成度应是什么）。
+2. 导出并读取轨迹。两个来源读法不同，见 `references/session-trajectory-review.md`（含「多帧 zstd 只解第一帧」这个坑）。
+3. 按 A／B／C 三个维度审，**每条落到证据**（行号／入参／返回正文），不凭印象。
+
+### A 工具调用序列
+- [ ] 预期该调的工具都出现了吗？（例：改出题校验后，`geo_question_validate` 应被真实调用）
+- [ ] 顺序对吗？（例：讲题必须 solve → judge → explain）
+- [ ] 有 `UNKNOWN_TOOL` 吗？——模型幻觉了预设里不存在的工具，说明文案或 `description` 给了错误暗示。
+- [ ] 有同一调用反复重试吗？**重试次数是症状指标**：模型修不掉某个 `fail` 时会一直重试（见上表第 1 行）。
+
+### B 失败项与错误码
+- [ ] 逐个列出 `isError` / `error.code`：`FS_NOT_FOUND`、`FS_AMBIGUOUS_EDIT`、`INVALID_TOOL_OUTPUT`、`ERR_MODULE_NOT_FOUND`……
+- [ ] 分清**模型失误**与**被工具坑了**：前者记 TODO；后者必须改工具或文案。
+- [ ] `INVALID_TOOL_OUTPUT: value is not lossless JSON` 一律算工具缺陷（返回值含 `undefined` 键），不是模型参数错。
+
+### C 模型宣称 vs 报告事实
+- [ ] 模型说的完成度，与 `validation.json` 的 `declaredReadiness`／`effectiveReadiness` 一致吗？
+- [ ] 语义未评审时有没有宣称「可使用」？——完成度口径失守，校验器的措辞要背一部分责任。
+- [ ] 有没有把「结构通过」说成「质量通过」？
+- [ ] 派生产物是否**由校验器／渲染器生成**（`draft.md` 六章节、`student.json` 不含答案侧字段），而不是模型手写？
+
+### 审完之后
+- 修工具／文案／技能的 → 回到「确定性检查」重跑，并按 §1 重启后冒烟。
+- 修模型的（幻觉工具、换 `taskId` 之类）→ 改技能或 `references` 把它写死，别指望模型下次自己记住。
+- **改过任何技能的 frontmatter，先确认该技能仍在目录里**：`description` 里出现 `: `（冒号 + 空格）会让 YAML 把它当成映射键，技能被**静默**从目录剔除。`verify:geo` 不检查 dev 技能，只有实际调用或看目录才能发现。（2026-10-21 改本技能描述时踩过。）
 
 ## 人工判断项（程序无法覆盖）
 

@@ -2,8 +2,9 @@
 
 > 版本：v4.0　日期：2026-08-19　状态：方法论当前有效；验证入口与部署说明已对齐预设包形态，具体检查项以脚本和开发检查技能为准
 > 更新说明（2026-09-27，M0）：`geo-verify.mjs` 现按声明行形态（`.agent-presets/geo-teacher/cordis.patch.yml`）校验，**不再读 `agent.cordis.yml`，不再要求 C: 运行时副本**；检查项由"双副本一致性 / YAML 结构(agent.cordis.yml)"改为"预设包导出 / bundle patch 声明 / 声明行完整性 / 插件行 name / isolate / 路由 / 技能入口唯一性 / 讲题回归"。详见 `docs/geography-question-generation-m0-baseline.md`
+> 更新说明（2026-10-21 / 2026-11-02）：`geo-dev-checklist` 增加**第三层验证——会话轨迹审查**，支撑文件 `references/session-trajectory-review.md`；原因是 M2 挖出的三个缺陷全部躲过了单测与静态检查。2026-11-02 已按当前实现校准本文的验证入口与技能清单（技能入口 4 个、`geo_*` 工具 10 个）
 > 说明：dsh-code-review 已独立适配为 `.agents/skills/geo-code-review/SKILL.md`（语义代码审查）。开发维护 Skill 现为三个，职责分离、互不替代：`geo-dev-checklist`（确定性验证）、`geo-code-review`（语义审查）、`geo-doc-writing`（写作规范）。
-> 来源：`E:\geo_edu_agent\deepseek-harness-skills-master`（从 deepseek-harness GitHub 仓库 `.agents/skills` 下载，共 11 个 skill 包）
+> 来源：`E:\geo_edu_agent\deepseek-harness-skills-master`（从 deepseek-harness GitHub 仓库 `.agents/skills` 下载，共 11 个 skill 包）；**该第三方目录不随仓库发布**，已在 `.gitignore` 排除，需要时按上游来源与 commit 自行获取
 > 配套：`README.md`、`使用指南.md`、`讲题功能设计.md`、`讲题评测方案.md`、`讲题工作流修复方案.md`
 
 ## 〇、来源与合规信息
@@ -50,14 +51,15 @@
 
 ```
 E:\geo_edu_agent\.agents\skills\
-  geo-dev-checklist\SKILL.md          # 确定性验证（verify:geo + 提交前/重启后检查）
+  geo-dev-checklist\SKILL.md          # 确定性验证（verify:geo + 提交前/重启后检查 + 会话轨迹审查）
+  geo-dev-checklist\references\session-trajectory-review.md   # 读会话轨迹的技术细节与三维度审查口径
   geo-code-review\SKILL.md            # 语义代码审查（判断代码与设计是否正确）
   geo-doc-writing\SKILL.md            # 开发写作规范（含过程性元话语/作者痕迹检测）
 ```
 
 | Skill | 内容 |
 | :-- | :-- |
-| `geo-dev-checklist` | ① 何时运行 `npm run verify:geo`（含各参数模式）；② 程序无法覆盖的人工判断项（简化候选核验、重启沟通、重启后冒烟）；③ 语义代码审查指向 `geo-code-review`（不重复审查条目） |
+| `geo-dev-checklist` | ① 何时运行 `npm run verify:geo`（含各参数模式）；② 程序无法覆盖的人工判断项（简化候选核验、重启沟通、重启后冒烟）；③ **会话轨迹审查（端到端第三层）**：先写下预期行为，再按「工具调用序列／失败项与错误码／模型宣称 vs 报告事实」三维度审真实会话轨迹；④ 语义代码审查指向 `geo-code-review`（不重复审查条目） |
 | `geo-code-review` | 语义代码审查：判断代码与设计是否正确（DSH 生命周期与服务边界 / 工具与模型可见契约 / 讲题流水线纪律 / 数据缓存新鲜度 / 安全文件边界 / 测试真实入口 / 文档一致性），findings-first 报告，默认不改代码 |
 | `geo-doc-writing` | 供**开发 Agent** 使用的写作规范：契约完整（proposition-preservation）、删废话、无过程性元话语/作者痕迹、术语引用 `docs/术语表.md`；**教师端不引用本 Skill** |
 

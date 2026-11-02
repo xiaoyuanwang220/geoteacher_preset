@@ -14,6 +14,7 @@
 | 项 | 值 | 来源 |
 | :-- | :-- | :-- |
 | `desktopVersion` | `0.1.7-rc.2` | `<DSH_HOME>/dsh-runtimes/dsh-primary-runtime/runtime.json:2` |
+| ↑ **已过时** | 桌面已于 2026-10-21 升级到 **`0.2.1-rc.2`**；本表其余版本项（payloadDigest、pnpm、安装形态、源码可读性）随之改变 | [DSH 0.2.1-rc.2 基线记录](DSH-0.2.1-rc.2-基线.md) |
 | `platform` / `arch` | `win32` / `x64` | 同文件 `:3-4` |
 | `payloadDigest` | `a7dddb0dc2b5035d86c7f39a4e2c688ccf531a3ba11d0737d441d6376500c14e` | 同文件 `:5` |
 | Node | `24.21.0` | 同文件 `:7` |
@@ -173,6 +174,8 @@ profiles/desktop/package.json
 | `docs/archive/DSH-v0.1.1原生多模态迁移与旧视觉链路下线执行方案.md:64,370` | 当时执行记录，如实描述当时状态 | ➖ 保留（历史记录，不代表当前配置） |
 
 ### 3.2 退役标记与物理归档
+
+> ⚠️ `.backups/` 是本地归档目录，**不随仓库发布**（`.gitignore` 已排除）。本文件与变更清单里出现的 `.backups/…` 路径在公开仓库中不存在，仅用于本机追溯。
 
 `agent.cordis.yml` 与 `preset.yml` 已确认为**已退役形态**（rc.2 不读取）。M0 执行：
 
