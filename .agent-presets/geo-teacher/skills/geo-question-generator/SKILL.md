@@ -80,6 +80,8 @@ description: 为中国高中地理教师与师范生命制原创题组：材料�
 | 可使用 | 必要材料与图表齐备，结构与语义核验完成，无阻断项 | 题组可用于相应教学任务；是否符合具体比赛规则仍按该比赛要求判断 |
 | 待补充 | 证据、确认或必要图表缺失 | 只能交付构思或初稿，不宣称最终对齐或完整成品 |
 
+**声明「初稿完成」或「可使用」之前，必须先跑一次结构校验**：会话里调 `geo_question_validate`（入参 `{ taskId, target }`），或用 CLI `scripts/check-package.mjs --task <taskId> --render`——后者同时产出 `draft.md`／`student.json`／`teacher.json`／`validation.json`。`structureOk=false` 时不得声明初稿完成；`gates[].semantic` 恒为 `pending`，不构成「质量通过」。**这四个产物不要手写**，它们由同一实现从题包派生；手写的稿子与数据一旦不一致，`validation.json` 的 `packageRevision` 就对不上。
+
 **必须读图才能作答、而图尚未制作时，只能到"初稿完成/待补充"。** 结构检查通过不等于质量通过；语义项未完成时保持 `pending`，不得报告"全部门禁通过"。
 
 **综合题另有两条语义条件**（结构检查查不出，必须由评审给出）：采分点与分值自洽且覆盖参考答案的每一条推理；答案边界在常见作答上可判定。这两条未评审前，综合题不得标 `usable`。若 `knowledge.needsReviewNodeIds` 非空，交付稿必须明示该节点待复核。
@@ -97,6 +99,7 @@ description: 为中国高中地理教师与师范生命制原创题组：材料�
 | 定位考点、读版本与 needs_review | `geo_taxonomy` |
 | 真题风格与真题参照 | `geo_style_profile`、`geo_search_questions`、`geo_question_detail` |
 | 命题研究（真题分析与命题蓝图） | `geo_analyze` |
+| **成稿后、声明任何完成度之前；改过题面/答案/来源之后** | **`geo_question_validate`**（`{ taskId, target, render }`）——跑结构校验；`render: true` 时一并产出 `draft.md`／`student.json`／`teacher.json`／`validation.json`。命令行等价物：`scripts/check-package.mjs --task <taskId> --render` |
 | 检索热点/课标/论文 | `web_search`；**若 `web_fetch` 在册**才可读网页正文 |
 
 **联网证据的实际可用层级有限**（搜索只给线索；网页读取只能读 HTML，PDF 与多数出版社站点读不到；2xx ≠ 已读到）。判断依据与降级口径见 `references/evidence-policy.md`，不要凭印象假设联网可用。

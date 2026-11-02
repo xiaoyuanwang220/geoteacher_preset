@@ -359,6 +359,59 @@ function checkPackageWiring(view) {
   return pkg;
 }
 
+// ── 12. 命题包校验器（M3 确定性检查实现） ────────────────────
+// 这条检查的意义是「校验器自己不能坏」：两份样例作为正例，任何一份被判 fail 即说明
+// 实现或 schema 被改坏。反例（逐条证明能检出）由 test/question-package.test.mjs 覆盖。
+async function checkQuestionPackage() {
+  const QDIR = join(PRESET_SRC, 'plugins', 'question');
+  const SCHEMA_FILE = join(QDIR, 'package.schema.json');
+  const MODULE_FILE = join(QDIR, 'package.js');
+  const samples = [
+    join(PROJECT_ROOT, 'docs', 'examples', 'question-package.sample.json'),
+    join(PROJECT_ROOT, 'docs', 'examples', 'question-package-comprehensive.sample.json'),
+  ];
+  if (!existsSync(MODULE_FILE) || !existsSync(SCHEMA_FILE)) {
+    add('question-package', '命题包校验器（M3）', false,
+      `${MODULE_FILE} 或 ${SCHEMA_FILE} 不存在——校验/渲染实现缺失，命题包无法自动校验`);
+    return;
+  }
+  let impl, schema;
+  try {
+    impl = await import(pathToFileURL(MODULE_FILE).href);
+    schema = JSON.parse(readFileSync(SCHEMA_FILE, 'utf8').replace(/^\uFEFF/, ''));
+  } catch (e) {
+    add('question-package', '命题包校验器可加载', false, (e && e.message) || String(e));
+    return;
+  }
+  const API = ['validatePackage', 'buildValidationReport', 'buildStudentProjection', 'buildTeacherProjection', 'renderMarkdown', 'resolveTaskDir'];
+  const missing = API.filter((k) => typeof impl[k] !== 'function');
+  if (missing.length) {
+    add('question-package', '命题包校验器导出 API', false, '缺导出: ' + missing.join(', '));
+    return;
+  }
+  const schemaVer = schema.properties && schema.properties.schemaVersion && schema.properties.schemaVersion.const;
+  if (schemaVer !== impl.SCHEMA_VERSION) {
+    add('question-package', 'schema 版本与实现一致', false,
+      `schema.properties.schemaVersion.const=${schemaVer}，实现 SCHEMA_VERSION=${impl.SCHEMA_VERSION}`);
+    return;
+  }
+  const bad = [];
+  for (const f of samples) {
+    if (!existsSync(f)) { bad.push(basename(f) + ' 不存在'); continue; }
+    let pkg;
+    try { pkg = JSON.parse(readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); }
+    catch (e) { bad.push(basename(f) + ' 不是合法 JSON'); continue; }
+    const fails = impl.validatePackage(pkg, { schema }).filter((x) => x.level === 'fail');
+    if (fails.length) bad.push(basename(f) + '：' + fails.map((x) => `${x.pointer} ${x.message}`).join(' | '));
+  }
+  if (bad.length) {
+    add('question-package', '命题包样例零 fail（校验器正例回归）', false, bad.join('；'));
+  } else {
+    add('question-package', '命题包样例零 fail（校验器正例回归）', true,
+      `${samples.length} 份样例（选择题组/综合题）结构校验全部通过；schemaVersion ${schemaVer}`);
+  }
+}
+
 // ── 5. cordis.patch.yml 结构（声明行形态） ───────────────────
 function checkPatch(view) {
   if (!existsSync(PATCH_FILE)) { add('patch', 'cordis.patch.yml', false, 'cordis.patch.yml 不存在'); return; }
@@ -700,6 +753,7 @@ if (flags.source) {
   checkRoutes();
   checkSkills();
   checkPipelineDiscipline();
+  await checkQuestionPackage();
   checkDeployment();
   checkBackups();
   console.log();

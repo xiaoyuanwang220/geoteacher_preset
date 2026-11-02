@@ -11,6 +11,7 @@
     "./plugins/bank": "./plugins/bank/index.js",
     "./plugins/analysis": "./plugins/analysis/index.js",
     "./plugins/generator": "./plugins/generator/index.js",
+    "./plugins/question": "./plugins/question/index.js",
     "./plugins/panel": "./plugins/panel/index.js"
   },
   "dsh": {
@@ -21,8 +22,7 @@
   "files": [
     "cordis.patch.yml",
     "plugins/",
-    "skills/",
-    "knowledge/"
+    "skills/"
   ],
   "license": "MIT",
   "dependencies": {

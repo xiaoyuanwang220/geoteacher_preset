@@ -821,7 +821,7 @@
       "reviewId": "RV1",
       "targetRevision": 2,
       "checkType": "structural",
-      "method": "按 schemaVersion 2 逐字段核对 + 分值三级求和人工核对（校验器尚未实现，属 M3）",
+      "method": "按 schemaVersion 2 逐字段核对 + 分值三级求和人工核对（当时校验器尚未实现；2026-10-12 起同一批不变式可由 plugins/question 的校验器复核）",
       "findings": [
         "questionType=comprehensive，题组恰好 1 项且 itemType=comprehensive，符合选择题组与综合题不混排的要求",
         "分值三级自洽：Q1-1 为 1+1+2=4 分；Q1-2 为 2+2+2+2=8 分；Q1-3 为 2+2+2+2=8 分；合计 4+8+8=20 分，等于 items[0].totalPoints",

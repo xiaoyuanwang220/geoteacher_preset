@@ -31,6 +31,8 @@ outputs/出题/<taskId>/
 | `validation.json` | 校验器输出：`structureOk`、`packageRevision`、`gates`、`findings`、`readiness` | 所针对 `packageRevision` |
 | `visuals/` | 已获批准且已制作附件的存放位置；`visuals[].files` 在 `status != generated/verified` 时必须为空 | `visuals[].revision` |
 
+**`draft.md`／`student.json`／`teacher.json`／`validation.json` 由同一实现从题包派生，不要手写**：会话里调 `geo_question_validate`（`render: true` 才写盘），或用 CLI `check-package.mjs --task <taskId> --render`。手写的派生产物与题包数据一旦不一致，`validation.json` 的 `packageRevision` 就失去意义，学生投影是否夹带答案侧字段也无从保证。
+
 题内 ID 约定：选择题小题 `Q1`、`Q2`…；综合题大题 `Q1`，其小问 `Q1-1`、`Q1-2`…；采分点 `KP-1`、`KP-2`…。`visuals[].linkedItems` 与 `simulations[].responses[]` 引用同一套 ID。
 
 ## 2. 六大章节（固定）
