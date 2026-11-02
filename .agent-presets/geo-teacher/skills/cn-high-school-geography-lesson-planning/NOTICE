@@ -1,0 +1,11 @@
+Chinese High School Geography Lesson Planning Skill
+Copyright 2026 contributors
+
+This product includes material derived from Agent Skills for K-12 Teachers,
+Copyright 2026 Anthropic PBC and Learning Commons, licensed under the
+Apache License, Version 2.0.
+
+The derived work adds Chinese curriculum alignment, geography lesson-planning,
+WorkBuddy integration, a render-chain verification gate, and document rendering
+changes. Earlier versions also added review protocols and completion gates;
+those were removed in V3.2.

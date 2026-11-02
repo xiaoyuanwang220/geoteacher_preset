@@ -1,0 +1,180 @@
+{
+  "theme": {
+    "primary": "#1F6FB2",
+    "title_color": "#134E7A"
+  },
+  "shared": {
+    "grade": "高一",
+    "subject": "地理",
+    "duration": 45,
+    "standard_code": "示例条目号",
+    "standard_text": "示例：此处完整呈现教师提供的现行课标原文（含条目号与来源）。",
+
+    "material_1": {
+      "type": "source_card",
+      "title": "材料1｜示例材料卡",
+      "origin": "示例占位——正式使用时填写可核验来源：机构或文献、发布年份",
+      "text": "示例正文。正式使用时替换为已联网核验的真实材料，并标明年份、单位与口径；核不到就写“此处需教师补充本地案例”，不编造数值与出处。",
+      "url": "https://example.org/replace-with-verified-source"
+    },
+
+    "q1": {
+      "student": {
+        "type": "instructions",
+        "text": "任务1：读材料1，写出你的判断，并写出支持这个判断的一条依据。"
+      },
+      "teacher": {
+        "type": "callout",
+        "kind": "teacher-note",
+        "label": "主问题 1",
+        "text": "读材料1，写出判断与一条依据。预期回答边界、答不出时的阶梯提示、答偏时的纠偏路径、可观察回答及其后续用途，都写在本环节。"
+      }
+    },
+
+    "answer_1": {
+      "type": "workspace",
+      "height_pt": 90,
+      "ruled": true
+    }
+  },
+
+  "documents": [
+    {
+      "id": "教学设计",
+      "eyebrow": "教师用",
+      "title": "示例课题 教学设计",
+      "meta": "高一 · 必修课程 地理1 · 45分钟",
+      "audience": "teacher",
+      "sections": [
+        {
+          "heading": "课程基本信息",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": ["项目", "内容"],
+              "rows": [
+                ["课题", "示例课题"],
+                ["学段与模块", "普通高中 · 必修课程 地理1（高一）"],
+                ["教材与位置", "示例：填写教材版本与目次；版本无法确认时标“未指定”，不猜测"],
+                ["课时", "45分钟（各环节时长合计45分钟）"]
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "课标分析",
+          "blocks": [
+            {
+              "type": "callout",
+              "kind": "special",
+              "label": "课标原文",
+              "text": "示例：课标原文在教学设计中只完整呈现一次；核不到原文时写“课标条目待核对”，不用引号包装记忆内容。"
+            },
+            {
+              "type": "paragraph",
+              "text": "按原文实有的要素分段写：A 行为主体、B 行为动词、C 行为内容、D 行为水平，原文没有的要素略去；再说明这些要素如何约束本课的目标、任务与评价，段末用一句话收束。每项单独成段，篇幅克制，不机械生成维度表。"
+            }
+          ]
+        },
+        {
+          "heading": "教学过程",
+          "blocks": [
+            {
+              "type": "phase_header",
+              "name": "环节一　示例环节名称（约6分钟）",
+              "minutes": 6
+            },
+            {
+              "type": "from_shared",
+              "key": "material_1"
+            },
+            {
+              "type": "from_shared",
+              "key": "q1"
+            },
+            {
+              "type": "h3",
+              "text": "学生活动：示例活动名"
+            },
+            {
+              "type": "from_shared",
+              "key": "answer_1"
+            },
+            {
+              "type": "labeled",
+              "label": "设计理由",
+              "text": "具体学习困难 → 当前活动的作用 → 可观察的学习证据。一句话若只在解释方案为何成立，删掉。"
+            }
+          ]
+        },
+        {
+          "heading": "课堂观察建议",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "围绕本课目标设至少三项观察点，与教学目标、主要任务、课堂检测使用同一判断口径。"
+            },
+            {
+              "type": "table",
+              "headers": ["观察点", "可见证据", "教师下一步动作"],
+              "rows": [
+                ["示例观察点（写可观察行为）", "可由课堂作品或作答支持的行为", "示例：针对该类表现的下一步动作"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "学生学习材料",
+      "eyebrow": "学生用",
+      "title": "示例课题 学习材料",
+      "meta": "高一 · 必修课程 地理1",
+      "audience": "student",
+      "sections": [
+        {
+          "heading": "材料与任务",
+          "blocks": [
+            {
+              "type": "from_shared",
+              "key": "material_1"
+            },
+            {
+              "type": "from_shared",
+              "key": "q1"
+            },
+            {
+              "type": "fill_table",
+              "headers": ["我的判断", "我的依据（来自材料1的哪一句）"],
+              "rows": [
+                ["", ""]
+              ]
+            },
+            {
+              "type": "checklist",
+              "items": [
+                "我写出了一个可以检验的判断",
+                "我为判断写出了依据",
+                "我标出了依据来自材料1的哪一句"
+              ]
+            },
+            {
+              "type": "labeled_box",
+              "label": "在这里画出你的示意图（标明方向与依据）",
+              "height_pt": 120
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                "第一步：读材料1，圈出与你判断有关的那一句",
+                "第二步：把判断和依据写进上面的表格",
+                "第三步：在方框里画出过程，箭头旁注明每一步的依据"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

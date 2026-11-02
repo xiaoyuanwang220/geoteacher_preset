@@ -1,0 +1,4 @@
+interface:
+  display_name: "中国高中地理课程设计"
+  short_description: "先与教师确认方向，展开后自查，再渲染交付"
+  default_prompt: "使用 $cn-high-school-geography-lesson-planning 为我设计一节中国普通高中地理课。"
