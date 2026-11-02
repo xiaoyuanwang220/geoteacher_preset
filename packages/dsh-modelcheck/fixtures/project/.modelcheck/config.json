@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "projectId": "fixture-circulation",
+  "title": "夹具：三圈环流（闭合与方向）",
+  "route": "svg",
+  "preview": {
+    "entry": "index.html",
+    "viewport": { "width": 1280, "height": 720 },
+    "unitToPx": 0.001,
+    "injectBridge": true
+  },
+  "build": { "entry": "index.html", "outputs": [] },
+  "sources": ["index.html", "src/config.js"],
+  "budget": {
+    "maxRounds": { "science": 3, "dev": 3, "prototype": 5, "production": 8, "delivery": 3 },
+    "maxMinutes": 120,
+    "stagnantRounds": 3
+  }
+}

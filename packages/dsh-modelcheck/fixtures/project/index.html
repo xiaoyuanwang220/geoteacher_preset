@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>夹具：三圈环流（闭合 35px ≈ 0.035 世界单位，超出 0.03 容差）</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1520; color: #d8e2ee; font: 14px/1.5 system-ui, sans-serif; }
+  .wrap { display: grid; place-items: center; height: 100%; }
+  svg { background: #101c2c; border-radius: 12px; }
+  .hint { position: fixed; left: 12px; bottom: 10px; opacity: .55; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <svg id="scene" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360"
+       data-mc-world-width="640" data-mc-world-height="360">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#6fb6ff"/>
+      </marker>
+    </defs>
+
+    <!-- 北半球东北信风：从东北(320,120)吹向西南(220,220)，屏幕坐标 y 向下 -->
+    <path id="nh-trade-winds" data-mc-id="nh-trade-winds" data-mc-role="wind-arrow"
+          d="M320,120 L220,220" stroke="#6fb6ff" stroke-width="4" fill="none"
+          marker-end="url(#arrow)"/>
+
+    <!-- 北半球盛行西风：起点 (220,255)，与信风终点 (220,220) 相距 35px ≈ 0.035 世界单位 -->
+    <path id="nh-westerlies" data-mc-id="nh-westerlies" data-mc-role="wind-arrow"
+          d="M220,255 L520,255" stroke="#8ee3c1" stroke-width="4" fill="none"
+          marker-end="url(#arrow)"/>
+
+    <text x="20" y="24" fill="#9fb3c8" font-size="13">夹具：信风终点与西风起点存在 0.035 世界单位的闭合缝</text>
+  </svg>
+</div>
+<div class="hint">ModelCheck 夹具 · 修改 index.html 可复现 pass / fail / stale</div>
+</body>
+</html>

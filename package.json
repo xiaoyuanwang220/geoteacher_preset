@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "verify:geo": "node scripts/geo-verify.mjs",
-    "test:native-images": "node --test test/native-image-delivery.test.mjs",
+    "verify:modelcheck": "node scripts/modelcheck-verify.mjs --tests",
+    "test:modelcheck": "node --test \"packages/dsh-modelcheck/test/*.test.mjs\"",
     "test:explainer": "node --test test/explainer-audience.test.mjs"
   },
   "dependencies": {
