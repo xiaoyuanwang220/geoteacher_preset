@@ -1,4 +1,4 @@
-# 地理教师辅助 Agent preset —— 声明行形态（DSH ≥ 0.1.7-rc.2）。
+# 地理教师辅助 Agent preset —— 声明行形态（DSH ≥ 0.2.1-rc.2；本机实测版本见 docs/DSH-0.2.1-rc.2-基线.md）。
 #
 # 旧形态 `$DSH_HOME/.agent-presets/<id>/{preset.yml,agent.cordis.yml}` 已被移除：
 # 当前版本只认由 bundle patch 插入的 `@deepseek-ai/dsh-agent-preset` Loader 行。
@@ -31,12 +31,17 @@
           # ── identity ────────────────────────────────────────────────────────────────
 
           # The preset's own persona, shadowing the deployment default for this agent.
-          # `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+          # 模板变量契约（DSH 0.2.1-rc.2 实测）：本段只注册 `provider` 与 `model`。
+          # 0.1.7-rc.2 时还能用的 `{{cwd}}` 已不再注册，写它会**让整轮运行失败**：
+          #   unknown prompt variable "{{cwd}}" in section "deployment:persona-prefix"
+          # persona 的模板是「渲染时严格解析」的，不是宽松替换——未注册的变量直接报错。
+          # 工作目录改由运行时上下文提供（persona 的 includeRuntimeContext 默认 true，
+          # 会在系统提示里给出 "Current working directory"）。
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
               prefix: >-
-                You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+                You are a coding agent powered by the {{model}} model.
 
                 [Geo 工作流路由 · 地理教师辅助预设]
                 - 检索/浏览：geo_taxonomy、geo_search_questions、geo_question_detail、geo_style_profile
@@ -99,7 +104,7 @@
             name: '@deepseek-ai/dsh-skill-filesystem'
             config:
               customSkillDirs:
-                # 预设包自身的技能根：出题/解题/讲题三个教师技能。
+                # 预设包自身的技能根：出题/解题/讲题/课程方案四个教师技能。
                 - !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@geo-edu/dsh-geo-teacher-preset/package.json')), 'skills')"
 
           - id: tool-skill
@@ -129,6 +134,10 @@
                 name: '@geo-edu/dsh-geo-teacher-preset/plugins/analysis'
               - id: geo-generator
                 name: '@geo-edu/dsh-geo-teacher-preset/plugins/generator'
+              # 出题确定性检查：命题包校验/渲染的唯一实现在 plugins/question/package.js，
+              # 本插件只注册 geo_question_validate 工具（无 HTTP 路由，故不注入 webServer、不增 isolate 项）。
+              - id: geo-question
+                name: '@geo-edu/dsh-geo-teacher-preset/plugins/question'
               - id: geo-panel
                 name: '@geo-edu/dsh-geo-teacher-preset/plugins/panel'
 

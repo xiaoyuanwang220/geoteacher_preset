@@ -4,11 +4,11 @@
 // 它不注册任何路由，因此不会与新工作台争夺 /geo-teacher——同一路径被两个插件注册会让整个
 // preset 挂载失败（重复路由）。
 //
-// 退役前原文：.backups/geo-ui-retired-20261003/index.js
+// 退役前原文：.backups/geo-ui-retired-20261003/index.js（`.backups/` 为本地归档，不随仓库发布）
 // 完成物理删除（需本地 shell 执行一次，本会话无 shell 且无删除/移动类工具）：
 //   Move-Item -Recurse -Force `
-//     E:\geo_edu_agent\.agent-presets\geo-teacher\plugins\ui `
-//     E:\geo_edu_agent\.backups\geo-ui-retired-20261003\plugin-dir
+//     <仓库根>\.agent-presets\geo-teacher\plugins\ui `
+//     <仓库根>\.backups\geo-ui-retired-20261003\plugin-dir
 
 export default {
   name: 'geo-ui-retired',
