@@ -82,7 +82,10 @@ function parseTaxonomyDocumentLegacy(text) {
     if (f) current[f[1]] = unquoteScalar(f[2]);
   }
   if (current) nodes.push(current);
-  return { meta, nodes };
+  // 必须收敛到与 YAML 路径相同的节点形态：降级路径把 needs_review 读成字符串
+  // "false"（非空字符串为真），若不过归一化，`filter(n => n.needs_review)` 会命中全部节点，
+  // 使 meta.needsReview 列出整棵树（2026-10-20 运行时实测：162 个节点全部被列出）。
+  return normalizeParsedDocument({ meta, nodes });
 }
 
 // 真实 YAML 解析结果 → 统一节点形态（补齐列表字段、归一化 needs_review）

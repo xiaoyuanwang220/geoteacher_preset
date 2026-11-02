@@ -71,23 +71,25 @@ export default {
               });
             }
             case 'meta': {
-              const res = await kernel.getTaxonomy({});
-              return sendJson(res, res.status === 'error' ? 503 : 200, {
-                status: res.status,
-                message: res.message || null,
-                meta: res.meta,
-                sources: res.sources,
-                errors: res.errors
+              // 注意：不要把内核结果命名为 res——它会遮蔽 HTTP 响应对象 res，
+              // 导致 sendJson(res, …) 去调 notAFunction 的 writeHead，路由返回 500。
+              const result = await kernel.getTaxonomy({});
+              return sendJson(res, result.status === 'error' ? 503 : 200, {
+                status: result.status,
+                message: result.message || null,
+                meta: result.meta,
+                sources: result.sources,
+                errors: result.errors
               });
             }
             case 'query': {
               const ids = query.ids ? query.ids.split(',').map((s) => s.trim()).filter(Boolean) : null;
-              const res = await kernel.getTaxonomy({
+              const result = await kernel.getTaxonomy({
                 query: query.q || query.query || '',
                 ids,
                 limit: query.limit
               });
-              return sendJson(res, res.status === 'error' ? 503 : 200, res);
+              return sendJson(res, result.status === 'error' ? 503 : 200, result);
             }
             default:
               return sendJson(res, 404, { status: 'error', message: 'unknown action: ' + action });
