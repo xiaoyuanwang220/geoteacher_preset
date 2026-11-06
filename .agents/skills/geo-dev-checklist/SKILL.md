@@ -27,9 +27,9 @@ description: Use when modifying geo-teacher plugins, composition, or skills — 
 | 导出 | `cordis.patch.yml` 引用的每个包子路径都有 `exports` 且目标文件存在 / `./package.json` 可导出（技能根解析依据）/ `skills\` 存在 |
 | 隔离 | 每个 `ctx.provide('X')` 都在 patch 的 isolate 中被声明 |
 | 路由 | `/geo/*` 源码内无重复路径 |
-| 技能 | 入口唯一（`<name>.md` 与 `<name>\SKILL.md` 不并存）/ frontmatter 的 `name`（小写 kebab-case）与 `description` 必填 |
+| 技能 | 两个技能根（预设 + 开发）的入口唯一与跨根重名 / frontmatter 的 `name` 与 `description` 必填 / `description` ≤ 500 字符（运行时静默截断）与「: 」YAML 陷阱 / 正文 ≤ 8192 码点（压缩裁剪阈值）/ 消费方式申报 / `references`、`scripts` 引用可达 |
 | 回归 | 讲题流水线断言（solve 无答案泄漏 / 原生图片交付契约 / 旧视觉链路已移除 / 独立答案编排 / 解析层修复断言 / 索引数据完整性） |
-| 提示 | 部署形态（link 或包安装，**不作为失败项**）/ `tool-web` 的 fetch 开关 / 技能 description 与正文长度预算 / `.backups` |
+| 提示 | 部署形态（link 或包安装，**不作为失败项**）/ `tool-web` 的 fetch 开关 / 正文按消费方式的软上限、单节长度与可跳读性 / `.backups` |
 | 运行时 | `/geo/core/health` + `/geo-teacher`（仅 `--runtime`） |
 
 **⚠️ 静态检查边界**：`cordis.patch.yml` 含 `!!js` 表达式，脚本只做**结构扫描、不求值**——表达式语义与 Loader 实际挂载结果只能靠重启后验收。路由静态扫描也只能发现当前源码内的重复路径，不能发现运行进程中旧路径仍被占用的问题。
@@ -72,7 +72,7 @@ description: Use when modifying geo-teacher plugins, composition, or skills — 
 ### 审完之后
 - 修工具／文案／技能的 → 回到「确定性检查」重跑，并按 §1 重启后冒烟。
 - 修模型的（幻觉工具、换 `taskId` 之类）→ 改技能或 `references` 把它写死，别指望模型下次自己记住。
-- **改过任何技能的 frontmatter，先确认该技能仍在目录里**：`description` 里出现 `: `（冒号 + 空格）会让 YAML 把它当成映射键，技能被**静默**从目录剔除。`verify:geo` 不检查 dev 技能，只有实际调用或看目录才能发现。（2026-10-21 改本技能描述时踩过。）
+- **改过任何技能的 frontmatter，先确认该技能仍在目录里**：`description` 里出现 `: `（冒号 + 空格）会让 YAML 把它当成映射键，技能被**静默**从目录剔除。`verify:geo` 自 2026-11-05 起覆盖开发技能根，这类写法会由 `skills-desc-yaml` 提示；但技能是否**真的**进入目录，仍只有实际调用或看目录能确认。（2026-10-21 改本技能描述时踩过。）
 
 ## 人工判断项（程序无法覆盖）
 

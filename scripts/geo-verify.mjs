@@ -523,49 +523,180 @@ function readFrontmatter(text) {
   return fm;
 }
 
+// 预算按「消费方式」分档，不按字数一刀切。两个硬上限都是运行时事实，不是自定口味：
+//   · description：运行时按 catalogDescriptionMaxLength（默认 500）**静默截断**，切掉的正是
+//     "什么时候不该用我"这段路由边界 → 超限必须是失败。
+//   · 正文：skill 工具返回的正文属工具结果，压缩触发时会被 tool-result-pruner 按
+//     thresholdChars 8192 裁成 head 4096 + tail 1024，中段直接消失 → 8192 是硬上限。
+const DESC_MAX = 500;
+const BODY_HARD_MAX = 8192;
+const SECTION_MAX = 2500;
+const NAV_MIN_BODY = 3000;
+const NAV_MIN_HEADINGS = 3;
+
+const SKILL_TIERS = {
+  workflow: { max: 5000, hint: '每次任务都加载，正文只留决策与步骤（目标 4000）' },
+  reference: { max: Infinity, hint: '查表用，可长，但须可跳读' },
+  normative: { max: 8000, hint: '人明确要求才加载，条目应可清单化' },
+};
+
+// 新增技能必须在此申报消费方式；未申报即失败——否则预算会静默失效（6000 时代的毛病）。
+const SKILL_TIER = {
+  'geo-solver': 'workflow',
+  'geo-question-explainer': 'workflow',
+  'geo-question-generator': 'workflow',
+  'cn-high-school-geography-lesson-planning': 'reference',
+  'geo-code-review': 'normative',
+  'geo-dev-checklist': 'normative',
+  'geo-doc-writing': 'normative',
+};
+
+const SKILL_ROOTS = [
+  { label: '预设技能根', dir: SKILLS_DIR },
+  { label: '开发技能根', dir: join(PROJECT_ROOT, '.agents', 'skills') },
+];
+
+function collectSkills() {
+  const out = [];
+  for (const root of SKILL_ROOTS) {
+    if (!existsSync(root.dir)) continue;
+    for (const e of readdirSync(root.dir, { withFileTypes: true })) {
+      if (e.isDirectory()) {
+        const file = join(root.dir, e.name, 'SKILL.md');
+        if (existsSync(file)) out.push({ root, name: e.name, file, base: join(root.dir, e.name) });
+      } else if (e.name.endsWith('.md')) {
+        out.push({ root, name: e.name.slice(0, -3), file: join(root.dir, e.name), base: root.dir });
+      }
+    }
+  }
+  return out;
+}
+
+// 单节高度：一个二级标题下的正文码点数，用来发现"该节该拆进 references/"。
+function sectionHeights(body) {
+  const out = [];
+  let cur = null;
+  let buf = [];
+  for (const line of body.split(/\r?\n/)) {
+    if (/^## /.test(line)) {
+      if (cur !== null) out.push({ title: cur, len: [...buf.join('\n')].length });
+      cur = line.slice(3).trim();
+      buf = [];
+    } else if (cur !== null) buf.push(line);
+  }
+  if (cur !== null) out.push({ title: cur, len: [...buf.join('\n')].length });
+  return out;
+}
+
 function checkSkills() {
-  if (!existsSync(SKILLS_DIR)) { add('skills', '技能目录', false, `${SKILLS_DIR} 不存在`); return; }
-  const flat = new Map();
-  const bundle = new Map();
-  for (const e of readdirSync(SKILLS_DIR, { withFileTypes: true })) {
-    if (e.isFile() && e.name.endsWith('.md')) flat.set(e.name.slice(0, -3), join(SKILLS_DIR, e.name));
-    else if (e.isDirectory() && existsSync(join(SKILLS_DIR, e.name, 'SKILL.md'))) {
-      bundle.set(e.name, join(SKILLS_DIR, e.name, 'SKILL.md'));
-    }
-  }
-  const dupes = [...flat.keys()].filter(n => bundle.has(n));
-  add('skills-unique', '技能入口唯一（平铺与目录包不并存）', dupes.length === 0,
-    dupes.length === 0
-      ? `平铺 ${flat.size} 个 / 目录包 ${bundle.size} 个，无同名`
-      : `同名两形态并存: ${dupes.join(', ')}——技能发现器会同时看到两个候选`);
+  const skills = collectSkills();
+  if (skills.length === 0) { add('skills', '技能目录', false, '两个技能根下均未发现技能入口'); return; }
 
-  const entries = [...flat.entries(), ...bundle.entries()];
-  if (entries.length === 0) { add('skills', '技能 frontmatter', false, '未发现任何技能入口'); return; }
-  let allOk = true;
+  // (a) 入口唯一：同一根内平铺与目录包并存、以及跨根同名，都会让目录出现两个候选
+  const byName = new Map();
+  for (const s of skills) {
+    if (!byName.has(s.name)) byName.set(s.name, []);
+    byName.get(s.name).push(s);
+  }
+  const sameRoot = [];
+  const crossRoot = [];
+  for (const [name, list] of byName) {
+    if (list.length < 2) continue;
+    if (new Set(list.map(s => s.root.label)).size > 1) crossRoot.push(name);
+    else sameRoot.push(name);
+  }
+  add('skills-unique', '技能入口唯一（平铺与目录包不并存）', sameRoot.length === 0,
+    sameRoot.length === 0
+      ? `${skills.length} 个入口（${SKILL_ROOTS.map(r => r.label).join(' + ')}）`
+      : `同名两形态并存: ${sameRoot.join(', ')}——技能发现器会同时看到两个候选`);
+  add('skills-unique-root', '跨技能根无同名', crossRoot.length === 0,
+    crossRoot.length === 0 ? '两个根之间无重名' : `跨根重名: ${crossRoot.join(', ')}——目录里会出现两个同名技能`);
+
+  // (b) frontmatter / 预算 / 结构 / 引用
+  const badFm = [];
   const nameMismatch = [];
-  const longDesc = [];
-  const longBody = [];
-  for (const [entryName, file] of entries) {
-    const fm = readFrontmatter(readFileSync(file, 'utf8'));
-    if (!fm) { add('skills-fm', `frontmatter 缺失: ${entryName}`, false, '无 YAML frontmatter'); allOk = false; continue; }
-    if (!fm.name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fm.name)) {
-      add('skills-fm', `frontmatter name 非法: ${entryName}`, false, `name=${JSON.stringify(fm.name)}（须小写 kebab-case）`);
-      allOk = false;
-    }
-    if (!fm.description) {
-      add('skills-fm', `frontmatter description 缺失: ${entryName}`, false, 'description 必填');
-      allOk = false;
-    }
-    if (fm.name && fm.name !== entryName) nameMismatch.push(`${entryName}→${fm.name}`);
-    if (fm.description && fm.description.length > 500) longDesc.push(`${entryName}(${fm.description.length})`);
-    if (fm.__body && [...fm.__body].length > 6000) longBody.push(`${entryName}(${[...fm.__body].length})`);
-  }
-  if (allOk) add('skills-fm', '技能 frontmatter（name/description）', true, `${entries.length} 个技能入口`);
+  const colonTrap = [];
+  const descOver = [];
+  const bodyHard = [];
+  const tierOver = [];
+  const undeclared = [];
+  const noNav = [];
+  const heavySection = [];
+  const dangling = [];
+  let maxDesc = 0;
+  let maxBody = 0;
+  let maxSection = 0;
+  let refCount = 0;
 
-  // 以下两项是项目维护约定（M1 迁移后转为硬门禁），此处仅提示
+  for (const s of skills) {
+    const fm = readFrontmatter(readFileSync(s.file, 'utf8'));
+    if (!fm) { badFm.push(`${s.name}: 无 YAML frontmatter`); continue; }
+    const desc = String(fm.description || '').replace(/^["']|["']$/g, '').trim();
+    if (!fm.name || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fm.name)) badFm.push(`${s.name}: name=${JSON.stringify(fm.name)} 须小写 kebab-case`);
+    if (!desc) badFm.push(`${s.name}: description 缺失`);
+    if (fm.name && fm.name !== s.name) nameMismatch.push(`${s.name}→${fm.name}`);
+    if (desc && /:\s/.test(desc)) colonTrap.push(s.name);
+
+    const dLen = [...desc].length;
+    if (dLen > maxDesc) maxDesc = dLen;
+    if (dLen > DESC_MAX) descOver.push(`${s.name}(${dLen})`);
+
+    const body = fm.__body || '';
+    const bLen = [...body].length;
+    if (bLen > maxBody) maxBody = bLen;
+    if (bLen > BODY_HARD_MAX) bodyHard.push(`${s.name}(${bLen})`);
+
+    const tier = SKILL_TIER[s.name];
+    if (!tier) undeclared.push(s.name);
+    else if (bLen > SKILL_TIERS[tier].max) tierOver.push(`${s.name}[${tier}](${bLen}>${SKILL_TIERS[tier].max})`);
+
+    const h2Count = (body.match(/^## /gm) || []).length;
+    if (bLen > NAV_MIN_BODY && h2Count < NAV_MIN_HEADINGS) noNav.push(`${s.name}(## ×${h2Count})`);
+
+    for (const sec of sectionHeights(body)) {
+      if (sec.len > maxSection) maxSection = sec.len;
+      if (sec.len > SECTION_MAX) heavySection.push(`${s.name}「${sec.title}」(${sec.len})`);
+    }
+
+    for (const m of body.matchAll(/`((?:references|scripts)\/[^`\s]+)`/g)) {
+      const rel = m[1];
+      if (/[<>]/.test(rel)) continue; // 文档占位符（如 references/<文件>），不是真实路径
+      refCount++;
+      if (!existsSync(join(s.base, rel))) dangling.push(`${s.name}: ${rel}`);
+    }
+  }
+
+  add('skills-fm', '技能 frontmatter（name kebab-case / description 必填）', badFm.length === 0,
+    badFm.length === 0 ? `${skills.length} 个入口全部合规` : badFm.join('；'));
+
   if (nameMismatch.length > 0) addWarn('skills-name-match', 'frontmatter name 与入口名一致', `不一致: ${nameMismatch.join(', ')}`);
-  if (longDesc.length > 0) addWarn('skills-desc-budget', 'description ≤ 500 字符（目录渲染预算）', `超长: ${longDesc.join(', ')}`);
-  if (longBody.length > 0) addWarn('skills-body-budget', '根正文 ≤ 6000 码点（工程预算）', `超长: ${longBody.join(', ')}`);
+  if (colonTrap.length > 0) addWarn('skills-desc-yaml', 'description 不含「: 」（YAML 会当映射键，技能被静默剔除）', `命中: ${colonTrap.join(', ')}`);
+
+  add('skills-desc-budget', `description ≤ ${DESC_MAX} 字符（运行时静默截断，切掉的是路由边界）`, descOver.length === 0,
+    descOver.length === 0 ? `最长 ${maxDesc}` : `超限: ${descOver.join(', ')}`);
+
+  add('skills-body-hard', `正文 ≤ ${BODY_HARD_MAX} 码点（压缩裁剪阈值，超出中段被砍）`, bodyHard.length === 0,
+    bodyHard.length === 0 ? `最长 ${maxBody}` : `超限: ${bodyHard.join(', ')}`);
+
+  add('skills-tier-declared', '技能消费方式已申报（预算分档依据）', undeclared.length === 0,
+    undeclared.length === 0 ? `${skills.length} 项全部申报` : `未申报: ${undeclared.join(', ')}——在 SKILL_TIER 中补类型`);
+
+  if (tierOver.length > 0) {
+    const tiers = [...new Set(tierOver.map(x => x.slice(x.indexOf('[') + 1, x.indexOf(']'))))];
+    addWarn('skills-body-tier', '正文按消费方式的软上限',
+      `超档: ${tierOver.join(', ')}；${tiers.map(t => `${t}: ${SKILL_TIERS[t].hint}`).join('；')}`);
+  } else {
+    add('skills-body-tier', '正文在消费方式的软上限内', true, `最长 ${maxBody}（workflow ≤ ${SKILL_TIERS.workflow.max}）`);
+  }
+
+  if (heavySection.length > 0) addWarn('skills-section', `单节 ≤ ${SECTION_MAX} 码点（超出宜拆进 references/）`, `过重: ${heavySection.join(', ')}`);
+  else add('skills-section', `单节 ≤ ${SECTION_MAX} 码点`, true, `最重 ${maxSection}`);
+
+  if (noNav.length > 0) addWarn('skills-nav', `正文 > ${NAV_MIN_BODY} 码点须有 ≥${NAV_MIN_HEADINGS} 个二级标题（可跳读）`, noNav.join(', '));
+  else add('skills-nav', '长正文可跳读', true, `> ${NAV_MIN_BODY} 码点的技能均有 ≥${NAV_MIN_HEADINGS} 个二级标题`);
+
+  add('skills-refs', 'references/scripts 引用可达', dangling.length === 0,
+    dangling.length === 0 ? `${refCount} 处引用全部可达` : `悬空: ${dangling.join('; ')}`);
 }
 
 // ── 9. 讲题流水线纪律（源码断言，回归保护） ─────────────────
