@@ -767,35 +767,39 @@ async function checkPipelineDiscipline() {
       ? 'startActivation + agentPreset + delivery:caller + SOLVER_ISOLATION_UNAVAILABLE + SOLVER_RUN_FAILED + INTERNAL_SOLVER_PRESET_ID'
       : '缺: ' + isoMissing.join(', '));
 
-  // (f) 内部预设结构：id 固定、plugins 只有一行 persona（零工具）
-  if (analysisMod && typeof analysisMod.buildSolverPresetDefinition === 'function') {
-    const def = analysisMod.buildSolverPresetDefinition('PERSONA-SENTINEL') || {};
-    const plugins = Array.isArray(def.plugins) ? def.plugins : [];
-    const personaRow = plugins[0] || {};
-    const presetOk = def.id === 'geo-solver-internal'
-      && analysisMod.INTERNAL_SOLVER_PRESET_ID === 'geo-solver-internal'
-      && plugins.length === 1
-      && personaRow.name === '@deepseek-ai/dsh-persona'
-      && personaRow.config && personaRow.config.prefix === 'PERSONA-SENTINEL'
-      && !('tools' in def);
-    add('solver-preset', '内部解题预设：geo-solver-internal 只含 persona 一行（零工具）', presetOk,
-      presetOk ? `id=${def.id}，plugins=[persona]，无 tools 字段` : `id=${def.id}, plugins=${plugins.map(p => p.name).join('|') || '(空)'}, 含tools=${'tools' in def}`);
-  } else {
-    add('solver-preset', '内部解题预设结构可校验（buildSolverPresetDefinition 可导入）', false, 'analysis/index.js 未导出 buildSolverPresetDefinition');
-  }
+  // (f) 内部预设：bundle 声明（cordis.patch.yml）+ 唯一插件行 solver-isolation
+  const patchSrc = existsSync(PATCH_FILE) ? readFileSync(PATCH_FILE, 'utf8') : '';
+  const internalPresetOk = /id:\s*geo-solver-internal\b/.test(patchSrc)
+    && /plugins\/solver-isolation/.test(patchSrc)
+    && !/id:\s*geo-solver-internal[\s\S]{0,4000}name:\s*'@deepseek-ai\/dsh-persona'/.test(patchSrc);
+  add('solver-preset', '内部解题预设：bundle 声明且插件行只有 solver-isolation（无静态 persona/工具）', internalPresetOk,
+    internalPresetOk
+      ? 'cordis.patch.yml → id=geo-solver-internal，plugins=[@geo-edu/.../plugins/solver-isolation]'
+      : '缺少内部预设声明，或仍引用静态 persona 行（persona 只应来自 skills/geo-solver.md）');
 
-  // (g) persona 正文来自技能文件，且不含 {{ }} 模板变量、含固定输出格式
-  if (analysisMod && typeof analysisMod.loadSolverPersona === 'function') {
-    const loaded = analysisMod.loadSolverPersona() || {};
-    const body = String(loaded.persona || '');
-    const personaOk = loaded.fallback !== true
+  // (g) 隔离插件：persona 来自技能（单一来源）+ 工具锁（restrict 隐藏 + guard 兜底）
+  const isolationFile = join(PRESET_SRC, 'plugins', 'solver-isolation', 'index.js');
+  const isolationSrc = existsSync(isolationFile) ? readFileSync(isolationFile, 'utf8') : '';
+  let isolationMod = null;
+  try { isolationMod = await import(pathToFileURL(isolationFile).href); } catch (e) { /* checkImport 已报错 */ }
+  const lockTokens = ['tools.restrict', 'tools.guard', 'lockFailed', 'geo-solver.md', 'deployment:persona-prefix'];
+  const lockMissing = missingOf(isolationSrc, lockTokens);
+  add('solver-lock', '隔离子会话工具锁（restrict 隐藏 + guard 兜底，persona 从技能读取）', lockMissing.length === 0,
+    lockMissing.length === 0
+      ? 'restrict + guard + skills/geo-solver.md + persona section（隐藏并拒绝宿主全局工具）'
+      : '缺: ' + lockMissing.join(', '));
+
+  if (isolationMod && typeof isolationMod.readSolverPersona === 'function') {
+    const loaded = isolationMod.readSolverPersona() || {};
+    const body = String(loaded.text || '');
+    const personaOk = loaded.source === 'skill'
       && [...body].length >= 1000
       && !/\{\{[^}]*\}\}/.test(body)
       && body.includes('## 答案') && body.includes('## 关键依据');
-    add('solver-persona', '解题 persona 来自 skills/geo-solver.md（无模板变量 / 含固定输出格式）', personaOk,
-      personaOk ? `来源 ${basename(String(loaded.source || ''))}，正文 ${[...body].length} 码点` : `fallback=${loaded.fallback}, 正文 ${[...body].length} 码点${loaded.error ? '，错误: ' + loaded.error : ''}`);
+    add('solver-persona', '解题 persona 来自 skills/geo-solver.md（无模板变量 / 含固定三段输出）', personaOk,
+      personaOk ? `来源 skill，正文 ${[...body].length} 码点` : `source=${loaded.source}, 正文 ${[...body].length} 码点`);
   } else {
-    add('solver-persona', '解题 persona 可校验（loadSolverPersona 可导入）', false, 'analysis/index.js 未导出 loadSolverPersona');
+    add('solver-persona', '解题 persona 可校验（readSolverPersona 可导出）', false, 'solver-isolation/index.js 未导出 readSolverPersona');
   }
 
   // (h) 作答绑定与门禁（core 源码 + 状态机实测）

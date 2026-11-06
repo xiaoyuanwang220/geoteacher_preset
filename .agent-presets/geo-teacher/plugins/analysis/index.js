@@ -3,18 +3,11 @@
 // 模型工具：geo_analyze、geo_solve、geo_judge、geo_explain、geo_export_analysis
 // 消费 geoKernel 服务。
 // 讲题契约（docs/讲题优化计划.md、docs/讲题功能设计.md）：
-//   解题由隔离会话完成：插件注册一个只含 persona、零工具的内部 agent preset，
-//   用 subagents(provider=spawn) 创建全新上下文的子 agent 独立作答，作答回传后由服务端保存；
+//   解题由隔离会话完成：bundle 声明内部 agent preset（geo-solver-internal，唯一插件
+//   plugins/solver-isolation：提供解题 persona 并隐藏/拒绝全部继承工具），analysis 用
+//   subagents(provider=spawn) 创建全新上下文的子 agent 独立作答，作答回传后由服务端保存；
 //   参考答案在作答提交后才开放，核验结论再次调用归档；讲稿只读服务端核验记录。
 // 注意：不 import 宿主包（C: 用户根无 node_modules，裸 import 会失败），工具定义直接构造对象。
-
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-const PRESET_ROOT = join(HERE, '..', '..');
-const SOLVER_SKILL_PATH = join(PRESET_ROOT, 'skills', 'geo-solver.md');
 
 function sendJson(res, status, data) {
   const body = JSON.stringify(data);
@@ -174,94 +167,24 @@ export async function deliverNativeImages(ctx, refsResult, signal) {
   };
 }
 
-// ========== 隔离解题：内部 agent preset（只含 persona、零工具） ==========
+// ========== 隔离解题：内部 agent preset（bundle 声明，插件提供 persona 与工具锁） ==========
+// 该 preset 在 cordis.patch.yml 中声明（id 固定），唯一插件行是 plugins/solver-isolation：
+//   提供解题 persona（读取 skills/geo-solver.md 正文）+ 隐藏并拒绝一切继承工具。
+// 这里只负责校验它可用；不可用即 fail-closed，不回落主会话解题。
 export const INTERNAL_SOLVER_PRESET_ID = 'geo-solver-internal';
 
-const FALLBACK_SOLVER_PERSONA = [
-  '你是一个隔离的地理独立解题会话：只收到题面与题面图片，没有任何工具。',
-  '按“设问拆解 → 定向读材料/读图 → 知识选择 → 推理链 → 作答与检查”独立完成作答，',
-  '每条结论都要有材料依据或图中信息；不得臆造题面之外的内容。',
-  '最终回复只包含三段：## 答案、## 关键依据、## 推理过程。'
-].join('\n');
-
-function stripFrontmatter(text) {
-  if (typeof text !== 'string') return '';
-  const m = text.match(/^---\s*\r?\n[\s\S]*?\r?\n---\s*(?:\r?\n|$)/);
-  return m ? text.slice(m[0].length) : text;
-}
-
-// 隔离解题会话的 persona 正文来自技能文件（唯一详细来源）；读取失败时用内置兜底并如实记录。
-export function loadSolverPersona(skillPath) {
-  const target = skillPath || SOLVER_SKILL_PATH;
+async function ensureInternalPreset(ctx) {
+  const presets = ctx.get && ctx.get('agentPresets');
+  if (!presets) return { ok: false, error: '缺少 agentPresets 服务' };
+  let info = null;
   try {
-    const raw = readFileSync(target, 'utf8');
-    const body = stripFrontmatter(raw).trim();
-    if (body.length < 200) throw new Error('解题技能正文过短');
-    if (/\{\{[^}]*\}\}/.test(body)) throw new Error('解题技能正文含模板变量 {{…}}，persona 渲染会失败');
-    return { persona: body, source: target, fallback: false };
+    info = await presets.resolve(INTERNAL_SOLVER_PRESET_ID);
   } catch (e) {
-    console.error('geo-analysis: 读取隔离解题 persona 失败，使用内置兜底：', (e && e.message) || e);
-    return { persona: FALLBACK_SOLVER_PERSONA, source: 'fallback', fallback: true, error: (e && e.message) || String(e) };
+    return { ok: false, error: '内部解题预设未声明或不可用：' + ((e && e.message) || String(e)) };
   }
-}
-
-export function buildSolverPresetDefinition(persona) {
-  return {
-    id: INTERNAL_SOLVER_PRESET_ID,
-    name: '地理解题隔离会话（内部）',
-    description: '讲题流水线内部使用：只接收题面并独立作答，不开放文件、命令、联网、命题分析与代理工具。日常使用请选择「地理教师辅助」。',
-    order: 999,
-    plugins: [
-      { id: 'persona', name: '@deepseek-ai/dsh-persona', config: { prefix: String(persona || FALLBACK_SOLVER_PERSONA) } }
-    ]
-  };
-}
-
-// 懒注册内部预设：成功/失败都缓存，失败不回落主会话解题（fail-closed）。
-function createSolverPresetManager(ctx) {
-  const state = { status: 'idle', promise: null, error: null, disposer: null };
-  async function ensure() {
-    if (state.status === 'ready') return { ok: true, presetId: INTERNAL_SOLVER_PRESET_ID };
-    if (state.status === 'failed') return { ok: false, error: state.error };
-    if (!state.promise) {
-      state.promise = (async () => {
-        const presets = ctx.get && ctx.get('agentPresets');
-        if (!presets) throw new Error('缺少 agentPresets 服务：无法注册隔离解题预设');
-        const loaded = loadSolverPersona();
-        let disposer = null;
-        try {
-          disposer = await presets.register(buildSolverPresetDefinition(loaded.persona));
-        } catch (e) {
-          if (!/Duplicate/i.test(String((e && e.message) || e))) throw e;
-          const existing = await presets.resolve(INTERNAL_SOLVER_PRESET_ID);
-          if (!existing || existing.broken) throw new Error('隔离解题预设已存在但不可用：' + ((existing && existing.broken) || 'unknown'));
-        }
-        if (typeof disposer === 'function') state.disposer = disposer;
-        state.status = 'ready';
-        return { ok: true, presetId: INTERNAL_SOLVER_PRESET_ID, personaSource: loaded.fallback ? 'fallback' : 'skill' };
-      })();
-      state.promise = state.promise.catch((e) => {
-        state.status = 'failed';
-        state.error = (e && e.message) || String(e);
-        throw e;
-      });
-    }
-    try {
-      return await state.promise;
-    } catch (e) {
-      return { ok: false, error: state.error || (e && e.message) || String(e) };
-    }
-  }
-  function dispose() {
-    if (state.disposer) {
-      try { state.disposer(); } catch (e) { /* ignore */ }
-      state.disposer = null;
-    }
-    state.status = 'idle';
-    state.promise = null;
-    state.error = null;
-  }
-  return { ensure, dispose };
+  if (!info) return { ok: false, error: '内部解题预设未声明' };
+  if (info.broken) return { ok: false, error: '内部解题预设挂载失败：' + info.broken };
+  return { ok: true, presetId: INTERNAL_SOLVER_PRESET_ID };
 }
 
 // ========== 隔离解题会话的题面消息（只含材料/题干/选项/小问/图片） ==========
@@ -317,12 +240,12 @@ function isolationProblem(ctx, exec) {
   if (!subagents) return '宿主缺少 subagents 服务，无法创建隔离解题会话';
   if (typeof subagents.getProvider !== 'function' || !subagents.getProvider('spawn')) return '宿主缺少 spawn 解题提供方（subagent-spawn-in-process）';
   const presets = ctx.get && ctx.get('agentPresets');
-  if (!presets) return '宿主缺少 agentPresets 服务，无法注册隔离解题预设';
+  if (!presets) return '宿主缺少 agentPresets 服务，无法解析隔离解题预设';
   return '';
 }
 
 // 在全新上下文执行独立解题：题面 + 图片 → 子会话 → 作答回传 → 服务端保存。
-async function runIsolatedSolve(ctx, exec, qid, solverPresets) {
+async function runIsolatedSolve(ctx, exec, qid) {
   const kernel = ctx.geoKernel;
   const prepared = await kernel.prepareSolve(qid);
   if (prepared.status !== 'success') return prepared;
@@ -346,7 +269,7 @@ async function runIsolatedSolve(ctx, exec, qid, solverPresets) {
   if (problem) {
     return { status: 'error', code: 'SOLVER_ISOLATION_UNAVAILABLE', questionId: qid, message: problem + '；为保持答案隔离，本次不回落主会话解题。' };
   }
-  const preset = await solverPresets.ensure();
+  const preset = await ensureInternalPreset(ctx);
   if (!preset.ok) {
     return { status: 'error', code: 'SOLVER_ISOLATION_UNAVAILABLE', questionId: qid, message: '隔离解题预设不可用：' + preset.error + '；本次不回落主会话解题。' };
   }
@@ -432,8 +355,7 @@ async function runIsolatedSolve(ctx, exec, qid, solverPresets) {
     answerHash: recorded.answerHash,
     questionCount: (prepared.questions || []).length,
     imageCount: (imageDelivery.images || []).length,
-    imageStatus: imageDelivery.status,
-    personaSource: preset.personaSource || 'skill'
+    imageStatus: imageDelivery.status
   };
 }
 
@@ -446,9 +368,10 @@ export function renderSolve(args, value) {
   lines.push(`- 运行：${d.runId || '—'}｜状态：${d.state || '—'}｜提交：${formatTime(d.submittedAt)}${d.reused ? '｜复用已有作答（未重新解题）' : ''}`);
   lines.push(`- 作答覆盖小问：${d.questionCount || 0} 个｜题面图片：${d.imageStatus || 'none'}（${d.imageCount || 0} 张）`);
   lines.push('');
-  lines.push('## 答案');
+  // 作答原文自带「## 答案 / ## 关键依据 / ## 推理过程」三段，原样呈现，不再另加同名标题（避免重复）。
+  lines.push('## 作答原文');
   lines.push(d.independentAnswer || '（空）');
-  if (d.keyEvidence) {
+  if (d.keyEvidence && !/(^|\n)##\s*关键依据/.test(String(d.independentAnswer || ''))) {
     lines.push('');
     lines.push('## 关键依据');
     lines.push(d.keyEvidence);
@@ -678,10 +601,6 @@ export default {
   apply(ctx) {
     const webServer = ctx.webServer;
     const kernel = ctx.geoKernel;
-    const solverPresets = createSolverPresetManager(ctx);
-    if (typeof ctx.effect === 'function') {
-      ctx.effect(() => () => solverPresets.dispose());
-    }
 
     webServer.register({
       kind: 'prefix',
@@ -745,7 +664,7 @@ export default {
       async execute(args, exec) {
         const qid = String((args && args.qid) || '').trim();
         if (!qid) return { status: 'error', code: 'MISSING_QID', message: '缺少 qid' };
-        return await runIsolatedSolve(ctx, exec, qid, solverPresets);
+        return await runIsolatedSolve(ctx, exec, qid);
       }
     });
 
@@ -843,6 +762,6 @@ export default {
       }
     });
 
-    console.log('geo-analysis: /geo/analysis 路由与 geo_analyze / geo_solve / geo_judge / geo_explain / geo_export_analysis 工具已注册（隔离解题预设按需注册）');
+    console.log('geo-analysis: /geo/analysis 路由与 geo_analyze / geo_solve / geo_judge / geo_explain / geo_export_analysis 工具已注册（内部解题预设由 cordis.patch.yml 声明）');
   }
 };

@@ -291,3 +291,25 @@
             config:
               fetch: true
               searchTimeoutMs: 60000
+
+    # ── 内部解题预设（隔离解题会话，供 geo_solve 自动调用）────────────────────────────
+    #
+    # 为什么单独一个 preset：子 agent 的工具与 persona 只由它自己的 preset 决定（dsh-subagent 源码：
+    # persona/toolFilter 已不在工具参数里，必须配置在 preset 中）。本 preset 只有一行插件：
+    #   plugins/solver-isolation —— 提供解题 persona（读取 skills/geo-solver.md 正文）+
+    #   在 preset 作用域内隐藏并拒绝一切继承来的全局工具。
+    # 只在 bundle patch 里声明、不在 profile package.json 里新增 bundle；会话选择器会出现该预设
+    # （name/order 已标明内部使用），请勿手动选择。
+    - id: preset-geo-solver-internal
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: geo-solver-internal
+        name: 地理解题隔离会话（内部）
+        description: >-
+          讲题流水线内部使用：只接收题面与题面图片并独立作答，不开放文件、命令、联网、命题分析、
+          会话检索与代理工具。日常使用请选择「地理教师辅助」。
+        order: 999
+        plugins:
+          - id: solver-isolation
+            name: '@geo-edu/dsh-geo-teacher-preset/plugins/solver-isolation'
+

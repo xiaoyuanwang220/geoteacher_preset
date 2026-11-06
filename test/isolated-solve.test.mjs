@@ -22,12 +22,13 @@ import corePlugin, {
 import analysisPlugin, {
   INTERNAL_SOLVER_PRESET_ID,
   buildSolvePrompt,
-  buildSolverPresetDefinition,
-  loadSolverPersona,
   renderSolve,
   renderJudge,
   renderExplain
 } from '../.agent-presets/geo-teacher/plugins/analysis/index.js';
+import solverIsolationPlugin, {
+  readSolverPersona
+} from '../.agent-presets/geo-teacher/plugins/solver-isolation/index.js';
 
 // ========== 通用工具 ==========
 
@@ -419,7 +420,20 @@ const VERIFIED_RESULT = Object.freeze({
 });
 
 function createHarness(options = {}) {
-  const calls = { activations: [], registeredPresets: [], savedImages: [], recordAnswer: [], openReference: [], recordVerification: [], assembleExplanation: [], dispose: 0 };
+  const calls = {
+    activations: [],
+    registeredPresets: [],
+    savedImages: [],
+    recordAnswer: [],
+    openReference: [],
+    recordVerification: [],
+    assembleExplanation: [],
+    dispose: 0,
+    restrictions: [],
+    guards: [],
+    personaSections: [],
+    presetResolve: 0
+  };
   const services = {};
   const activationResult = 'activationResult' in options
     ? options.activationResult
@@ -445,7 +459,11 @@ function createHarness(options = {}) {
         calls.registeredPresets.push(definition);
         return () => {};
       },
-      resolve: async (id) => ({ id, broken: null })
+      resolve: async (id) => {
+        calls.presetResolve += 1;
+        if (options.presetResolveThrows) throw new Error(`Unknown agent preset: ${id}`);
+        return { id, broken: options.presetBroken || null };
+      }
     };
   }
 
@@ -511,6 +529,28 @@ function createHarness(options = {}) {
       register(definition) {
         if (definition && definition.name) tools.set(definition.name, definition);
         return () => {};
+      },
+      schemas() {
+        return options.globalTools || [
+          { name: 'session_search' },
+          { name: 'modelcheck_status' },
+          { name: 'run_code' }
+        ];
+      },
+      restrict(filter) {
+        calls.restrictions.push(filter);
+        return () => {};
+      },
+      guard(guard) {
+        calls.guards.push(guard);
+        return () => {};
+      }
+    },
+    systemPrompt: {
+      getSectionOrder: () => 7,
+      section(definition) {
+        calls.personaSections.push(definition);
+        return () => {};
       }
     },
     webServer: { register() {}, registerUpgrade() {}, registerFallback() {}, tapIndex() { return () => {}; } },
@@ -553,18 +593,10 @@ test('geo_solve：在内部预设的隔离子会话中解题，作答回写服�
   assert.match(result.independentAnswer, /## 答案/);
   assert.equal(result.keyEvidence, '沿岸暖流增温增湿。', '从子会话文本的"## 关键依据"段提取依据');
 
-  // 内部预设：id 固定、只有 persona 一行（零工具）、persona 正文来自解题技能。
-  assert.equal(harness.calls.registeredPresets.length, 1, '应注册一次内部解题预设');
-  const preset = harness.calls.registeredPresets[0];
-  assert.equal(preset.id, INTERNAL_SOLVER_PRESET_ID);
-  assert.equal(preset.id, 'geo-solver-internal');
-  assert.equal(Array.isArray(preset.plugins) && preset.plugins.length, 1);
-  assert.equal(preset.plugins[0].name, '@deepseek-ai/dsh-persona');
-  assert.equal('tools' in preset, false, '内置预设不得带工具');
-  const persona = loadSolverPersona();
-  assert.equal(persona.fallback, false, 'persona 正文应来自 skills/geo-solver.md，而不是内置兜底');
-  assert.equal(preset.plugins[0].config.prefix, persona.persona);
-  assert.deepEqual(buildSolverPresetDefinition('X').plugins.map((p) => p.name), ['@deepseek-ai/dsh-persona']);
+  // 内部预设由 bundle（cordis.patch.yml）声明，analysis 不再运行时注册；这里只校验它可用并传给子会话。
+  assert.equal(harness.calls.registeredPresets.length, 0, '内部预设由 cordis.patch.yml 声明，不在运行时注册');
+  assert.equal(harness.calls.presetResolve, 1, '应解析一次内部解题预设');
+  assert.equal(INTERNAL_SOLVER_PRESET_ID, 'geo-solver-internal');
 
   // 子会话请求：spawn provider + caller 交付 + 内部预设 + 调用方 Agent。
   assert.equal(harness.calls.activations.length, 1);
@@ -608,6 +640,74 @@ test('geo_solve：在内部预设的隔离子会话中解题，作答回写服�
   assert.match(renderSolve({ qid: 'T-B-2' }, result)[0].text, /独立作答.*（隔离解题会话）/);
 });
 
+test('内部解题预设插件：persona 来自解题技能，且隐藏+拒绝一切继承工具', () => {
+  const calls = { sections: [], restrictions: [], guards: [] };
+  const ctx = {
+    tools: {
+      schemas: () => [{ name: 'session_search' }, { name: 'modelcheck_status' }, { name: 'working_directory' }, { name: 'run_code' }],
+      restrict: (filter) => {
+        calls.restrictions.push(filter);
+        return () => {};
+      },
+      guard: (guard) => {
+        calls.guards.push(guard);
+        return () => {};
+      }
+    },
+    systemPrompt: {
+      getSectionOrder: () => 7,
+      section(definition) {
+        calls.sections.push(definition);
+        return () => {};
+      }
+    },
+    effect(callback) {
+      const dispose = callback();
+      return typeof dispose === 'function' ? dispose : () => {};
+    }
+  };
+  solverIsolationPlugin.apply(ctx, {});
+
+  // persona：与 dsh-persona prefix 同落点，正文来自 skills/geo-solver.md（单一来源）。
+  assert.equal(calls.sections.length, 1);
+  assert.equal(calls.sections[0].name, 'deployment:persona-prefix');
+  assert.equal(calls.sections[0].order, 7);
+  const persona = readSolverPersona();
+  assert.equal(persona.source, 'skill', 'persona 正文应来自 skills/geo-solver.md，而不是内置兜底');
+  assert.equal(calls.sections[0].text, persona.text);
+  assert.match(calls.sections[0].text, /## 关键依据/);
+  assert.doesNotMatch(calls.sections[0].text, /\{\{/);
+
+  // 工具锁：deny 覆盖所有继承来的全局工具（除 PTC 保留名 run_code），并注册兜底 guard。
+  assert.ok(calls.restrictions.length >= 1, '应注册工具限制');
+  const denied = new Set(calls.restrictions.flatMap((filter) => filter.deny || []));
+  assert.ok(denied.has('session_search'), '必须隐藏会话检索');
+  assert.ok(denied.has('modelcheck_status'));
+  assert.ok(denied.has('working_directory'));
+  assert.equal(denied.has('run_code'), false, 'PTC 保留名不得出现在限制里');
+  assert.equal(calls.guards.length, 1, '应注册兜底 guard');
+  const deniedReason = calls.guards[0]({ name: 'session_search' });
+  assert.match(deniedReason, /不开放工具/);
+
+  // 缺少服务（mock/非预设环境）时安静跳过，不抛错。
+  assert.doesNotThrow(() => solverIsolationPlugin.apply({ effect() {}, get() { return undefined; } }, {}));
+
+  // 有继承工具却限制失败 → 让 preset 挂载失败（fail-closed），不带可见工具运行。
+  const failingCtx = {
+    tools: {
+      schemas: () => [{ name: 'session_search' }],
+      restrict: () => { throw new Error('not scoped'); },
+      guard: () => () => {}
+    },
+    systemPrompt: { getSectionOrder: () => 7, section: () => () => {} },
+    effect(callback) {
+      const dispose = callback();
+      return typeof dispose === 'function' ? dispose : () => {};
+    }
+  };
+  assert.throws(() => solverIsolationPlugin.apply(failingCtx, {}), /无法在 preset 作用域限制继承工具/);
+});
+
 test('geo_solve：已有同指纹作答时直接复用，不再启动子会话', async () => {
   const prepared = {
     ...DEFAULT_PREPARED,
@@ -622,7 +722,7 @@ test('geo_solve：已有同指纹作答时直接复用，不再启动子会话',
   assert.equal(result.independentAnswer, '已有作答');
   assert.equal(result.imageStatus, 'reused');
   assert.equal(harness.calls.activations.length, 0, '复用路径不得再启动子会话');
-  assert.equal(harness.calls.registeredPresets.length, 0, '复用路径无需注册预设');
+  assert.equal(harness.calls.presetResolve, 0, '复用路径无需解析预设');
   assert.equal(harness.calls.recordAnswer.length, 0, '复用路径不得覆盖已保存作答');
 });
 
@@ -652,7 +752,9 @@ test('geo_solve：题面图片不完整时返回 IMAGE_DELIVERY_INCOMPLETE，不
 test('geo_solve：缺少隔离能力时返回 SOLVER_ISOLATION_UNAVAILABLE，不回落主会话', async () => {
   const cases = [
     { label: '缺 subagents 服务', options: { subagents: null } },
-    { label: '缺 agentPresets 服务', options: { agentPresets: null } }
+    { label: '缺 agentPresets 服务', options: { agentPresets: null } },
+    { label: '内部预设未声明', options: { presetResolveThrows: true } },
+    { label: '内部预设挂载失败', options: { presetBroken: 'solver-isolation 挂载失败' } }
   ];
   for (const testCase of cases) {
     const harness = createHarness(testCase.options);

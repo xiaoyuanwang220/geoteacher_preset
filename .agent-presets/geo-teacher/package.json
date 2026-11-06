@@ -12,7 +12,8 @@
     "./plugins/analysis": "./plugins/analysis/index.js",
     "./plugins/generator": "./plugins/generator/index.js",
     "./plugins/question": "./plugins/question/index.js",
-    "./plugins/panel": "./plugins/panel/index.js"
+    "./plugins/panel": "./plugins/panel/index.js",
+    "./plugins/solver-isolation": "./plugins/solver-isolation/index.js"
   },
   "dsh": {
     "bundle": {
