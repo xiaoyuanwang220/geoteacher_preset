@@ -41,7 +41,7 @@ node scripts/setup.mjs --yes       # 备份 profile 清单 → 写入 → pnpm �
 
 1. **运行安装器**：`--check` 不写任何文件；`--yes` 会备份 `profile/package.json` 与 `pnpm-lock.yaml`，把两个包以 `link:<仓库路径>` 写进目标 profile 的依赖与 `dsh.profile.bundles`，再用运行时自带 pnpm 在 profile 目录安装一次，生成 `node_modules` 链接。
 2. **完整重启 DSH**（关闭窗口可能只是隐藏，请确认进程已退出）。
-3. **开始使用**：新建「地理教师辅助」会话，输入框上方会出现功能选择；先发 `/geo-status` 确认版本、数据来源与题库题数。
+3. **开始使用**：新建「地理教师辅助」会话，输入框上方会出现功能选择；先发 `/geo-status`（或直接说「查看状态」，由 `geo_status` 工具回复）确认版本、数据来源与题库题数。
 
 卸载：`node scripts/setup.mjs --uninstall --yes`（只移除本项目的两个依赖与两个 bundle 项；保留配置、数据、产物与运行记录，不承诺“恢复原状”）。
 

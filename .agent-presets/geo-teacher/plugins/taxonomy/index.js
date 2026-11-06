@@ -49,7 +49,7 @@ export default {
     const webServer = ctx.webServer;
     const kernel = ctx.geoKernel;
 
-    webServer.register({
+    const routeDispose1 = webServer.register({
       kind: 'prefix',
       path: '/geo/taxonomy',
       handler: async (req, res) => {
@@ -99,6 +99,7 @@ export default {
         }
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose1 === 'function') ctx.effect(() => routeDispose1);
 
     // 模型工具：考点树。无参数时兼容旧行为（status + roots）；给定 query/ids 时只返回相关节点 + 版本元数据。
     ctx.tools.register({

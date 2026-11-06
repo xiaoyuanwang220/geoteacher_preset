@@ -2660,7 +2660,7 @@ export default {
       }
     };
 
-    webServer.register({
+    const routeDispose1 = webServer.register({
       kind: 'exact',
       path: '/geo/core/health',
       handler: async (req, res) => {
@@ -2676,6 +2676,7 @@ export default {
         }
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose1 === 'function') ctx.effect(() => routeDispose1);
 
     ctx.provide('geoKernel', api);
     console.log('geo-core: geo.kernel 服务已注册');

@@ -46,7 +46,7 @@ export default {
     const webServer = ctx.webServer;
 
     // 工作台页面
-    webServer.register({
+    const routeDispose1 = webServer.register({
       kind: 'exact',
       path: '/geo-teacher',
       handler: (req, res) => {
@@ -65,9 +65,10 @@ export default {
           });
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose1 === 'function') ctx.effect(() => routeDispose1);
 
     // 页面静态资源（只按文件名取，逐个候选目录尝试）
-    webServer.register({
+    const routeDispose2 = webServer.register({
       kind: 'prefix',
       path: '/geo-teacher/assets',
       handler: async (req, res) => {
@@ -105,6 +106,7 @@ export default {
         return sendText(res, 404, 'text/plain; charset=utf-8', 'geo-panel: asset not found: ' + name);
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose2 === 'function') ctx.effect(() => routeDispose2);
 
     console.log('geo-panel: /geo-teacher 工作台已注册');
   }

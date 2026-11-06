@@ -31,8 +31,16 @@ function mountHarness(options = {}) {
     fs: {},
     attachments: {},
     get(name) {
-      if (name === 'commands') return { register(definition) { commands.push(definition); return () => {}; } };
-      if (name === 'agentPresets') return { resolve: async (id) => ({ id, broken: null }) };
+      if (name === 'commands') {
+        return {
+          register(definition) {
+            if (options.commandRegisterError) throw new Error(options.commandRegisterError);
+            commands.push(definition);
+            return () => {};
+          }
+        };
+      }
+      if (name === 'agentPresets') return { resolve: async (id) => ({ id, broken: options.presetBroken || null }) };
       return undefined;
     },
     effect(callback) {
@@ -74,4 +82,30 @@ test('/geo-status 读取状态失败时返回 error，不抛出错', async () =>
   assert.equal(result.kind, 'error');
   assert.match(result.text, /读取状态失败/);
   assert.match(result.text, /kernel 不可用/);
+});
+
+test('geo_status 工具与命令同源，返回同样的只读状态文本', async () => {
+  const { tools } = mountHarness();
+  const tool = tools.get('geo_status');
+  assert.ok(tool, '应注册 geo_status 工具');
+  assert.match(tool.description, /状态/);
+  const value = await tool.execute({});
+  assert.equal(value.status, 'success');
+  for (const token of ['DSH：', '考点库：随仓库 data/', '279 小问 / 115 文件', '内部解题预设：可用']) {
+    assert.ok(value.text.includes(token), `缺少：${token}`);
+  }
+  const rendered = tool.output.render({}, value);
+  assert.equal(rendered[0].text, value.text);
+});
+
+test('命令重复注册不导致 preset 挂载失败（幂等兜底）', () => {
+  assert.doesNotThrow(() => mountHarness({ commandRegisterError: 'command "geo-status" is already registered' }));
+  const { tools } = mountHarness({ commandRegisterError: 'command "geo-status" is already registered' });
+  assert.ok(tools.get('geo_status'), '命令重复也不影响模型工具注册');
+});
+
+test('内部预设不可用时，状态文本带出 broken 原因', async () => {
+  const { commands } = mountHarness({ presetBroken: 'solver-isolation 挂载失败：restrict 不可用' });
+  const result = await commands[0].handler({});
+  assert.match(result.text, /内部解题预设：不可用：solver-isolation 挂载失败/);
 });

@@ -401,10 +401,11 @@ async function buildStatusText(ctx, kernel) {
     const presets = ctx.get && ctx.get('agentPresets');
     if (presets) {
       const info = await presets.resolve(INTERNAL_SOLVER_PRESET_ID);
-      preset = info && !info.broken ? '可用' : '不可用';
+      if (info && !info.broken) preset = '可用';
+      else preset = '不可用：' + ((info && info.broken) || 'unknown');
     }
-  } catch {
-    preset = '不可用';
+  } catch (e) {
+    preset = '不可用：' + (((e && e.message) || String(e)).slice(0, 300));
   }
   lines.push(`- 内部解题预设：${preset}（内部使用，请勿手动选择）`);
   if (summary.status !== 'success') {
@@ -656,7 +657,7 @@ export default {
     const webServer = ctx.webServer;
     const kernel = ctx.geoKernel;
 
-    webServer.register({
+    const routeDispose1 = webServer.register({
       kind: 'prefix',
       path: '/geo/analysis',
       handler: async (req, res) => {
@@ -677,8 +678,12 @@ export default {
         }
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose1 === 'function') ctx.effect(() => routeDispose1);
 
     // /geo-status：只读状态命令（安装验活、数据来源、题库题数、最近讲题 run）。
+    // 注意：DSH 的 commands.register 注册在全局层；预设重新挂载时同名命令可能仍由旧
+    // generation 持有，重复注册会抛错并**连带打挂整个 preset 挂载**。这里对重复注册
+    // 做幂等处理：保留既有注册，不让 apply 失败。
     const commands = ctx.get ? ctx.get('commands') : undefined;
     if (commands && typeof commands.register === 'function') {
       const definition = {
@@ -692,14 +697,50 @@ export default {
           }
         }
       };
-      if (typeof ctx.effect === 'function') {
-        ctx.effect(() => commands.register(definition));
-      } else {
-        commands.register(definition);
+      try {
+        if (typeof ctx.effect === 'function') {
+          ctx.effect(() => commands.register(definition));
+        } else {
+          commands.register(definition);
+        }
+      } catch (error) {
+        const message = (error && error.message) || String(error);
+        if (/already registered/i.test(message)) {
+          console.log('geo-analysis: /geo-status 已由既有 generation 注册，跳过重复注册');
+        } else {
+          console.error('geo-analysis: /geo-status 注册失败（不影响其它工具）：' + message);
+        }
       }
     } else {
-      console.error('geo-analysis: 缺少 commands 服务，/geo-status 未注册');
+      console.log('geo-analysis: 缺少 commands 服务，/geo-status 未注册（不影响模型工具）');
     }
+
+    // 模型工具：状态查询（与 /geo-status 同源；用户要求“查看状态”时由模型用正常消息回复）。
+    ctx.tools.register({
+      name: 'geo_status',
+      description: '查看地理教师辅助的安装与数据状态：DSH 版本、考点库/题库来源、题数、索引、最近讲题 run。只读，不触发解题。',
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false
+      },
+      output: {
+        schema: { type: 'object', additionalProperties: true },
+        render(args, value) {
+          if (value && value.status === 'success' && typeof value.text === 'string') {
+            return [{ type: 'text', text: value.text }];
+          }
+          return renderJson(args, value);
+        }
+      },
+      async execute() {
+        try {
+          return { status: 'success', text: await buildStatusText(ctx, kernel) };
+        } catch (e) {
+          return { status: 'error', message: '读取状态失败：' + ((e && e.message) || String(e)) };
+        }
+      }
+    });
 
     // 模型工具：真题分析 + 命题蓝图
     ctx.tools.register({

@@ -36,7 +36,7 @@ export default {
     const webServer = ctx.webServer;
     const kernel = ctx.geoKernel;
 
-    webServer.register({
+    const routeDispose1 = webServer.register({
       kind: 'prefix',
       path: '/geo/bank',
       handler: async (req, res) => {
@@ -67,6 +67,7 @@ export default {
         }
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose1 === 'function') ctx.effect(() => routeDispose1);
 
     // 模型工具：真题检索（结构化查询 + 全文搜索，按小问拆分返回）
     ctx.tools.register({

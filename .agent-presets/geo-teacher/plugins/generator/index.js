@@ -36,7 +36,7 @@ export default {
     const webServer = ctx.webServer;
     const kernel = ctx.geoKernel;
 
-    webServer.register({
+    const routeDispose1 = webServer.register({
       kind: 'prefix',
       path: '/geo/generator',
       handler: async (req, res) => {
@@ -57,6 +57,7 @@ export default {
         }
       }
     });
+    if (typeof ctx.effect === 'function' && typeof routeDispose1 === 'function') ctx.effect(() => routeDispose1);
 
     // 模型工具：风格档案（供出题技能锚定风格）
     ctx.tools.register({

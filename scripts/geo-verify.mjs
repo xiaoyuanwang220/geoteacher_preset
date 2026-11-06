@@ -964,9 +964,11 @@ async function checkPipelineDiscipline() {
   const setupFile = join(PROJECT_ROOT, 'scripts', 'setup.mjs');
   add('setup-script', '一键安装器存在（scripts/setup.mjs）', existsSync(setupFile),
     existsSync(setupFile) ? '安装/卸载/静态校验入口就位' : '缺少 scripts/setup.mjs');
-  const statusRegistered = analysisSrc.includes("name: 'geo-status'") && analysisSrc.includes('commands.register');
-  add('status-command', '/geo-status 状态命令已注册（只读，不调模型）', statusRegistered,
-    statusRegistered ? 'analysis 插件通过 commands.register 注册 geo-status' : 'analysis 未注册 /geo-status');
+  const statusRegistered = analysisSrc.includes("name: 'geo-status'")
+    && analysisSrc.includes('commands.register')
+    && analysisSrc.includes("name: 'geo_status'");
+  add('status-command', '/geo-status 命令与 geo_status 工具已注册（只读，不调模型）', statusRegistered,
+    statusRegistered ? 'analysis 注册 geo-status 命令与 geo_status 工具' : 'analysis 未同时注册 /geo-status 与 geo_status');
   const dataRoot = join(PROJECT_ROOT, 'data');
   const dataYaml = existsSync(join(dataRoot, 'config'))
     ? readdirSync(join(dataRoot, 'config')).filter((name) => /\.ya?ml$/i.test(name)).length
