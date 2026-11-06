@@ -1,7 +1,7 @@
 ---
 name: geo-code-review
 description: >-
-  Use when reviewing local geo-teacher changes — diffs, commits, plugins, cordis composition, tools, skills, UI, and related docs; triggered by requests like "review"、"代码审查"、"审查改动"、"检查 diff"、"找回归风险". Performs semantic review of correctness and design against project contracts, decision records, and the pipeline discipline; reports findings first and never modifies code unless the user explicitly asks. Not for feature implementation, pre-commit mechanical verification (use geo-dev-checklist), or teacher business content evaluation.
+  Use when reviewing local geo-teacher changes — diffs, commits, plugins, cordis composition, tools, skills, UI. Triggered by "review"、"代码审查"、"审查改动"、"检查 diff"、"找回归风险". Semantic review of correctness and design against project contracts, decision records, and pipeline discipline; findings first, no code changes unless asked. Not for feature implementation, pre-commit checks (use geo-dev-checklist), or teacher content.
 ---
 
 # 地理教师 Agent 语义代码审查（geo-code-review）
@@ -14,7 +14,7 @@ description: >-
 
 **审查对象**：
 - 本地改动：diff（staged / unstaged）、提交（commit）与补丁；
-- 插件代码：`.agent-presets/geo-teacher/plugins/*/index.js`、`plugins/ui/page.html` 等；
+- 插件代码：`.agent-presets/geo-teacher/plugins/*/index.js`、`plugins/panel/page.html` 等；
 - composition 与 isolate 配置：`.agent-presets/geo-teacher/agent.cordis.yml`；
 - 模型工具：`geo_*` 工具的 description / 输入输出 schema / render；
 - Skill：`.agents/skills/` 下开发 Skill、`.agent-presets/geo-teacher/skills/` 下教师 Skill；

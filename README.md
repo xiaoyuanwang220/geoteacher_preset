@@ -154,7 +154,7 @@ geo-core（内核：考点树 / 题库加载 / 真题分析 / 命题蓝图 / 风
 .agent-presets/geo-teacher/   预设包：plugins/（core,taxonomy,bank,analysis,generator,question,panel）+ skills/ + cordis.patch.yml
 packages/dsh-geo-teacher-ui/  输入区 UI 插件
 packages/dsh-modelcheck/      建模完成判定插件（lib/ + server/ + client.js + 测试）
-docs/                         运行基线、决策记录、需求与设计、实施记录、归档
+docs/                         运行基线、当前规范、需求与设计、验收待办
 课本与课标/                    课标与教材正文（课标核验与共同知识依据）
 scripts/                      verify 与验收脚本
 test/                         教师功能行为测试
@@ -177,7 +177,7 @@ test/                         教师功能行为测试
 - [讲题功能设计](docs/讲题功能设计.md)／[评测方案](docs/讲题评测方案.md)
 - [ModelCheck 需求规格书](docs/建模完成判定插件-需求规格书.md)／[实施记录](docs/modelcheck/实施记录.md)／[接入指南](docs/modelcheck/接入指南-给agent.md)
 - [术语表](docs/术语表.md) —— 地理与交付术语的唯一权威
-- [历史归档](docs/archive/README.md)
+- 历史方案与迁移记录通过 Git 历史追溯。
 
 ## 已知限制
 

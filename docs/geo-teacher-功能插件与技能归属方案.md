@@ -192,7 +192,7 @@ DSH 公开文档给出的四条与本方案直接相关的约定。
 | L291-297 | 仅 `plugins/core` 获得 cfg | 新增插件若需配置，mock 不会传 | 为新增插件补 cfg 分支 |
 | L342-345 | `exports-self`：要求导出 `./package.json`，理由写作"技能根解析依据" | 理由随 `createRequire` 表达式一起失效 | 随表达式退役，或改述为包子路径导出自检 |
 | L346-347 | `skills-dir`：`skills/` 必须存在 | 技能根退场后该断言恒假 | 删除，或改判"技能清单非空" |
-| L443-514 | `geo-verify` §8 `checkSkills()`：平铺／目录包发现、`skills-unique`、frontmatter 的 `name`／`description`、`skills-name-match`、`skills-desc-budget`（≤500 字符）、`skills-body-budget`（≤6000 码点） | 发现逻辑绑死目录形态 | **保留检查内容**，改数据来源；≤500 的出处是消费者配置 `catalogDescriptionMaxLength`（默认 500），仍应保留；`skills-unique` 重述为"同一技能名不得由两处注册" |
+| L443-514 | `geo-verify` §8 `checkSkills()`：平铺／目录包发现、`skills-unique`、frontmatter 的 `name`／`description`、`skills-name-match`、`skills-desc-budget`（≤500 字符，硬）、`skills-body-hard`（≤8192 码点，硬）、`skills-body-tier`（按消费方式分档） | 发现逻辑绑死目录形态 | **保留检查内容**，改数据来源；≤500 的出处是消费者配置 `catalogDescriptionMaxLength`（默认 500），仍应保留；`skills-unique` 重述为"同一技能名不得由两处注册" |
 | L599 | `deploy` 提示要求 link 目标同时存在 `cordis.patch.yml` 与 `skills/` | 技能根退场后提示恒为"目标缺少…" | 改判 `cordis.patch.yml`（若保留技能根则并查） |
 | L725 | 尾部提示"仅改 references 等支持文件不刷新技能目录" | 归属改变后语义需重述 | 重述为"技能目录由插件注册：改 `description` 或增删技能须重启；正文与 `references/` 从不缓存，改后下次加载即生效" |
 
@@ -266,5 +266,5 @@ DSH 公开文档给出的四条与本方案直接相关的约定。
 
 - 本方案**不改**工作台三个 tab 的功能与文案；`plugins/panel` 的入口不变。
 - 本方案**不改**讲题流水线的纪律（`solve→judge→explain`）、工具契约与原生图片交付。
-- 本方案与 `docs/geo-teacher-原生UI插件方案.md` 是**两条正交的路线**：那份评估客户端 UI 形态，本份评估宿主侧装配与技能归属，可各自独立实施。
+本方案评估宿主侧装配与技能归属；客户端 UI 的当前实现见 [包说明](../packages/dsh-geo-teacher-ui/README.md)，两者可独立调整。
 - 本方案若采纳，需在 `docs/术语表.md` §七补入术语，并在 `docs/决策记录.md` 追加决策行。
