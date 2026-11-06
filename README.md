@@ -6,7 +6,7 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 
 数据（考点库、真题库）由使用者自行提供并在本机绑定，不随仓库分发。
 
-> *English summary: GeoSparkAI is a high-school geography teaching agent preset for DeepSeek Harness — question explaining, exam-item authoring, lesson planning and model-completion verification, grounded in a local exam bank and curriculum taxonomy.*
+> *English summary: GeoSparkAI is a high-school geography teaching agent preset for DeepSeek Harness — question explaining, exam-item authoring, lesson planning, grounded in a local exam bank and curriculum taxonomy.*
 
 ## 能做什么
 
@@ -80,7 +80,6 @@ node --test "test/*.test.mjs"           # 教师功能行为测试
 - 出题——「出一道材料型综合题，考生态脆弱区的综合治理」：模型加载 `geo-question-generator` 技能，先给三个构思，经你确认后成稿，并可用 `geo_question_validate` 或 CLI 做结构校验。
 - 检索与分析——「人口迁移这个考点近几年考得多吗」：`geo_taxonomy` → `geo_search_questions` → `geo_question_detail` → `geo_analyze`。
 
-**建模判定**：ModelCheck 仍在开发中，不随本期发布，也不引导安装；需要时按仓库内文档单独加载，没有 `.modelcheck\` 目录的项目完全不受影响。
 
 详细的入口说明、话术示例与故障排查见 [使用指南](docs/使用指南.md)。
 
@@ -111,7 +110,6 @@ geo-core（内核：考点树 / 题库加载 / 真题分析 / 命题蓝图 / 风
 ```text
 .agent-presets/geo-teacher/   预设包：plugins/（core,taxonomy,bank,analysis,generator,question,panel,solver-isolation）+ skills/ + cordis.patch.yml
 packages/dsh-geo-teacher-ui/  输入区 UI 插件
-packages/dsh-modelcheck/      建模完成判定插件（开发中，不随本期发布）
 data/                         随仓库数据：config/（考点库）+ obsidian_vault/（题库、题图、图谱笔记与导航）
 docs/                         运行基线、当前规范、需求与设计、验收待办
 课本与课标/                    课标与教材正文（课标核验与共同知识依据）

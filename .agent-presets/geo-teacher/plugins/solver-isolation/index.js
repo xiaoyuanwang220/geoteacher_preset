@@ -1,7 +1,7 @@
 // 隔离解题会话的 preset 插件（内部预设 geo-solver-internal 唯一插件行）。
 //
 // 为什么需要它：agent preset 只决定「本 preset 注册哪些工具」，宿主/全局注册的工具
-// （session_search、session_event_*、modelcheck_*、working_directory、load_workspace_dependencies
+// （session_search、session_event_*、external_*、working_directory、load_workspace_dependencies
 // 等）仍会被子 agent 继承。计划 §一.2 要求「解题会话只获取题面、提交作答」，所以这里在
 // preset 作用域内做两件事：
 //   1) restrict：把当前已知的继承工具全部隐藏（子会话的工具目录里不再出现）；
@@ -9,7 +9,7 @@
 // 同时提供解题 persona（唯一来源：skills/geo-solver.md 正文），替代静态 persona 配置。
 //
 // 时间差处理：本插件随 bundle 在 profile 启动早期加载，晚于此加载的宿主 bundle（session-search、
-// modelcheck 等）注册的工具不在第一轮已知清单里。因此按短延时重试补 deny；guard 在第一次成功
+// 其它扩展等）注册的工具不在第一轮已知清单里。因此按短延时重试补 deny；guard 在第一次成功
 // restrict 后注册，作为最终兜底。
 
 import { readFileSync } from 'node:fs';
@@ -121,7 +121,7 @@ export default {
       }
     }
 
-    // 4) 晚注册的宿主工具（session-search / modelcheck 等）在启动后才出现：短延时补 deny。
+    // 4) 晚注册的宿主工具（session-search / 其它扩展等）在启动后才出现：短延时补 deny。
     //    deny 按名字生效，后续新增的名字不会自动被已有 restriction 覆盖，所以再扫一次。
     //    注意：不能在未 inject 的情况下访问 `ctx.timer`（Cordis 会抛
     //    `cannot get property "timer" without inject` 并打挂 preset），这里只用全局定时器。

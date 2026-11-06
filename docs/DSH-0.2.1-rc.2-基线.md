@@ -41,8 +41,7 @@
 // <DSH_HOME>/profiles/desktop/package.json（2026-11-02 实测）
 "dependencies": {
   "@geo-edu/dsh-geo-teacher-preset": "link:E:/geo_edu_agent/.agent-presets/geo-teacher",
-  "@geo-edu/dsh-geo-teacher-ui":     "link:E:/geo_edu_agent/packages/dsh-geo-teacher-ui",
-  "@geo-edu/dsh-modelcheck":         "link:E:/geo_edu_agent/packages/dsh-modelcheck"
+  "@geo-edu/dsh-geo-teacher-ui":     "link:E:/geo_edu_agent/packages/dsh-geo-teacher-ui"
 },
 "dsh": { "profile": { "bundles": [
   "@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app",
@@ -50,13 +49,12 @@
   "@deepseek-ai/dsh-experimental-agent-team-profile",
   "@deepseek-ai/dsh-experimental-inspector-profile",
   "@deepseek-ai/dsh-experimental-session-search",
-  "@geo-edu/dsh-modelcheck",
   "@deepseek-ai/dsh-experimental-session-titles-bundle"
 ] } }
 ```
 
 - 仍是 **link 直连仓库**，改仓库即改运行时（M0 的这条结论**继续有效**）。
-- bundle 数量：M0 时 4 个，本文 10-21 记录时 5 个，**2026-11-02 实测 9 个**——新增 ModelCheck 本体，另有三个 `dsh-experimental-*` profile 与 session-titles bundle 已在列表中。新增包**必须同时出现在 `dependencies` 与 `dsh.profile.bundles`**，只加依赖不会加载。
+- 新增包必须同时出现在 `dependencies` 与 `dsh.profile.bundles`，只加依赖不会加载。
 
 ## 3. 0.2.1 的破坏性变更中，与本项目相关的部分
 
@@ -106,7 +104,7 @@ registered variables: provider, model
 | 技能发现（`!!js` 的 `customSkillDirs`） | 2026-10-21 会话中 `skill` 成功加载 `geo-question-generator` |
 | 工具在会话内可调用 | 2026-10-21 轨迹：`geo_taxonomy`×4、`geo_style_profile`、`geo_search_questions`、`web_search`/`web_fetch`、`geo_question_validate`×7 均返回正常 |
 | `geo_question_validate` 调用与写盘 | 2026-10-21：7 次调用全部 ok；`render: true` 产出 `package.json`／`draft.md`／`student.json`／`teacher.json`／`validation.json` |
-| 静态检查与行为测试（2026-11-02 复跑） | `geo-verify --source` 0 失败 / 4 提示 / 28 通过；`node --test "test/*.test.mjs"` 96/96；`npm run test:modelcheck` 141/141 |
+| 静态检查与行为测试（2026-11-02 复跑） | `geo-verify --source` 0 失败 / 4 提示 / 28 通过；`node --test "test/*.test.mjs"` 96/96 |
 
 ## 6. 尚未在 0.2.1 复验的面（不得当作已验证）
 
@@ -115,7 +113,7 @@ registered variables: provider, model
 1. **输入区 UI 插件槽位**（§3 第 6 行）：0.2.1 改了输入区扩展位并新增 `conversation.input.model.label`；插件使用 `conversation.input.left`／`right`，未在 0.2.1 下逐一确认。
 2. **HMR／生效边界**：技能目录热更新、插件改动需重启的边界。
 3. **长工具结果的裁剪阈值**（8192 码点）与压缩行为。
-4. **`engines.dsh` 缺失**对本预设兼容判断的影响（预设与 UI 插件、ModelCheck 均未声明）。
+4. **`engines.dsh` 缺失**对本预设兼容判断的影响（预设与 UI 插件均未声明）。
 
 > 口径：M2 会话证明的是「这些面在 0.2.1 上跑通过一次」，不是「每个参数组合都验过」。例如工具注册只确认了实际被调用的那几个 `geo_*`，未逐一罗列 10 个。
 

@@ -61,3 +61,8 @@ geo-teacher.config.json
 .DS_Store
 Thumbs.db
 
+# Unpublished local component; retained only in private development.
+/packages/dsh-modelcheck/
+/docs/modelcheck/
+/docs/建模完成判定插件-需求规格书.md
+/scripts/modelcheck-*.mjs

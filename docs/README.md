@@ -4,7 +4,7 @@
 
 | 用途 | 文档 | 当前边界 |
 | :-- | :-- | :-- |
-| 部署与使用 | [项目说明](../README.md)、[使用指南](使用指南.md) | profile 依赖挂载；本机 link 直连仓库。**本期安装范围**：preset + 输入区 UI 两个 bundle（ModelCheck 开发中、暂不发布）；安装步骤与数据默认值见[工作台聚合与一键安装方案](工作台聚合与一键安装方案.md)，许可见「许可与致谢」 |
+| 部署与使用 | [项目说明](../README.md)、[使用指南](使用指南.md) | profile 依赖挂载；本机 link 直连仓库。**本期安装范围**：preset + 输入区 UI 两个 bundle；安装步骤与数据默认值见[工作台聚合与一键安装方案](工作台聚合与一键安装方案.md)，许可见「许可与致谢」 |
 | **仓库更新（教师已装好之后）** | [仓库更新-给agent的提示词](geo-teacher-仓库更新-给agent的提示词.md) | 维护者在 GitHub 推送新提交后，由 Agent 代教师执行：检查更新 → 确认 → `git pull --ff-only` → `setup.mjs --check/--yes` → 重启 → 状态确认 → 失败回滚；含面向教师的非技术汇报模板与禁止事项 |
 | **工作台聚合与一键安装** | [工作台聚合与一键安装方案](工作台聚合与一键安装方案.md) | **已实施（2026-11-06，源码）**：`scripts/setup.mjs` 一键安装/卸载（含 pnpm 安装与链接校验）、仓库根 `data/` 随附真实题库与全量考点库、`/geo-status` 只读状态命令、README 三步快速开始；预设收口（隐藏内部预设）与工作台 UI 改造不在本期。运行基线 `0.2.1-rc.5`（已验证版本，不是最低版本） |
 | **运行版本基线** | [DSH 0.2.1-rc.2 基线](DSH-0.2.1-rc.2-基线.md) | **历史基线**：本机现行验证版本为 **`0.2.1-rc.5`**（`runtime.json` 实测，现有功能可用）；本期**不新建** rc.5 基线文件，只在该文档顶部补“现行验证版本”小节（见[聚合方案](工作台聚合与一键安装方案.md) §2）。rc.2 段落保留历史原貌 |
@@ -19,7 +19,6 @@
 | 工作台与 UI 形态 | [输入区 UI 插件说明](../packages/dsh-geo-teacher-ui/README.md)、[聚合方案](工作台聚合与一键安装方案.md) | `plugins/panel` 提供静态受理台；输入区插件提供原生输入框的功能选择，两者不调用模型。工作台的聚合、安装与数据默认值见聚合方案（**方案阶段、未实施**） |
 | 插件与技能归属 | [功能插件与技能归属方案](geo-teacher-功能插件与技能归属方案.md) | **方案阶段、未实施**：三功能载体的分层判据、技能收归功能插件的目标形态与代价（`geo-verify` 8 处断言重写、失去技能目录热更新）、官方 `dsh-skill-badge` 先例、未验证项；其中「课程方案技能未加载」的缺口已按推荐修法解决（2026-10-24 技能物理移入预设技能根，2026-10-28 对齐修订），本文其余结论不变 |
 | 课程方案技能 | [技能说明](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/README.md)、[发布清单](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/RELEASE-MANIFEST.md) | V3.2 已放入预设技能根（`SKILL.md` + 5 份 references + Python 渲染脚本）；**桌面端加载与渲染链路未验收**；采用 Apache-2.0，派生自 *Agent Skills for K-12 Teachers*，`LICENSE` 与 `NOTICE` 随目录保留 |
-| 建模完成判定 | [需求规格书](建模完成判定插件-需求规格书.md)、[一期实现设计](modelcheck/设计-一期实现.md)、[解决方案](modelcheck/解决方案-组件粒度与接入流程.md)、[接入指南-给agent](modelcheck/接入指南-给agent.md)、[实施记录](modelcheck/实施记录.md)、[M0 能力矩阵](modelcheck/M0-能力矩阵.md)、[DSH API 取证笔记](modelcheck/DSH-API-notes.md) | 插件 `@geo-edu/dsh-modelcheck` **已安装进 desktop profile 并实测在线**（8 个工具、`conversation.view` 页签、`/modelcheck/*` 路由；141 项单测 + 19 项可执行验收全绿）。已执行 P0（接入就绪/校验入口/verify 预检）与 P1 客户端+数据层（kind/parts/instances、instanceId 命中链、面包屑）；**未验证**：真机 `InstancedMesh` 实例命中/取证、面板视觉与点选全链路、不透明源沙箱兼容性、真实模型上的拦截行为、多会话并发隔离。点选按设计只聚焦模型几何，文字标签/二维控件不点选 |
 
 ## 文档维护规则
 

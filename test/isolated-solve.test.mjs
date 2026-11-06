@@ -589,7 +589,7 @@ function createHarness(options = {}) {
       schemas() {
         return options.globalTools || [
           { name: 'session_search' },
-          { name: 'modelcheck_status' },
+          { name: 'external_status' },
           { name: 'run_code' }
         ];
       },
@@ -711,7 +711,7 @@ test('内部解题预设插件：persona 来自解题技能，且隐藏+拒绝�
   const calls = { sections: [], restrictions: [], guards: [] };
   const ctx = {
     tools: {
-      schemas: () => [{ name: 'session_search' }, { name: 'modelcheck_status' }, { name: 'working_directory' }, { name: 'run_code' }],
+      schemas: () => [{ name: 'session_search' }, { name: 'external_status' }, { name: 'working_directory' }, { name: 'run_code' }],
       restrict: (filter) => {
         calls.restrictions.push(filter);
         return () => {};
@@ -749,7 +749,7 @@ test('内部解题预设插件：persona 来自解题技能，且隐藏+拒绝�
   assert.ok(calls.restrictions.length >= 1, '应注册工具限制');
   const denied = new Set(calls.restrictions.flatMap((filter) => filter.deny || []));
   assert.ok(denied.has('session_search'), '必须隐藏会话检索');
-  assert.ok(denied.has('modelcheck_status'));
+  assert.ok(denied.has('external_status'));
   assert.ok(denied.has('working_directory'));
   assert.equal(denied.has('run_code'), false, 'PTC 保留名不得出现在限制里');
   assert.equal(calls.guards.length, 1, '应注册兜底 guard');
