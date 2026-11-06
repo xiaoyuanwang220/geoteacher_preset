@@ -5,7 +5,8 @@
 | 用途 | 文档 | 当前边界 |
 | :-- | :-- | :-- |
 | 部署与使用 | [项目说明](../README.md)、[使用指南](使用指南.md) | profile 依赖挂载；本机 link 直连仓库。三个 bundle（预设／输入区 UI／ModelCheck）的接线见 README「快速开始」，数据路径绑定见「配置数据路径」，许可见「许可与致谢」 |
-| **运行版本基线** | [DSH 0.2.1-rc.2 基线](DSH-0.2.1-rc.2-基线.md) | **现行版本的唯一环境事实来源**：版本/tag/commit、打包形态下的源码核对方式、0.1.7→0.2.1 的破坏性变更、已复验与未复验面、版本漂移政策。取代 M0 记录中与运行版本相关的部分 |
+| **工作台聚合与一键安装** | [工作台聚合与一键安装方案](工作台聚合与一键安装方案.md) | **方案阶段、未实施**：clone → 一条安装命令 → 一个可见预设 → 原生输入区工作台；含安装脚本、示例题库、预设收口（插件自建子会话/临时注册/保留内部预设）与文档收口。运行基线按实际 `0.2.1-rc.5` |
+| **运行版本基线** | [DSH 0.2.1-rc.2 基线](DSH-0.2.1-rc.2-基线.md) | **历史基线**：本机实际运行已升至 **`0.2.1-rc.5`**（`runtime.json` 实测，现有功能可用）；rc.5 基线待建，见[工作台聚合与一键安装方案](工作台聚合与一键安装方案.md) §3.5。旧文件保留 rc.2 当时的版本/tag/commit 与破坏性变更记录 |
 | 共享术语 | [术语表](术语表.md) | 地理与交付术语的统一来源 |
 | 讲题优化 | [讲题优化计划](讲题优化计划.md) | **源码已实现（2026-11-06）**：MD 题答题分离 + 隔离解题会话 + 服务端 run 状态机与两阶段核验；**完整重启 DSH 后待运行时验收**；Word、PDF 后续 |
 | 出题需求与设计 | [产品需求](geography-question-generation-product-requirements.md)、[技术设计](geography-question-generation-technical-design.md)、[执行方案](geography-question-generation-execution-plan.md) | V1 设计及 M0–M5 验收要求；不是全部功能完成声明。V1 范围含**两种题型**（材料型选择题组与材料型综合题，一包一题型），命题包格式为 `schemaVersion: 2`（[决策记录](决策记录.md) 2026-10-04 行）。**出题自 2026-10-08 起正在开发**（2026-10-04 之前的暂缓令已解除） |
@@ -14,7 +15,7 @@
 | 讲题规范 | [功能设计](讲题功能设计.md)、[工作流约束](讲题工作流修复方案.md)、[评测方案](讲题评测方案.md) | 三对象规则、隔离解题与题答分离、服务端 run 状态机与两阶段核验、DeepSeek 原生图片输入与内容评测 |
 | 三对象实施状态 | [讲题评测方案](讲题评测方案.md)、[验收待办](验收待办.md) | 三对象已实现；2026-11-06 讲题优化源码已实现、运行时待重启验收；内容评审与运行时核验保证不能由源码检查替代 |
 | 开发维护 | [Skills 应用方案](harness-skills-应用方案.md)、[简化候选](代码简化TODO.md)、[决策记录](决策记录.md)、[会话轨迹审查](../.agents/skills/geo-dev-checklist/references/session-trajectory-review.md) | 保留当前约束、待办和决策理由；轨迹审查记录读会话轨迹的方式（含 `session.v4.jsonl.zstd` 多帧解压）与「工具调用序列／失败项／模型宣称 vs 报告事实」三维度口径 |
-| 工作台与 UI 形态 | [输入区 UI 插件说明](../packages/dsh-geo-teacher-ui/README.md) | `plugins/panel` 提供静态受理台；输入区插件提供原生输入框的功能选择，两者不调用模型 |
+| 工作台与 UI 形态 | [输入区 UI 插件说明](../packages/dsh-geo-teacher-ui/README.md)、[聚合方案](工作台聚合与一键安装方案.md) | `plugins/panel` 提供静态受理台；输入区插件提供原生输入框的功能选择，两者不调用模型。工作台的聚合、安装与数据默认值见聚合方案（**方案阶段、未实施**） |
 | 插件与技能归属 | [功能插件与技能归属方案](geo-teacher-功能插件与技能归属方案.md) | **方案阶段、未实施**：三功能载体的分层判据、技能收归功能插件的目标形态与代价（`geo-verify` 8 处断言重写、失去技能目录热更新）、官方 `dsh-skill-badge` 先例、未验证项；其中「课程方案技能未加载」的缺口已按推荐修法解决（2026-10-24 技能物理移入预设技能根，2026-10-28 对齐修订），本文其余结论不变 |
 | 课程方案技能 | [技能说明](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/README.md)、[发布清单](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/RELEASE-MANIFEST.md) | V3.2 已放入预设技能根（`SKILL.md` + 5 份 references + Python 渲染脚本）；**桌面端加载与渲染链路未验收**；采用 Apache-2.0，派生自 *Agent Skills for K-12 Teachers*，`LICENSE` 与 `NOTICE` 随目录保留 |
 | 建模完成判定 | [需求规格书](建模完成判定插件-需求规格书.md)、[一期实现设计](modelcheck/设计-一期实现.md)、[解决方案](modelcheck/解决方案-组件粒度与接入流程.md)、[接入指南-给agent](modelcheck/接入指南-给agent.md)、[实施记录](modelcheck/实施记录.md)、[M0 能力矩阵](modelcheck/M0-能力矩阵.md)、[DSH API 取证笔记](modelcheck/DSH-API-notes.md) | 插件 `@geo-edu/dsh-modelcheck` **已安装进 desktop profile 并实测在线**（8 个工具、`conversation.view` 页签、`/modelcheck/*` 路由；141 项单测 + 19 项可执行验收全绿）。已执行 P0（接入就绪/校验入口/verify 预检）与 P1 客户端+数据层（kind/parts/instances、instanceId 命中链、面包屑）；**未验证**：真机 `InstancedMesh` 实例命中/取证、面板视觉与点选全链路、不透明源沙箱兼容性、真实模型上的拦截行为、多会话并发隔离。点选按设计只聚焦模型几何，文字标签/二维控件不点选 |
