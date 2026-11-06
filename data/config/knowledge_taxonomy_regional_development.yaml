@@ -1,0 +1,788 @@
+# 高中地理 Taxonomy — 区域发展部分（跨册整合草案 v0.2-draft）
+#
+# 来源：ima 知识库「aaa」→ 高中文件夹
+#   - 普通高中教科书·地理选择性必修2 区域发展（人教版 2019，樊杰、高俊昌总主编；葛岳静、覃燕飞本册主编）
+#   - 普通高中教科书·地理必修 第二册第五章第三节（人教版 2019）
+#
+# 结构：domain → theme → knowledge_unit（三层教材主干）
+# 本版已比较选择性必修2与必修第二册第五章第三节的相关原文并完成跨册整合。
+# 案例、问题研究、情境、能力表达均未进入主干。
+# 所有节点均基于教材原文提取，未使用 Agent 记忆或网络摘要。
+
+meta:
+  subject: 高中地理
+  taxonomy_name: 区域发展知识点体系（跨册整合草案）
+  version: v0.2-draft
+  status: draft
+  constructed_at: "2026-07-28"
+  source_textbooks:
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理选择性必修2 区域发展
+      publisher: 人民教育出版社
+      edition: 2019
+      chief_editor: 樊杰、高俊昌
+      volume_editor: 葛岳静、覃燕飞
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理必修 第二册
+      publisher: 人民教育出版社
+      edition: 2019
+      relevant_chapters: 第五章第三节"中国国家发展战略举例"
+  construction_basis: 依据 taxonomy_construction_rules.md，从 ima 原文逐节提取知识候选。
+  notes:
+    - 本文件以选择性必修2为主体，并已整合必修第二册第五章第三节中可形成稳定区域发展主干的内容。
+    - 教材册、章、节仅为来源线索，不直接等于 taxonomy 层级。
+    - 第二章标题"资源、环境与区域发展"未机械建立为单一主题；已区分区域发展条件、生态脆弱区治理和资源型城市转型三个独立主题。
+    - 生态脆弱区和资源型区域分别具有明确教学对象、多个可独立教学的知识单元和稳定区域发展机制，因此保留为与城市、产业、区际联系并列的 L2 专题。
+    - 一般性的自然地理过程、产业区位因素、城镇化概念、交通区位原理、资源安全与环境安全知识、地理信息技术原理均未纳入本领域主干。
+    - needs_review=true 的节点存在粒度、父级、边界或来源疑问，需人工裁定。
+    - 本版尚未使用代表性高考真题验证可映射性，结构检查通过不等于定稿。
+
+# ============================================================
+# L1 学科领域
+# ============================================================
+nodes:
+  - id: DM-REG
+    level: domain
+    name: 区域发展
+    parent_id: null
+    definition: 研究区域的类型与整体性关联性、区域发展条件、特定类型区域的发展与转型机制、城市辐射带动、产业结构变化以及区际联系与区域协调发展的学科领域。
+    includes:
+      - 区域的概念、类型、空间尺度和整体性关联性
+      - 自然条件和资源禀赋对区域发展路径的影响
+      - 生态脆弱区的发展与治理机制
+      - 资源型城市的发展阶段与转型机制
+      - 城市辐射功能与城市体系
+      - 地区产业结构变化与升级
+      - 流域协作、资源跨区域调配、产业转移和国际合作等区际联系机制
+    excludes:
+      - 自然地理过程和自然环境要素的一般规律（归入自然地理）
+      - 人口、城镇化、农业区位、工业区位、服务业区位、交通区位的一般原理（归入人文地理）
+      - 资源安全、环境安全、粮食安全、能源安全和国家安全的一般原理（归入资源、环境与国家安全）
+      - RS、GNSS、GIS 等地理信息技术的技术原理和工具操作（现阶段不纳入 taxonomy 主干）
+      - 具体国家、城市、地区、企业、工程和区域开发案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 全册
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# L2 知识主题 + L3 知识单元
+# ============================================================
+
+  # ---------- 主题 1：区域与区域发展 ----------
+  - id: TH-REG-REGION
+    level: theme
+    name: 区域与区域发展
+    parent_id: DM-REG
+    definition: 研究区域的概念、类型、空间尺度以及区域整体性、差异性和关联性，为区域发展分析提供基础框架。
+    includes: []
+    excludes:
+      - 具体区域案例的发展结论
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第一章"区域与区域发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-REGION-001
+    level: knowledge_unit
+    name: 区域的概念与类型
+    parent_id: TH-REG-REGION
+    definition: 人们在地球表面按照一定目的和标准划定的空间单元及其按自然特征、人文特征或综合特征划分的不同类型。
+    includes:
+      - 区域的概念（具有一定范围、形状和边界的空间单元）
+      - 按自然特征划分的区域（如气候区、地形区）
+      - 按人文特征划分的区域（如行政区、方言区）
+      - 综合自然和人文特征划分的区域（如主体功能区）
+      - 区域边界的明确性与过渡性
+    excludes:
+      - 具体区域名称作为独立知识点
+      - 具体方言分布、行政区划数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第一章第一节"多种多样的区域"——"不同类型的区域"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第三节"中国国家发展战略举例"——"建设主体功能区"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-REGION-002
+    level: knowledge_unit
+    name: 区域的空间尺度
+    parent_id: TH-REG-REGION
+    definition: 区域在空间范围上的层级大小关系以及不同尺度区域间的发展互动机制。
+    includes:
+      - 区域空间尺度与层级高低的关系
+      - 较大尺度区域包含较小尺度区域
+      - 不同尺度区域发展的相互促进
+      - 同一尺度区域因面积和位置差异产生不同发展条件
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第一章第一节"多种多样的区域"——"不同空间尺度的区域"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-REGION-003
+    level: knowledge_unit
+    name: 区域整体性
+    parent_id: TH-REG-REGION
+    definition: 区域内自然要素和人文要素相互作用、相互制约构成的整体特征及其对区域发展的影响。
+    includes:
+      - 自然要素（地质、地貌、气候、水文、生物、土壤）与人文要素（人口、文化、经济）
+      - 要素间的直接和间接影响关系
+      - 区域整体性对区域发展的影响
+    excludes:
+      - 自然环境整体性的自然地理过程机制（归入自然地理"自然环境的整体性与差异性"）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第一章第二节"区域整体性和关联性"——"区域整体性"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-REGION-004
+    level: knowledge_unit
+    name: 区域差异与关联性
+    parent_id: TH-REG-REGION
+    definition: 区域差异的普遍性及其作为区域关联基础的作用，通过自然要素和人文要素的区域间流动实现区域关联并影响区域发展方向的机制。
+    includes:
+      - 区域差异的类型（地理位置、自然条件、社会经济发展水平、文化习俗等）
+      - 区域关联的实现方式（自然要素流动和人文要素流动）
+      - 要素流动种类、方向和强度变化对区域生产生活方式和发展方向的影响
+    excludes:
+      - 具体区域的关联案例结论
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第一章第二节"区域整体性和关联性"——"区域差异与区域关联性"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-REGION-005
+    level: knowledge_unit
+    name: 因地制宜与区域发展
+    parent_id: TH-REG-REGION
+    definition: 根据自身地理条件合理安排人类活动，并充分考虑区域关联发展变化及时调整活动方式的区域发展原则。
+    includes:
+      - 因地制宜的内涵（依据区域整体性和关联性）
+      - 比较不同区域发展异同的分析框架
+      - 区域发展条件随技术经济社会变化而改变
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第一章第二节"区域整体性和关联性"——"因地制宜与区域发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 2：区域发展的条件 ----------
+  - id: TH-REG-CONDITION
+    level: theme
+    name: 区域发展的条件
+    parent_id: DM-REG
+    definition: 研究自然条件和自然资源如何影响区域发展路径，以及自然资源开发利用与区域发展之间的关系。
+    includes: []
+    excludes:
+      - 自然地理过程和自然环境要素本身的一般规律
+      - 自然资源安全和资源环境承载力的一般原理
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第一节"区域发展的自然环境基础"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-CONDITION-001
+    level: knowledge_unit
+    name: 自然条件与区域发展
+    parent_id: TH-REG-CONDITION
+    definition: 地理位置和自然要素对区域发展路径的重要影响，以及自然条件作为区域发展重要条件而非唯一条件的关系。
+    includes:
+      - 地理位置、自然要素对区域发展的影响
+      - 自然条件优越但发展水平不高和自然条件较差但充分利用比较优势发展的现象
+      - 人类改造自然须遵循自然规律的原则
+    excludes:
+      - 自然地理要素本身的形成机制和分布规律（归入自然地理）
+      - 具体水利工程案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第一节"区域发展的自然环境基础"——"自然条件与区域发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-CONDITION-002
+    level: knowledge_unit
+    name: 自然资源与区域发展
+    parent_id: TH-REG-CONDITION
+    definition: 自然资源作为区域发展物质基础的作用机制，以及在不同发展阶段不同种类自然资源对区域发展的影响差异。
+    includes:
+      - 自然资源是区域发展的物质基础
+      - 不同发展阶段影响区域发展的自然资源种类不同（农业社会→土地资源，工业社会→矿产资源）
+      - 自然资源区域分布与组合的不平衡性
+      - 自然资源开发利用方式对区域发展的关键作用
+    excludes:
+      - 自然资源的概念和分类（归入资源、环境与国家安全）
+      - 资源安全与国家安全（归入资源、环境与国家安全）
+      - 具体国家或地区的资源数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第一节"区域发展的自然环境基础"——"自然资源与区域发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-CONDITION-003
+    level: knowledge_unit
+    name: 资源诅咒
+    parent_id: TH-REG-CONDITION
+    definition: 自然资源丰富的国家或地区因过度依赖自然资源而工业化速度反而慢于资源贫乏国家的现象及其成因机制。
+    includes:
+      - 资源诅咒现象的表现
+      - 资源丰富国家资金和劳动力过度集中于自然资源开发而制造业得不到发展的机制
+      - 自然资源只是经济发展条件而非决定因素的关系
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第一节"区域发展的自然环境基础"——自学窗"'资源诅咒'"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 3：生态脆弱区的发展与治理 ----------
+  - id: TH-REG-ECOFRAGILE
+    level: theme
+    name: 生态脆弱区的发展与治理
+    parent_id: DM-REG
+    definition: 研究生态系统抗干扰能力弱的区域的土地退化成因及其综合治理机制，以实现生态脆弱区的可持续发展。
+    includes: []
+    excludes:
+      - 资源安全和环境安全的一般原理（归入资源、环境与国家安全）
+      - 具体地区的治理案例结论
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第二节"生态脆弱区的综合治理"
+    status: draft
+    confidence: medium
+    needs_review: true
+    review_note: "该主题与'资源、环境与国家安全'领域存在边界交叉。教材从区域发展角度讨论特定类型区域的治理机制，但土地退化和生态治理内容也可能属于资源环境安全领域。待跨领域审查时确认归属。"
+
+  - id: KU-REG-ECOFRAGILE-001
+    level: knowledge_unit
+    name: 生态脆弱区
+    parent_id: TH-REG-ECOFRAGILE
+    definition: 生态系统抗干扰能力弱、易于退化且难以恢复的地区及其空间分布特征。
+    includes:
+      - 生态脆弱区的概念
+      - 主要分布区域（干湿交替、农牧交错、水陆交界、森林边缘、沙漠边缘等）
+      - 生态系统稳定性差和土地易退化的特征
+    excludes:
+      - 具体生态脆弱区的环境数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第二节"生态脆弱区的综合治理"——"生态脆弱区"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-ECOFRAGILE-002
+    level: knowledge_unit
+    name: 土地退化及成因
+    parent_id: TH-REG-ECOFRAGILE
+    definition: 受自然因素和人类活动影响导致土地质量下降、生产力降低的过程，以及不同生态脆弱区土地退化成因的分析框架。
+    includes:
+      - 土地退化的概念和表现（土地沙化、石漠化、土壤侵蚀、盐碱化、肥力下降等）
+      - 自然背景对土地稳定性和恢复能力的影响
+      - 过度开垦、过度放牧、不合理开矿等人类活动的影响
+      - 自然因素和人为因素共同作用的成因分析框架
+    excludes:
+      - 一般性的环境问题概念（归入资源、环境与国家安全）
+      - 北方农牧交错带等具体区域的降水、大风和土地利用特征
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第二节"生态脆弱区的综合治理"——"生态脆弱区"及"北方农牧交错带的土地退化及原因"
+    status: draft
+    confidence: medium
+    needs_review: true
+    review_note: "教材先给出土地退化的一般定义，再以北方农牧交错带展开成因分析；本节点仅保留可跨区域复用的成因框架，具体区域特征不进入主干。其与资源、环境与国家安全领域的边界仍需真题验证。"
+
+  - id: KU-REG-ECOFRAGILE-003
+    level: knowledge_unit
+    name: 生态脆弱区的综合治理
+    parent_id: TH-REG-ECOFRAGILE
+    definition: 以保护恢复自然环境为第一要务，综合运用生物、工程、经济和社会措施治理生态脆弱区土地退化以实现可持续发展的机制。
+    includes:
+      - 以保护恢复自然环境为第一要务的观念
+      - 根据土地适宜性优化土地利用结构
+      - 综合运用生物、工程、经济和社会措施
+      - 减少不合理人类干扰并促进自然恢复
+      - 协调生产方式、人口、资源与环境的关系
+    excludes:
+      - 具体地区的治理案例和数据
+      - 针对北方农牧交错带的具体畜种调整和防护工程方案
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第二节"生态脆弱区的综合治理"——"北方农牧交错带土地退化的综合治理"
+    status: draft
+    confidence: medium
+    needs_review: true
+    review_note: "教材的一般治理原则通过北方农牧交错带案例展开；本节点仅保留跨区域可复用的综合治理机制，具体措施留作案例证据。其与生态保护领域的边界仍需真题验证。"
+
+  # ---------- 主题 4：资源型区域的发展与转型 ----------
+  - id: TH-REG-RESOURCE
+    level: theme
+    name: 资源型区域的发展与转型
+    parent_id: DM-REG
+    definition: 研究因大规模开采自然资源而兴起的资源型城市的发展阶段特征，以及资源枯竭后的转型发展机制。
+    includes: []
+    excludes:
+      - 一般性的自然资源概念和资源安全原理（归入资源、环境与国家安全）
+      - 一般性的工业区位因素（归入人文地理）
+      - 具体城市的转型案例结论
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第三节"资源枯竭型城市的转型发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-RESOURCE-001
+    level: knowledge_unit
+    name: 资源型城市的发展阶段
+    parent_id: TH-REG-RESOURCE
+    definition: 因大规模开采自然资源而兴起并以资源开采加工业为主导产业的城市从兴起到衰退的生命周期过程。
+    includes:
+      - 资源型城市的概念
+      - 生命周期的三个阶段（兴起期、繁荣期、衰退期）
+      - 各阶段的产业特征和城市规模变化
+      - 资源枯竭型城市的形成条件
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第三节"资源枯竭型城市的转型发展"——"资源枯竭型城市及其转型"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-RESOURCE-002
+    level: knowledge_unit
+    name: 资源枯竭型城市的转型机制
+    parent_id: TH-REG-RESOURCE
+    definition: 资源枯竭型城市因地制宜实现可持续发展的转型路径及其作用机制。
+    includes:
+      - 延长产业链、提升原有资源利用价值的路径
+      - 开发新的资源、培育新的主导产业的路径
+      - 因地制宜选择转型方向的原则
+    excludes:
+      - 具体城市的转型方案和成效数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第二章第三节"资源枯竭型城市的转型发展"——"资源枯竭型城市及其转型"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 5：城市与区域发展 ----------
+  - id: TH-REG-CITY
+    level: theme
+    name: 城市与区域发展
+    parent_id: DM-REG
+    definition: 研究城市作为区域中心的功能及其对区域的辐射带动作用，以及不同规模等级城市构成的城市体系对区域空间组织的影响。
+    includes: []
+    excludes:
+      - 一般性的城镇化概念和规律（归入人文地理）
+      - 一般性的城镇内部空间结构原理（归入人文地理）
+      - 具体城市的发展案例结论
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第一节"城市的辐射功能"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-CITY-001
+    level: knowledge_unit
+    name: 城市功能与区域作用
+    parent_id: TH-REG-CITY
+    definition: 城市作为区域政治、经济、文化中心所发挥的生产、服务、管理、集散和创新等功能及其与区域的相互依存关系。
+    includes:
+      - 城市作为区域中心的地位
+      - 城市功能的主要类型（生产、服务、管理、集散、创新）
+      - 城市功能单一与综合的差异
+      - 区域为城市发展提供依托的关系
+    excludes:
+      - 一般性的城镇化和城镇内部空间结构原理（归入人文地理）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第一节"城市的辐射功能"——"城市在区域中的作用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-CITY-002
+    level: knowledge_unit
+    name: 城市辐射功能
+    parent_id: TH-REG-CITY
+    definition: 城市各项功能对其所在区域的综合影响力和发展带动力，及其与城市规模等级、功能和腹地范围的关系。
+    includes:
+      - 城市辐射功能的概念
+      - 辐射能力与城市规模等级和功能的关系
+      - 城市腹地范围作为辐射能力的表示
+      - 城市发展与腹地特征的相互影响
+    excludes:
+      - 具体城市的辐射范围数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第一节"城市的辐射功能"——"城市在区域中的作用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-CITY-003
+    level: knowledge_unit
+    name: 城市体系与区域空间组织
+    parent_id: TH-REG-CITY
+    definition: 一定区域范围内不同规模等级城市构成的城市体系，通过人流、物流、资本流和信息流形成分工明确、联系紧密的关联网络的机制。
+    includes:
+      - 城市体系的概念和构成
+      - 城市间关联网络的形成（人流、物流、资本流、信息流）
+      - 城市规模与交通运输网络密度、联系强度、辐射范围的关系
+      - 大都市的概念
+      - 点轴结构与区域经济增长的关系
+    excludes: []
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第一节"城市的辐射功能"——"城市在区域中的作用"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第一节自学窗"区域经济发展中的点与轴"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 6：产业结构变化与区域发展 ----------
+  - id: TH-REG-INDUSTRY
+    level: theme
+    name: 产业结构变化与区域发展
+    parent_id: DM-REG
+    definition: 研究地区产业结构的变化规律和升级机制，以及比较优势变化、政策引导和技术创新对产业结构升级的推动作用。
+    includes: []
+    excludes:
+      - 一般性的产业区位因素（归入人文地理）
+      - 具体地区或城市的产业结构数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第二节"地区产业结构变化"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INDUSTRY-001
+    level: knowledge_unit
+    name: 地区产业结构
+    parent_id: TH-REG-INDUSTRY
+    definition: 一个国家或地区不同类型产业之间的比例关系及其体现的经济发展水平。
+    includes:
+      - 地区产业结构的概念
+      - 产业结构与资源禀赋、技术条件和分工深化的关系
+      - 产业结构体现经济发展水平的关系
+    excludes:
+      - 一般性的产业区位因素（归入人文地理）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第二节"地区产业结构变化"——"地区产业结构"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INDUSTRY-002
+    level: knowledge_unit
+    name: 产业结构的升级
+    parent_id: TH-REG-INDUSTRY
+    definition: 经济发展过程中劳动力从第一产业向第二、第三产业转移、国民经济重心转移的规律以及推动产业升级的主要因素。
+    includes:
+      - 产业结构升级的表现（劳动力转移、国民经济重心转移、工业内部升级）
+      - 比较优势变化对产业升级的推动作用
+      - 政策引导对产业升级的推动作用
+      - 技术创新作为推动产业不断升级的根本原因
+    excludes:
+      - 具体地区或城市的产业升级案例结论
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第三章第二节"地区产业结构变化"——"产业结构的升级"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 7：区际联系与区域协调发展 ----------
+  - id: TH-REG-INTERREGION
+    level: theme
+    name: 区际联系与区域协调发展
+    parent_id: DM-REG
+    definition: 研究流域协作、资源跨区域调配、产业转移和国际合作等区际联系机制及其对区域协调发展的推动作用。
+    includes: []
+    excludes:
+      - 一般性的交通区位和交通布局原理（归入人文地理）
+      - 资源安全和资源环境承载力的一般原理（归入资源、环境与国家安全）
+      - 具体工程案例的技术参数
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章"区际联系与区域协调发展"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第三节"中国国家发展战略举例"——"推动区域协调发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INTERREGION-001
+    level: knowledge_unit
+    name: 流域内协调发展
+    parent_id: TH-REG-INTERREGION
+    definition: 以流域为单元统筹管理水资源、协调上下游利益冲突以实现流域内各区域共同发展的机制。
+    includes:
+      - 流域水资源的多种功能和开放共享性
+      - 流域内不同利益主体之间的利益冲突
+      - 以流域为单元统筹管理的必要性
+      - 综合运用工程技术、行政、法律、市场等手段的流域管理机制
+    excludes:
+      - 一般性的水循环和水资源原理（归入自然地理）
+      - 具体流域的治理数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章第一节"流域内协调发展"——"流域内部水资源协作开发"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INTERREGION-002
+    level: knowledge_unit
+    name: 资源跨区域调配
+    parent_id: TH-REG-INTERREGION
+    definition: 国家为解决资源及其产品生产和消费空间不匹配而实施资源跨区域调配的机制及其对调出区、调入区和沿线区域发展的影响。
+    includes:
+      - 资源跨区域调配的原因（资源分布不均和区域发展水平不平衡）
+      - 资源调配对调出区的影响（资源优势转经济效益、促进基础设施建设）
+      - 资源调配对调入区的影响（缓解资源短缺、优化消费结构、促进经济发展）
+      - 资源调配对区域协调发展的促进作用
+    excludes:
+      - 一般性的自然资源概念和资源安全原理（归入资源、环境与国家安全）
+      - 具体工程的技术参数和建设数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章第二节"资源跨区域调配"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INTERREGION-003
+    level: knowledge_unit
+    name: 产业转移
+    parent_id: TH-REG-INTERREGION
+    definition: 企业为降低生产成本获得更多收益而实现生产地转移的经济现象及其影响因素和对区域发展的影响。
+    includes:
+      - 产业转移的概念和分类（国内转移和国际转移）
+      - 影响产业转移的主要因素（劳动力、市场、政策）
+      - 产业转移促进区域产业结构调整的作用
+      - 产业转移促进区域产业分工与合作的作用
+      - 产业转移改变劳动力就业空间分布的作用
+      - 雁行理论与产业梯度转移规律
+    excludes:
+      - 一般性的产业区位因素（归入人文地理）
+      - 具体产业或企业的转移案例数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章第三节"产业转移"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章第三节自学窗"产业转移的规律"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INTERREGION-004
+    level: knowledge_unit
+    name: 经济全球化与国际合作
+    parent_id: TH-REG-INTERREGION
+    definition: 经济全球化驱动各国经济相互依赖加深的过程，以及通过国际合作构建全球生产网络和促进区域共同发展的机制。
+    includes:
+      - 经济全球化的概念和表现
+      - 全球生产网络的形成和新的劳动地域分工
+      - 国际合作对推动世界经济可持续增长的作用
+      - 跨区域、跨国经济合作对构建生产网络和促进共同发展的作用
+    excludes:
+      - 具体国际合作项目的投资数据
+      - 具体国家战略和合作倡议
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章第四节"国际合作"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-REG-INTERREGION-005
+    level: knowledge_unit
+    name: 区域协调发展
+    parent_id: TH-REG-INTERREGION
+    definition: 通过加强区域间分工协作、要素流动和空间联系，缩小区域发展差距并形成优势互补、协同发展的机制。
+    includes:
+      - 区域发展差异是实施协调发展战略的基础
+      - 交通联系、城市辐射和产业协作对区域互动的促进作用
+      - 建立跨区域协同合作机制
+      - 推动不同区域优势互补和共同发展
+    excludes:
+      - 具体国家区域发展战略名称
+      - 具体经济带、城市群的发展数据和空间方案
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第三节"中国国家发展战略举例"——"推动区域协调发展"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修2 区域发展
+        source_locator: 第四章"区际联系与区域协调发展"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# 待审查项汇总
+# ============================================================
+review_items:
+  - node_id: TH-REG-ECOFRAGILE
+    issue: 跨领域边界待确认
+    detail: 已与"资源、环境与国家安全"中的生态保护节点比较。本领域仅保留生态脆弱区作为特定类型区域的发展问题、土地退化成因分析和区域综合治理机制；生态退化对国家安全的影响及自然保护区制度由资源环境安全领域维护。
+    suggestion: 当前边界可以用于草案；待代表性真题验证两类节点是否能稳定区分，相关主题和两个治理节点保持 needs_review。
+
+  - candidate_name: 流域内协调发展中的水土保持措施
+    issue: 跨领域边界待确认
+    detail: 教材第四章第一节流域内协调发展中的黄河调沙减淤涉及水土保持的工程措施和生物措施，这些措施本身也可能属于"资源、环境与国家安全"领域的生态环境保护内容。
+    suggestion: 跨领域审查时区分水土保持的一般原理（资源环境安全）与流域统筹管理机制（区域发展），若需要可拆分。
+
+  - candidate_name: 资源跨区域调配中的资源管理
+    issue: 跨领域边界待确认
+    detail: 教材第四章第二节资源跨区域调配涉及能源资源的调配和管理。资源调配作为区际要素流动和区域协调发展机制已纳入区域发展主干，但其中涉及的能源安全、资源利用效率等可能同时属于"资源、环境与国家安全"领域。
+    suggestion: 跨领域审查时确认资源调配机制（区域发展）与资源安全原理（资源环境安全）的边界。
+
+# ============================================================
+# 结构检查
+# ============================================================
+structure_check:
+  node_count:
+    domain: 1
+    theme: 7
+    knowledge_unit: 23
+    total: 31
+  id_uniqueness: pass  # 所有 id 均唯一
+  parent_child_validity: pass  # 父子层级合法，无孤立节点
+  single_parent: pass  # 每个节点只有一个主要父节点
+  definition_and_source: pass  # 每个主题和知识单元均有定义与 ima 来源
+  cross_book_dedup:
+    status: completed
+    note: 已比较选择性必修2与必修第二册第五章第三节相关原文；主体功能区作为区域类型写入既有节点，区域协调发展建立稳定节点，蓝色经济空间和海洋权益归入资源、环境与国家安全领域。
+  case_exclusion: pass  # 案例、问题研究、情境、能力表达未进入主干；案例（如长江三角洲与松嫩平原比较、纽约辐射功能、焦作转型、黄河调沙减淤、西气东输、东亚产业转移、一带一路等）仅用于确认一般概念、原理和机制
+  cross_domain_exclusion:
+    status: pending
+    note: 一般人文地理和自然地理原理未重复建节点；生态脆弱区的发展治理与资源环境安全中的生态保护已区分侧重，但仍需代表性真题验证边界。
+  tool_exclusion: pass  # RS、GNSS、GIS 等地理信息技术未进入 taxonomy 主干
+  review_items_marked: pass  # 节点不确定项已标记 needs_review；跨领域候选已列入 review_items
+  overall: "部分检查通过"
+  remaining_issues:
+    - '生态脆弱区治理、流域水土保持和资源调配等内容存在与"资源、环境与国家安全"领域的边界交叉，已列入 review_items 待跨领域审查。'
+    - '尚未使用代表性高考真题验证各知识单元的可映射性，结构检查通过不等于定稿。'
+    - 'TH-REG-ECOFRAGILE、KU-REG-ECOFRAGILE-002 和 KU-REG-ECOFRAGILE-003 的跨领域边界待代表性真题验证。'

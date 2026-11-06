@@ -9,6 +9,10 @@
 //   参考答案在作答提交后才开放，核验结论再次调用归档；讲稿只读服务端核验记录。
 // 注意：不 import 宿主包（C: 用户根无 node_modules，裸 import 会失败），工具定义直接构造对象。
 
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
 function sendJson(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(body) });
@@ -359,6 +363,56 @@ async function runIsolatedSolve(ctx, exec, qid) {
   };
 }
 
+// ========== /geo-status：只读状态入口（不调用模型） ==========
+function readRuntimeVersion() {
+  try {
+    const home = process.env.DSH_HOME || join(homedir(), '.dsh');
+    const file = join(home, 'dsh-runtimes', 'dsh-primary-runtime', 'runtime.json');
+    const info = JSON.parse(readFileSync(file, 'utf8'));
+    return info && info.desktopVersion ? String(info.desktopVersion) : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+const DATA_SOURCE_LABELS = { user: '教师配置', packaged: '随仓库 data/', missing: '缺失' };
+const RUN_STATE_LABELS = { question_ready: '题面就绪', submitted: '作答已提交', verified: '核验完成', none: '未开始' };
+
+async function buildStatusText(ctx, kernel) {
+  const summary = await kernel.statusSummary();
+  const lines = ['地理教师辅助 · 状态'];
+  lines.push(`- DSH：${readRuntimeVersion()}`);
+  const data = summary.data;
+  if (data) {
+    lines.push(`- 考点库：${DATA_SOURCE_LABELS[data.knowledgeSource] || data.knowledgeSource}${data.knowledgeBasePath ? '（' + data.knowledgeBasePath + '）' : ''}`);
+    lines.push(`- 题库：${DATA_SOURCE_LABELS[data.questionBankSource] || data.questionBankSource}${data.questionBankPath ? '（' + data.questionBankPath + '）' : ''}`);
+    lines.push(`- 配置：${data.configFileFound ? data.configPath : '未创建（使用随仓库 data/）'}`);
+  }
+  const counts = summary.counts || {};
+  lines.push(`- 题库题数：${counts.bankQuestions ?? '—'} 小问 / ${counts.bankFiles ?? '—'} 文件｜考点节点：${counts.taxonomyNodes ?? '—'}`);
+  const index = summary.index || {};
+  lines.push(`- 索引：${index.fromDisk ? '磁盘索引' : '内存重建'}${index.builtAt ? '（' + formatTime(index.builtAt) + '）' : ''}`);
+  const runs = summary.recentRuns || [];
+  lines.push(runs.length
+    ? `- 最近讲题：${runs.map((run) => `${run.questionId} ${RUN_STATE_LABELS[run.state] || run.state}`).join('；')}`
+    : '- 最近讲题：无');
+  let preset = '未检查';
+  try {
+    const presets = ctx.get && ctx.get('agentPresets');
+    if (presets) {
+      const info = await presets.resolve(INTERNAL_SOLVER_PRESET_ID);
+      preset = info && !info.broken ? '可用' : '不可用';
+    }
+  } catch {
+    preset = '不可用';
+  }
+  lines.push(`- 内部解题预设：${preset}（内部使用，请勿手动选择）`);
+  if (summary.status !== 'success') {
+    lines.push(`- 状态：${summary.status}${summary.message ? ' — ' + summary.message : ''}`);
+  }
+  return lines.join('\n');
+}
+
 // ========== 工具 render：紧凑 Markdown ==========
 export function renderSolve(args, value) {
   const d = value || {};
@@ -623,6 +677,29 @@ export default {
         }
       }
     });
+
+    // /geo-status：只读状态命令（安装验活、数据来源、题库题数、最近讲题 run）。
+    const commands = ctx.get ? ctx.get('commands') : undefined;
+    if (commands && typeof commands.register === 'function') {
+      const definition = {
+        name: 'geo-status',
+        description: '显示地理教师辅助的安装、数据与题库状态（只读，不调用模型）',
+        handler: async () => {
+          try {
+            return { kind: 'success', text: await buildStatusText(ctx, kernel) };
+          } catch (e) {
+            return { kind: 'error', text: '读取状态失败：' + ((e && e.message) || String(e)) };
+          }
+        }
+      };
+      if (typeof ctx.effect === 'function') {
+        ctx.effect(() => commands.register(definition));
+      } else {
+        commands.register(definition);
+      }
+    } else {
+      console.error('geo-analysis: 缺少 commands 服务，/geo-status 未注册');
+    }
 
     // 模型工具：真题分析 + 命题蓝图
     ctx.tools.register({

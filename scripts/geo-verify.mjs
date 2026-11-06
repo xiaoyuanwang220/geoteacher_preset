@@ -960,6 +960,27 @@ async function checkPipelineDiscipline() {
       sparseOk ? 'insufficient=true + gap 指明缺口' : `insufficient=${sparse.insufficient}, gap=${sparse.gap || '(空)'}`);
   }
 
+  // (m2) 工作台聚合：安装器、随仓库数据、/geo-status
+  const setupFile = join(PROJECT_ROOT, 'scripts', 'setup.mjs');
+  add('setup-script', '一键安装器存在（scripts/setup.mjs）', existsSync(setupFile),
+    existsSync(setupFile) ? '安装/卸载/静态校验入口就位' : '缺少 scripts/setup.mjs');
+  const statusRegistered = analysisSrc.includes("name: 'geo-status'") && analysisSrc.includes('commands.register');
+  add('status-command', '/geo-status 状态命令已注册（只读，不调模型）', statusRegistered,
+    statusRegistered ? 'analysis 插件通过 commands.register 注册 geo-status' : 'analysis 未注册 /geo-status');
+  const dataRoot = join(PROJECT_ROOT, 'data');
+  const dataYaml = existsSync(join(dataRoot, 'config'))
+    ? readdirSync(join(dataRoot, 'config')).filter((name) => /\.ya?ml$/i.test(name)).length
+    : 0;
+  const dataBankDir = join(dataRoot, 'obsidian_vault', '04_题目');
+  const dataBankMd = existsSync(dataBankDir)
+    ? walkFiles(dataBankDir).filter((file) => file.endsWith('.md')).length
+    : 0;
+  add('packaged-data', `随仓库数据（考点库 ${dataYaml} YAML / 题库 ${dataBankMd} md）`,
+    dataYaml > 0 && dataBankMd > 0,
+    dataYaml > 0 && dataBankMd > 0
+      ? `${dataRoot}：knowledge=packaged、questionBank=packaged`
+      : `缺失：请检查 data/config 与 data/obsidian_vault/04_题目（当前 ${dataYaml} / ${dataBankMd}）`);
+
   // (n) 数据/解析层修复断言（会话复盘-20260817 §五 1-4 / 修复方案-20260817 P0-P1，防回归）
   const qidQuoteOk = coreSrc.includes('question_id:\\s*["`]?([^"`]+)');
   add('parser-qid-quote', 'qid 正则兼容双引号 (["`]?[^"`]+)', qidQuoteOk,

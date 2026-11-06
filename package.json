@@ -6,6 +6,7 @@
   "description": "高中地理教师辅助 Agent — 基于 DeepSeek Harness 的插件化教学工具系统",
   "license": "MIT",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "verify:geo": "node scripts/geo-verify.mjs",
     "verify:modelcheck": "node scripts/modelcheck-verify.mjs --tests",
     "test:modelcheck": "node --test \"packages/dsh-modelcheck/test/*.test.mjs\"",

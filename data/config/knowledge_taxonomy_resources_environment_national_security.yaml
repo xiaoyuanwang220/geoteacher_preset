@@ -1,0 +1,579 @@
+# 高中地理 Taxonomy — 资源、环境与国家安全部分（跨册整合草案 v0.2-draft）
+#
+# 来源：ima 知识库「aaa」→ 高中文件夹
+#   - 普通高中教科书·地理选择性必修3 资源、环境与国家安全（人教版 2019，樊杰、高俊昌总主编；方修琦、刘健本册主编）
+#   - 普通高中教科书·地理必修 第二册第五章第一、二节（人教版 2019）
+#
+# 结构：domain -> theme -> knowledge_unit（三层教材主干）
+# 本版已比较选择性必修3与必修第二册第五章第一、二节相关原文并完成跨册整合。
+# 案例、问题研究、情境、能力表达均未进入主干。
+# 所有节点均基于教材原文提取，未使用 Agent 记忆或网络摘要。
+
+meta:
+  subject: 高中地理
+  taxonomy_name: 资源、环境与国家安全知识点体系（跨册整合草案）
+  version: v0.2-draft
+  status: draft
+  constructed_at: "2026-07-28"
+  source_textbooks:
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+      publisher: 人民教育出版社
+      edition: 2019
+      chief_editor: 樊杰、高俊昌
+      volume_editor: 方修琦、刘健
+    - ima_knowledge_base: aaa
+      source_document: 普通高中教科书·地理必修 第二册
+      publisher: 人民教育出版社
+      edition: 2019
+      relevant_chapters: 第五章第一节"人类面临的主要环境问题"、第二节"走向人地协调——可持续发展"
+  construction_basis: 依据 taxonomy_construction_rules.md，从 ima 原文逐节提取知识候选。
+  notes:
+    - 本文件以选择性必修3为主体，并已整合必修第二册第五章第一、二节中的环境问题和可持续发展主干。
+    - 教材册、章、节仅为来源线索，不直接等于 taxonomy 层级。L2 主题根据知识尺度重新组织，非机械照搬教材章名。
+    - 同一知识跨册出现时只保留一个节点，source_refs 记录多个来源。
+    - needs_review=true 的节点存在粒度、父级或来源疑问，需人工裁定。
+    - 本版尚未使用代表性高考真题验证可映射性，结构检查通过不等于定稿。
+
+# ============================================================
+# L1 学科领域
+# ============================================================
+nodes:
+  - id: DM-RES
+    level: domain
+    name: 资源、环境与国家安全
+    parent_id: null
+    definition: 研究自然资源供给、环境问题与人类社会发展及国家安全之间关系的学科领域。
+    includes:
+      - 自然环境的服务功能与自然资源利用
+      - 资源安全（能源、耕地粮食、海洋空间）与国家安全
+      - 环境安全（环境污染、生态保护、全球气候变化）与国家安全
+      - 保障资源环境安全的战略、政策与国际合作
+    excludes:
+      - 自然地理要素的组成、运动过程和一般规律（归入自然地理）
+      - 人口、城镇、产业和交通运输的一般原理（归入人文地理）
+      - 一般性的区域差异和区域转型机制（归入区域发展）
+      - RS、GNSS、GIS 等地理信息技术的技术原理（现阶段不纳入 taxonomy 主干）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 全册
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# L2 知识主题 + L3 知识单元
+# ============================================================
+
+  # ---------- 主题 1：资源环境与人类社会 ----------
+  - id: TH-RES-SOC
+    level: theme
+    name: 资源环境与人类社会
+    parent_id: DM-RES
+    definition: 研究自然环境对人类社会的服务功能、自然资源的属性与利用特征，以及环境问题产生的原因与危害。
+    includes: []
+    excludes:
+      - 自然环境各要素的组成与运动规律（归入自然地理）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第一章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-SOC-001
+    level: knowledge_unit
+    name: 自然环境的服务功能
+    parent_id: TH-RES-SOC
+    definition: 自然环境为人类提供供给、调节、文化和支撑四类服务功能，人类可持续利用不能突破其极限。
+    includes:
+      - 供给服务（提供自然资源）
+      - 调节服务（调节温度、净化空气、降解废弃物）
+      - 文化服务（精神享受、审美体验）
+      - 支撑服务（维持自然环境自身稳定，是其他服务的基础）
+      - 服务功能的可持续利用极限与综合权衡
+    excludes:
+      - 具体森林、湿地等生态系统的服务功能计算
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第一章第一节"自然环境的服务功能"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-SOC-002
+    level: knowledge_unit
+    name: 自然资源及其利用
+    parent_id: TH-RES-SOC
+    definition: 自然资源的概念、双重属性（自然与社会）及其数量、质量和空间分布特征对人类利用的影响。
+    includes:
+      - 自然资源的定义与主要类型（气候、生物、水、土地、矿产、能源、海洋资源）
+      - 自然资源的自然属性与社会属性
+      - 数量特征（有限性、稀缺性、价格响应机制）
+      - 质量特征（优劣分级、开发利用成本差异）
+      - 空间分布特征（不均匀但有规律、地带性与区域性、资源流动与调配）
+      - 可再生资源与非可再生资源的更新极限
+    excludes:
+      - 具体资源类型的分布数据（作为案例而非知识节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第一章第二节"自然资源及其利用"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-SOC-003
+    level: knowledge_unit
+    name: 环境问题的形成与危害
+    parent_id: TH-RES-SOC
+    definition: 人类活动超出自然环境调节能力导致环境问题产生，并通过损害自然环境服务功能影响人类健康和社会经济发展。
+    includes:
+      - 环境问题产生的原因（资源获取与废弃物排放超出自然环境调节能力）
+      - 影响环境问题的主要因素（人口数量、人均资源消费量、技术水平两面性）
+      - 环境问题的危害（影响生活质量与健康、制约社会经济发展）
+      - 自然系统与人类系统物质能量流动的差异
+      - 环境问题的主要表现（环境污染、生态破坏、自然资源枯竭）
+      - 环境问题的区域差异及由局部向全球扩展的趋势
+    excludes:
+      - 具体环境事件案例（如DDT、琵琶湖等）
+      - 具体污染物的理化特性
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第一章第三节"环境问题及其危害"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第一节"人类面临的主要环境问题"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-SOC-004
+    level: knowledge_unit
+    name: 海洋生物资源与渔场形成条件
+    parent_id: TH-RES-SOC
+    definition: 海洋生物资源的形成与富集受光照、水深、营养盐、洋流及栖息环境等自然条件共同影响。
+    includes:
+      - 大陆架浅海的水深与光照条件
+      - 寒暖流交汇和上升流对营养物质上泛及生物聚集的作用
+      - 入海径流输送营养盐对浮游生物和饵料资源的影响
+      - 海岸、岛屿等环境对海洋生物栖息和繁殖的作用
+      - 渔场形成的主要自然条件
+    excludes:
+      - 洋流的一般形成与分布规律（归入洋流节点）
+      - 海洋空间开发与海洋权益（归入海洋空间资源开发与国家安全节点）
+    aliases:
+      - 海洋生物资源
+      - 渔场形成条件
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第一章第二节"自然资源及其利用"（生物资源、海洋资源）
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第一册
+        source_locator: 第三章第三节"海水的运动"（洋流对海洋生物资源和渔场的影响）
+    validation_refs:
+      - source_document: 精品解析：2025年浙江6月高考地理真题（解析版）.docx
+        question_numbers: "26(2)"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: "经代表性真题验证，可作为海洋资源相关的独立 L3 知识单元。"
+
+  # ---------- 主题 2：资源安全 ----------
+  - id: TH-RES-RES
+    level: theme
+    name: 资源安全
+    parent_id: DM-RES
+    definition: 研究资源供需失衡引发的安全问题及其对国家安全的影响，包括能源、耕地粮食和海洋空间资源等具体领域的安全保障。
+    includes: []
+    excludes:
+      - 一般性的农业区位和工业区位因素（归入人文地理）
+      - 具体国家或地区的资源开发案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第二章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-RES-001
+    level: knowledge_unit
+    name: 资源安全与国家安全的关系
+    parent_id: TH-RES-RES
+    definition: 资源供给与需求失衡超过限度引发资源安全问题，战略资源短缺可动摇国家安全基础。
+    includes:
+      - 资源安全的概念（供给满足最低数量和质量要求、稳定及时经济、不破坏自然环境）
+      - 资源安全问题的成因（供需失衡：需求增长过快或供给能力降低）
+      - 影响因素（资源禀赋、生产与供给能力、消费需求）
+      - 资源安全在国家安全体系中的基础地位
+      - 战略资源与非战略资源的区分
+      - 资源安全问题影响国家安全的途径（触发环境、经济、军事、政治危机）
+      - 保障资源安全的途径（增加供给、降低需求、规避衍生风险）
+    excludes:
+      - 具体资源类型的安全问题（分别归入能源安全、耕地资源与粮食安全等节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第二章第一节"资源安全对国家安全的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-RES-002
+    level: knowledge_unit
+    name: 能源安全
+    parent_id: TH-RES-RES
+    definition: 能源供给、消费和空间配置失衡形成的安全风险，以及通过供给多元化、储备、运输保障和结构优化维护能源安全的机制。
+    includes:
+      - 能源供给结构、消费结构和供需空间错位对能源安全的影响
+      - 油气对外依存与运输通道风险
+      - 以煤为主的能源结构带来的环境约束和转型要求
+      - 保障措施（提升国内供给能力、进口来源多元化、战略储备、运输通道保障）
+      - 优化能源消费结构和提高能源利用效率
+      - 碳排放系数与能源结构对碳排放的影响
+    excludes:
+      - 具体油田、煤矿名称作为独立知识点
+      - 具体能源政策文件名称
+      - 特定年份的能源产量、消费量和对外依存度数据
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第二章第二节"中国的能源安全"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-RES-003
+    level: knowledge_unit
+    name: 耕地资源与粮食安全
+    parent_id: TH-RES-RES
+    definition: 耕地资源的数量、质量和空间分布特征对粮食综合生产能力的决定作用，以及保障粮食安全的途径与耕地保护制度。
+    includes:
+      - 粮食安全的概念（生产、储备、流通、进出口四环节）
+      - 我国耕地资源特征（人均少、质量欠佳、分布不均、气象灾害频发）
+      - 粮食总产量与耕地面积和单位面积产量的关系
+      - 实现粮食安全的途径（提高单产、跨区调剂、国际贸易、粮食储备）
+      - 耕地红线与基本农田保护制度
+      - 高标准农田建设与耕地质量提升
+      - 国家粮食安全战略（以我为主、立足国内、确保产能、适度进口、科技支撑）
+    excludes:
+      - 具体农作物品种的种植条件
+      - 具体区域中低产田治理案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第二章第三节"中国的耕地资源与粮食安全"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-RES-004
+    level: knowledge_unit
+    name: 海洋空间资源开发与国家安全
+    parent_id: TH-RES-RES
+    definition: 海洋空间资源开发利用对国家资源供给和海洋国土安全的影响。
+    includes:
+      - 海洋空间资源开发的技术特点与难度
+      - 海洋空间资源开发对资源安全的影响（拓展空间、丰富资源类型、储藏场所）
+      - 海洋国土的概念与权益（《联合国海洋法公约》框架下的管辖海域）
+      - 海洋空间资源开发对海洋国土安全的影响（宣示主权、管控能力、战略纵深）
+    excludes:
+      - 具体人工岛、跨海桥隧等工程项目
+      - 具体国家或地区的海洋开发案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第二章第四节"海洋空间资源开发与国家安全"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第三节"中国国家发展战略举例"——"拓展蓝色经济空间"及"维护海洋权益"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 3：环境安全 ----------
+  - id: TH-RES-ENV
+    level: theme
+    name: 环境安全
+    parent_id: DM-RES
+    definition: 研究环境问题严重程度超过临界值后形成的安全问题及其对国家安全的影响，包括环境污染、生态保护和全球气候变化。
+    includes: []
+    excludes:
+      - 自然灾害的成因机制（归入自然地理）
+      - 具体污染事件和生态退化案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第三章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-ENV-001
+    level: knowledge_unit
+    name: 环境安全与国家安全的关系
+    parent_id: TH-RES-ENV
+    definition: 环境问题严重程度超过临界值后形成环境安全问题，可通过危及生命财产和自然环境服务功能影响国家安全。
+    includes:
+      - 环境安全的概念（自然环境受到的破坏处于可承受范围之内）
+      - 环境安全临界值的概念与差异
+      - 突发性与累积性环境安全问题的区分
+      - 环境安全问题影响国家安全的途径（危及生命财产、触发经济政治军事危机）
+      - 降低环境安全风险的基本途径（降低环境问题严重程度、减少受损害可能性）
+    excludes:
+      - 具体污染事件和生态退化案例
+    aliases:
+      - 生态安全
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第三章第一节"环境安全对国家安全的影响"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-ENV-002
+    level: knowledge_unit
+    name: 环境污染与国家安全
+    parent_id: TH-RES-ENV
+    definition: 突发环境事件和污染物跨国转移对国家安全的影响及应对措施。
+    includes:
+      - 突发环境事件的特点与对国家安全的影响途径
+      - 污染物跨国转移的方式（跨国传输、废弃物跨国转移、含有毒有害物质的产品贸易）
+      - 污染物跨国转移引发国际争端的机制
+      - 跨国污染问题的应对措施（源头防范、事中控制、事后治理）
+    excludes:
+      - 具体污染事件案例（如伦敦烟雾、墨西哥湾漏油等）
+      - 具体国际协定名称作为独立知识点
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第三章第二节"环境污染与国家安全"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-ENV-003
+    level: knowledge_unit
+    name: 生态保护与国家安全
+    parent_id: TH-RES-ENV
+    definition: 生态退化对自然环境服务功能和国家安全的威胁，以及生态修复和自然保护区等保护措施。
+    includes:
+      - 生态退化的类型与对自然环境服务功能的影响
+      - 生态退化的渐进累积特征与对国家安全基础的动摇
+      - 生态修复的概念与类型（自然恢复与人工修复）
+      - 自然保护区的概念、功能区划分与保护意义
+      - 自然保护区对维护国家生态安全的作用
+    excludes:
+      - 具体自然保护区、生态工程名称作为独立知识点
+      - 具体地区的生态退化案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第三章第三节"生态保护与国家安全"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-ENV-004
+    level: knowledge_unit
+    name: 全球气候变化与国家安全
+    parent_id: TH-RES-ENV
+    definition: 人为碳排放导致全球变暖及其对国家安全的影响，以及减缓与适应的应对措施。
+    includes:
+      - 全球变暖与温室气体浓度变化的关系
+      - 温室效应的原理与人类活动对温室效应的增强
+      - 碳循环的概念与人类活动对全球碳循环的改变
+      - 全球气候变化对国家安全的影响（生存空间丧失、加剧资源危机、激化资源争端、间接波及）
+      - 减缓措施（减少排放、增加碳汇）
+      - 适应措施（提高适应能力、趋利避害）
+      - 应对气候变化的国际合作原则（公平原则、共同但有区别的责任）
+    excludes:
+      - 具体国际协定名称（如《巴黎协定》《京都议定书》）作为独立知识点
+      - 具体国家或岛国的气候影响案例
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第三章第四节"全球气候变化与国家安全"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  # ---------- 主题 4：资源环境安全保障 ----------
+  - id: TH-RES-STRATEGY
+    level: theme
+    name: 资源环境安全保障
+    parent_id: DM-RES
+    definition: 研究保障资源环境领域国家安全的战略理念、国家政策与行动及国际合作途径。
+    includes: []
+    excludes:
+      - 一般性的区域发展战略与产业转移（归入区域发展）
+      - 具体政策文件和法律条文
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第四章
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-STR-001
+    level: knowledge_unit
+    name: 生态文明
+    parent_id: TH-RES-STRATEGY
+    definition: 从工业文明向生态文明转变的人地关系演进，以及生态文明下资源环境与国家安全的关系。
+    includes:
+      - 不同社会阶段的生产方式、资源基础、环境问题与人地关系演变
+      - 从工业文明向生态文明转变的必要性
+      - 生态文明的内涵（人与自然是生命共同体、和谐共生）
+      - 生态文明下人与自然和谐共生的资源与环境安全观
+      - 生产方式和生活方式绿色化的途径
+    excludes:
+      - 具体生态文明示范案例（如安吉县等）
+      - 可持续发展的定义、三大内涵和基本原则（归入可持续发展节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第四章第一节"走向生态文明"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-STR-002
+    level: knowledge_unit
+    name: 资源环境国家战略与政策
+    parent_id: TH-RES-STRATEGY
+    definition: 国家在资源开发管控、战略储备、运输通道保障、环境保护和风险防控等方面的战略与政策措施，以及公众参与的途径。
+    includes:
+      - 保障资源领域国家安全的战略措施（管控战略资源开发、加强战略储备、完善运输通道）
+      - 保障环境领域国家安全的政策措施（划定生态保护红线、环境风险预警防控、突发环境事件应对）
+      - 推动公众参与的途径（履行法律义务、培养环境意识、社会监督）
+    excludes:
+      - 具体政策文件和法律条文
+      - 具体能源规划体系名称
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第四章第二节"国家战略与政策"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-STR-003
+    level: knowledge_unit
+    name: 资源环境安全的国际合作
+    parent_id: TH-RES-STRATEGY
+    definition: 资源环境问题的全球性和跨国性决定了国际合作的必要性，以及国际合作的主要途径和原则。
+    includes:
+      - 国际合作的必要性（全球性问题、跨国影响、不能以邻为壑）
+      - 国际合作的主要途径与进展差异
+      - 中国在资源环境安全国际合作中的角色与行动
+    excludes:
+      - 具体国际协定名称作为独立知识点
+      - 具体国家间合作案例
+      - 全球气候变化的减缓、适应和责任原则（归入全球气候变化与国家安全节点）
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第四章第三节"国际合作"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+  - id: KU-RES-STR-004
+    level: knowledge_unit
+    name: 可持续发展
+    parent_id: TH-RES-STRATEGY
+    definition: 既满足当代人的需求，又不危及后代人满足其需求能力，并协调生态、经济和社会发展的发展理念。
+    includes:
+      - 生态持续发展、经济持续发展和社会持续发展的内涵及关系
+      - 公平性、持续性和共同性三项基本原则
+      - 发展活动应保持在资源环境承载力之内
+      - 实现途径（消除贫困、发展绿色经济、倡导可持续消费）
+      - 政府、企业和公众共同参与
+    excludes:
+      - 生态文明的社会阶段演进和资源环境安全观（归入生态文明节点）
+      - 具体国际议程和可持续发展目标
+    aliases: []
+    source_refs:
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理必修 第二册
+        source_locator: 第五章第二节"走向人地协调——可持续发展"
+      - ima_knowledge_base: aaa
+        source_document: 普通高中教科书·地理选择性必修3 资源、环境与国家安全
+        source_locator: 第四章第一节"走向生态文明"——"从工业文明向生态文明转变"
+    status: draft
+    confidence: high
+    needs_review: false
+    review_note: ""
+
+# ============================================================
+# 待审查项汇总
+# ============================================================
+review_items: []
+
+# ============================================================
+# 结构检查
+# ============================================================
+structure_check:
+  node_count:
+    domain: 1
+    theme: 4
+    knowledge_unit: 16
+    total: 21
+  id_uniqueness: pass  # 所有 id 均唯一
+  parent_child_validity: pass  # 父子层级合法，无孤立节点
+  single_parent: pass  # 每个节点只有一个主要父节点
+  definition_and_source: pass  # 每个主题和知识单元均有定义与 ima 来源
+  cross_book_dedup:
+    status: completed
+    note: 已比较选择性必修3与必修第二册第五章第一、二节原文；环境问题合并为一个节点并记录双重来源，生态文明与可持续发展按概念边界分别保留。
+  case_exclusion: pass  # 案例、问题研究、情境、能力表达未进入主干
+  cross_domain_exclusion: pass  # 自然地理过程、人文地理一般原理和区域发展机制未纳入主干；碳循环作为气候变化节点的组成部分而非独立节点
+  review_items_marked: pass  # 当前没有未标记的粒度、父级、重复或来源疑问
+  overall: "结构检查通过"
+  remaining_issues:
+    - '尚未使用代表性高考真题验证各知识单元的可映射性，结构检查通过不等于定稿。'

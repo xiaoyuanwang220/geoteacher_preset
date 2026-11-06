@@ -1594,24 +1594,29 @@ export default {
     const webServer = ctx.webServer;
     const cfg = config || {};
     // ── 数据路径解析 ────────────────────────────────────────────────────────────
-    // 优先级：插件 config（组合文件覆盖，留给其它部署）＞ 用户配置文件 ＞ 明确报错。
-    // 不用 cwd 推导：插件在 apply 期没有会话上下文，工具执行上下文（ToolExecutionInput）里也没有 cwd，
-    // 所以插件拿不到"用户的工作区"，只能由用户显式给出，或落在确定的锚点上。
+    // 单一解析逻辑（knowledgeBase / questionBank 共用同一函数）：
+    //   插件 config 或用户配置文件显式路径 ＞ 仓库 data/ 默认路径 ＞ missing。
+    // 仓库 data/ 与教师的 Obsidian 数据同源（见 docs/工作台聚合与一键安装方案.md）：
+    //   knowledgeBase → <repo>/data/config
+    //   questionBank  → <repo>/data/obsidian_vault/04_题目
+    // 不写死作者机器路径；仓库根不可判定或 data/ 缺失时按 missing 处理，不静默回退。
     //
     // 用户配置文件：<DSH_HOME>/geo-teacher/config.json
     //   DSH_HOME = process.env.DSH_HOME || <用户目录>/.dsh
     //   键：knowledgeBasePath｜questionBankPath｜outputPath｜workspaceRoot（全部可选）
     //   相对路径以该配置文件所在目录为基准。
-    // 考点库若已随包发布（<预设包>/knowledge/ 存在），knowledgeBasePath 缺省即指向它，无需配置。
     const PKG_ROOT = join(HERE, '..', '..');
-    const PACKAGED_KNOWLEDGE_DIR = join(PKG_ROOT, 'knowledge');
+    const REPO_ROOT = join(PKG_ROOT, '..', '..');
+    const DATA_ROOT = join(REPO_ROOT, 'data');
+    const PACKAGED_KNOWLEDGE_DIR = join(DATA_ROOT, 'config');
+    const PACKAGED_QUESTION_BANK_DIR = join(DATA_ROOT, 'obsidian_vault', '04_题目');
     const CONFIG_PATH = join(
       process.env.DSH_HOME || join(homedir(), '.dsh'),
       'geo-teacher',
       'config.json'
     );
     const CONFIG_DIR = dirname(CONFIG_PATH);
-    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键（格式见项目 README「配置数据路径」一节）';
+    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键；未配置时使用随仓库的 data/ 默认数据（见项目 README「配置数据路径」一节）';
 
     function readUserConfig() {
       try {
@@ -1638,10 +1643,25 @@ export default {
     };
     const toAbs = (p) => (isAbsolute(p) ? p : join(CONFIG_DIR, p));
 
-    const KNOWLEDGE_BASE_PATH = pick('knowledgeBasePath')
-      ? toAbs(pick('knowledgeBasePath'))
-      : (existsSync(PACKAGED_KNOWLEDGE_DIR) ? PACKAGED_KNOWLEDGE_DIR : null);
-    const QUESTION_BANK_PATH = pick('questionBankPath') ? toAbs(pick('questionBankPath')) : null;
+    // 唯一的数据目录解析：返回 { path, source }，source ∈ user | packaged | missing。
+    function resolveDataDir(userValue, packagedDir) {
+      if (userValue) return { path: toAbs(userValue), source: 'user' };
+      try {
+        if (existsSync(packagedDir) && statSync(packagedDir).isDirectory()) {
+          return { path: packagedDir, source: 'packaged' };
+        }
+      } catch (e) {
+        // 目录不可用等同于 missing，由使用方如实报错。
+      }
+      return { path: null, source: 'missing' };
+    }
+
+    const knowledgeDir = resolveDataDir(pick('knowledgeBasePath'), PACKAGED_KNOWLEDGE_DIR);
+    const bankDir = resolveDataDir(pick('questionBankPath'), PACKAGED_QUESTION_BANK_DIR);
+    const KNOWLEDGE_BASE_PATH = knowledgeDir.path;
+    const KNOWLEDGE_SOURCE = knowledgeDir.source;
+    const QUESTION_BANK_PATH = bankDir.path;
+    const QUESTION_BANK_SOURCE = bankDir.source;
     const OUTPUT_PATH = pick('outputPath') ? toAbs(pick('outputPath')) : join(CONFIG_DIR, 'outputs');
     const WORKSPACE_ROOT = pick('workspaceRoot') ? toAbs(pick('workspaceRoot')) : CONFIG_DIR;
 
@@ -1649,9 +1669,9 @@ export default {
     // 写用户工作区会被拒；这里显式传入解析后的 workspaceRoot。
     const WRITE_POLICY = { mode: 'workspace-write', workspaceRoot: WORKSPACE_ROOT };
 
-    // 未配置时的统一报错：绝不回落到作者路径，也不静默返回空数据。
+    // 路径不可用时的统一报错：绝不回落到作者路径，也不静默返回空数据。
     function requirePath(value, what, key) {
-      if (!value) throw new Error('未配置' + what + '路径（' + key + '）：' + CONFIG_HINT);
+      if (!value) throw new Error(what + '路径不可用（' + key + ' 未配置且随仓库 data/ 缺失）：' + CONFIG_HINT);
       try {
         if (statSync(value).isDirectory()) return value;
       } catch (e) {
@@ -2539,13 +2559,60 @@ export default {
         }
       },
 
+      // /geo-status 使用的只读摘要：安装/数据/索引/最近讲题 run（不触发解题、不写盘）。
+      async statusSummary() {
+        await ensureSolveRunsLoaded();
+        const health = await this.health();
+        const runs = this.recentSolveRuns(3);
+        return {
+          status: health.status,
+          message: health.message || '',
+          data: health.config ? {
+            knowledgeSource: health.config.knowledgeSource,
+            questionBankSource: health.config.questionBankSource,
+            knowledgeBasePath: health.config.knowledgeBasePath,
+            questionBankPath: health.config.questionBankPath,
+            configPath: health.config.configPath,
+            configFileFound: health.config.configFileFound,
+            outputPath: health.config.outputPath
+          } : null,
+          counts: {
+            taxonomyNodes: health.taxonomyNodes ?? null,
+            bankFiles: health.bankFiles ?? null,
+            bankQuestions: health.bankQuestions ?? null
+          },
+          index: {
+            builtAt: health.indexBuiltAt ?? null,
+            fromDisk: health.indexFromDisk === true
+          },
+          recentRuns: runs
+        };
+      },
+
+      // 最近讲题 run（按提交/创建时间倒序），供状态命令展示，不含答案正文。
+      recentSolveRuns(limit) {
+        const n = Number.isSafeInteger(limit) && limit > 0 ? limit : 3;
+        return solveRegistry.list()
+          .sort((a, b) => (b.submittedAt || b.createdAt || 0) - (a.submittedAt || a.createdAt || 0))
+          .slice(0, n)
+          .map((run) => ({
+            questionId: run.questionId,
+            state: run.state,
+            submittedAt: run.submittedAt || null,
+            verifiedAt: run.verifiedAt || null
+          }));
+      },
+
       async health() {
         // 先如实回显解析结果：用户自查"我配的路径插件到底认不认、存不存在"。
         const configInfo = {
           configPath: CONFIG_PATH,
           configFileFound: existsSync(CONFIG_PATH),
+          dataRoot: DATA_ROOT,
           packagedKnowledgeDir: PACKAGED_KNOWLEDGE_DIR,
-          packagedKnowledgeDirUsed: KNOWLEDGE_BASE_PATH === PACKAGED_KNOWLEDGE_DIR,
+          packagedQuestionBankDir: PACKAGED_QUESTION_BANK_DIR,
+          knowledgeSource: KNOWLEDGE_SOURCE,
+          questionBankSource: QUESTION_BANK_SOURCE,
           knowledgeBasePath: KNOWLEDGE_BASE_PATH,
           questionBankPath: QUESTION_BANK_PATH,
           outputPath: OUTPUT_PATH,
@@ -2554,13 +2621,13 @@ export default {
           questionBankPathExists: QUESTION_BANK_PATH ? existsSync(QUESTION_BANK_PATH) : false
         };
         const missing = [];
-        if (!KNOWLEDGE_BASE_PATH) missing.push('knowledgeBasePath（考点库）');
-        if (!QUESTION_BANK_PATH) missing.push('questionBankPath（真题库）');
+        if (!KNOWLEDGE_BASE_PATH) missing.push('考点库（knowledgeBasePath 未配置，且随仓库 data/config 缺失）');
+        if (!QUESTION_BANK_PATH) missing.push('真题库（questionBankPath 未配置，且随仓库 data/obsidian_vault/04_题目 缺失）');
         if (missing.length) {
           return {
             status: 'error',
             configured: false,
-            message: '未配置：' + missing.join('、') + '。' + CONFIG_HINT,
+            message: '数据不可用：' + missing.join('、') + '。' + CONFIG_HINT,
             config: configInfo
           };
         }

@@ -1,0 +1,34 @@
+---
+taxonomy_id: "KU-NAT-UNIVERSE-004"
+level: "knowledge_unit"
+name: "太阳系行星的特征与地球的特殊性"
+parent_id: "TH-NAT-UNIVERSE"
+taxonomy_version: "v0.2-draft"
+generated_from_mappings: true
+---
+
+# 太阳系行星的特征与地球的特殊性
+
+`KU-NAT-UNIVERSE-004` · `knowledge_unit` · `v0.2-draft`
+
+## 定义
+
+八大行星的运动与结构特征，以及地球存在高级智慧生命的条件。
+
+## 层级关系
+
+- 领域：[[01_知识主题/领域/自然地理|自然地理]]
+- 主题：[[01_知识主题/主题/TH-NAT-UNIVERSE__地球的宇宙环境|地球的宇宙环境]]
+
+## 关联题目
+
+- 已关联题目数：0
+
+
+## 教师备注
+
+<!-- TEACHER-NOTES-START -->
+- 易错点：
+- 课堂提示：
+- 讲解建议：
+<!-- TEACHER-NOTES-END -->

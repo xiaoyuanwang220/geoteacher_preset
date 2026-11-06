@@ -56,14 +56,17 @@ function fixture(t) {
   return { root, configDir, knowledge, questions, config, writeConfig, mount };
 }
 
-test('缺配置时，健康检查与检索工具都返回可见错误', async t => {
+test('缺配置时使用随仓库 data/（与 Obsidian 同源），健康检查与检索都成功', async t => {
   const { mount } = fixture(t);
   const { api, search } = mount();
-  assert.equal((await api.health()).configured, false);
-  const result = await search.execute({ keyword: '热力环流' });
-  assert.equal(result.status, 'error');
-  assert.match(result.message, /questionBankPath/);
-  assert.equal('results' in result, false);
+  const health = await api.health();
+  // 仓库 data/ 随附（见 docs/工作台聚合与一键安装方案.md）；若在裁剪过的检出里运行，本用例应显式失败。
+  assert.equal(health.status, 'success');
+  assert.equal(health.config.knowledgeSource, 'packaged');
+  assert.equal(health.config.questionBankSource, 'packaged');
+  assert.ok(health.taxonomyNodes > 0);
+  assert.ok(health.bankQuestions > 0);
+  assert.equal((await search.execute({ keyword: '热力环流' })).status, 'success');
 });
 
 test('不存在的目录不能成为成功的空题库，也不能通过健康检查', async t => {
