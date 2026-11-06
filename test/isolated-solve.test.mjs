@@ -708,6 +708,40 @@ test('内部解题预设插件：persona 来自解题技能，且隐藏+拒绝�
   assert.throws(() => solverIsolationPlugin.apply(failingCtx, {}), /无法在 preset 作用域限制继承工具/);
 });
 
+test('隔离插件只访问已 inject 的服务（Cordis 未 inject 的属性访问会打挂 preset）', () => {
+  const calls = { sections: [], restrictions: [], guards: [] };
+  const base = {
+    tools: {
+      schemas: () => [{ name: 'session_search' }],
+      restrict: (filter) => { calls.restrictions.push(filter); return () => {}; },
+      guard: (guard) => { calls.guards.push(guard); return () => {}; }
+    },
+    systemPrompt: {
+      getSectionOrder: () => 7,
+      section(definition) { calls.sections.push(definition); return () => {}; }
+    },
+    effect(callback) {
+      const dispose = callback();
+      return typeof dispose === 'function' ? dispose : () => {};
+    },
+    get() { return undefined; }
+  };
+  const allowed = new Set(['tools', 'systemPrompt', 'effect', 'get']);
+  const strictCtx = new Proxy(base, {
+    get(target, prop, receiver) {
+      if (typeof prop === 'symbol') return Reflect.get(target, prop, receiver);
+      if (!allowed.has(prop)) {
+        throw new Error(`cannot get property "${prop}" without inject`);
+      }
+      return Reflect.get(target, prop, receiver);
+    }
+  });
+  assert.doesNotThrow(() => solverIsolationPlugin.apply(strictCtx, {}), '不得访问未 inject 的属性（如 ctx.timer）');
+  assert.equal(calls.sections.length, 1);
+  assert.ok(calls.restrictions.length >= 1);
+  assert.equal(calls.guards.length, 1);
+});
+
 test('geo_solve：已有同指纹作答时直接复用，不再启动子会话', async () => {
   const prepared = {
     ...DEFAULT_PREPARED,

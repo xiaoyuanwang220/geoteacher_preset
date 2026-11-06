@@ -789,6 +789,16 @@ async function checkPipelineDiscipline() {
       ? 'restrict + guard + skills/geo-solver.md + persona section（隐藏并拒绝宿主全局工具）'
       : '缺: ' + lockMissing.join(', '));
 
+  // Cordis 对未 inject 的服务属性会抛 `cannot get property "timer" without inject`，
+  // 这一异常会直接把 preset 挂载打挂（真实故障：solver-isolation 的 ctx.timer）。
+  // 只检查代码，忽略注释里对故障的说明。
+  const isolationCode = isolationSrc
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').map((line) => line.replace(/\/\/.*$/, '')).join('\n');
+  const injectViolation = /ctx\.timer\b/.test(isolationCode);
+  add('solver-inject-discipline', '隔离插件只访问已 inject 的服务（不触碰 ctx.timer 等）', !injectViolation,
+    injectViolation ? '仍访问未 inject 的 ctx.timer，会导致 preset 加载失败' : '仅访问 tools/systemPrompt（已 inject）与 ctx.get/ctx.effect');
+
   if (isolationMod && typeof isolationMod.readSolverPersona === 'function') {
     const loaded = isolationMod.readSolverPersona() || {};
     const body = String(loaded.text || '');

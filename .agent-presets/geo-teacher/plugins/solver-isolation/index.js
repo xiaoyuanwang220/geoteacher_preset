@@ -123,10 +123,9 @@ export default {
 
     // 4) 晚注册的宿主工具（session-search / modelcheck 等）在启动后才出现：短延时补 deny。
     //    deny 按名字生效，后续新增的名字不会自动被已有 restriction 覆盖，所以再扫一次。
-    if (typeof ctx.timer?.timeout === 'function') {
-      ctx.effect(() => ctx.timer.timeout(() => denyVisibleTools('延时复查'), 4000));
-      ctx.effect(() => ctx.timer.timeout(() => denyVisibleTools('延时复查'), 15000));
-    } else if (typeof setTimeout === 'function') {
+    //    注意：不能在未 inject 的情况下访问 `ctx.timer`（Cordis 会抛
+    //    `cannot get property "timer" without inject` 并打挂 preset），这里只用全局定时器。
+    if (typeof setTimeout === 'function') {
       const t1 = setTimeout(() => denyVisibleTools('延时复查'), 4000);
       const t2 = setTimeout(() => denyVisibleTools('延时复查'), 15000);
       if (t1 && typeof t1.unref === 'function') t1.unref();
