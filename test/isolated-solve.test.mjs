@@ -693,7 +693,18 @@ test('geo_solve：在内部预设的隔离子会话中解题，作答回写服�
   assert.equal(harness.calls.dispose, 1, '子会话结束后必须 dispose');
 
   assert.doesNotThrow(() => assertLossless(result, 'geo_solve'));
-  assert.match(renderSolve({ qid: 'T-B-2' }, result)[0].text, /独立作答.*（隔离解题会话）/);
+  const solveText = renderSolve({ qid: 'T-B-2' }, result)[0].text;
+  assert.match(solveText, /独立作答.*（隔离解题会话）/);
+  assert.match(solveText, /来源：本次新建隔离会话作答/);
+  assert.match(solveText, /隔离会话：child-42/);
+  const reusedText = renderSolve({ qid: 'T-B-2' }, {
+    ...result,
+    reused: true,
+    answerOrigin: 'reused',
+    answer: { submittedAt: '2026-11-06T05:00:00.000Z', childSessionId: 'child-old' }
+  })[0].text;
+  assert.match(reusedText, /来源：复用已有隔离作答（提交于 .*；本次未重新解题）/);
+  assert.match(reusedText, /隔离会话：child-old/);
 });
 
 test('内部解题预设插件：persona 来自解题技能，且隐藏+拒绝一切继承工具', () => {

@@ -261,6 +261,8 @@ async function runIsolatedSolve(ctx, exec, qid, options) {
       runId: prepared.runId,
       state: prepared.state,
       reused: true,
+      answerOrigin: 'reused',
+      answerSessionId: prepared.answer.childSessionId || prepared.answerSessionId || '',
       submittedAt: prepared.answer.submittedAt,
       independentAnswer: prepared.answer.answerText,
       keyEvidence: prepared.answer.keyEvidence,
@@ -354,6 +356,8 @@ async function runIsolatedSolve(ctx, exec, qid, options) {
     runId: prepared.runId,
     state: recorded.state,
     reused: false,
+    answerOrigin: 'fresh',
+    answerSessionId: activation.childId || '',
     submittedAt: recorded.submittedAt,
     independentAnswer: answerText.slice(0, 4000),
     keyEvidence,
@@ -422,9 +426,10 @@ export function renderSolve(args, value) {
   const lines = [];
   lines.push(`# 独立作答 ${d.questionId || ''}（隔离解题会话）`);
   const answerSession = (d.answer && d.answer.childSessionId) || d.answerSessionId || '';
+  const submittedAt = (d.answer && d.answer.submittedAt) || d.submittedAt || null;
   const origin = d.answerOrigin === 'reused' || d.reused
-    ? `复用已有隔离作答（提交于 ${formatTime(d.answer && d.answer.submittedAt)}；本次未重新解题）`
-    : `本次新建隔离会话作答（提交于 ${formatTime(d.answer && d.answer.submittedAt)}）`;
+    ? `复用已有隔离作答（提交于 ${formatTime(submittedAt)}；本次未重新解题）`
+    : `本次新建隔离会话作答（提交于 ${formatTime(submittedAt)}）`;
   lines.push(`- 运行：${d.runId || '—'}｜状态：${d.state || '—'}｜来源：${origin}${answerSession ? '｜隔离会话：' + answerSession : ''}`);
   lines.push(`- 作答覆盖小问：${d.questionCount || 0} 个｜题面图片：${d.imageStatus || 'none'}（${d.imageCount || 0} 张）`);
   lines.push('');
