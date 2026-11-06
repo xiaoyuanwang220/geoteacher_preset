@@ -1,12 +1,12 @@
-# GeoEduAgent · 高中地理教师辅助 Agent
+# GeoSparkAI · 高中地理教师辅助 Agent
 
-GeoEduAgent 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（下称 DSH）上的**高中地理教学预设**：它在会话里提供一套地理教师工具链与技能，让模型基于**本地真题库、考点树、课标与教材原文**工作，而不是凭记忆生成教学内容。
+GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（下称 DSH）上的**高中地理教学预设**：它在会话里提供一套地理教师工具链与技能，让模型基于**本地真题库、考点树、课标与教材原文**工作，而不是凭记忆生成教学内容。
 
 它解决的是「通用大模型能写教案，但写不准」的落差：考点要能对到自己的考点库，真题要能对到原题与答案，命题要能过结构校验，讲题要先把答案隔离在解题完成之后。所以本项目把三件事分开做——**工具的确定性部分交给代码，教学判断交给模型，人工评审保留人工**。
 
 数据（考点库、真题库）由使用者自行提供并在本机绑定，不随仓库分发。
 
-> *English summary: GeoEduAgent is a high-school geography teaching agent preset for DeepSeek Harness — question explaining, exam-item authoring, lesson planning and model-completion verification, grounded in a local exam bank and curriculum taxonomy.*
+> *English summary: GeoSparkAI is a high-school geography teaching agent preset for DeepSeek Harness — question explaining, exam-item authoring, lesson planning and model-completion verification, grounded in a local exam bank and curriculum taxonomy.*
 
 ## 能做什么
 
