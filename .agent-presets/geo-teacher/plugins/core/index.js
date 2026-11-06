@@ -900,13 +900,14 @@ export function createSolveRegistry(options) {
   function ensureRun(input) {
     const questionId = String((input && input.questionId) || '');
     const fingerprint = String((input && input.questionFingerprint) || '');
+    const fresh = Boolean(input && input.fresh === true);
     const incomingIds = Array.isArray(input && input.questionIds)
       ? input.questionIds.map((id) => String(id || '')).filter(Boolean)
       : [];
     const questionIds = incomingIds.length > 0 ? [...new Set(incomingIds)] : [questionId];
     const previousId = latest.get(questionId);
     const previous = previousId ? runs.get(previousId) : null;
-    if (previous && previous.questionFingerprint === fingerprint) {
+    if (!fresh && previous && previous.questionFingerprint === fingerprint) {
       const previousIds = Array.isArray(previous.questionIds) && previous.questionIds.length
         ? previous.questionIds
         : [previous.questionId];
@@ -926,13 +927,20 @@ export function createSolveRegistry(options) {
       const reusable = previous.state === SOLVE_STATES.SUBMITTED || previous.state === SOLVE_STATES.VERIFIED;
       return { run: cloneRun(previous), reused: reusable, invalidated: false };
     }
-    const runId = `${questionId}__${fingerprint}`;
-    const existing = runs.get(runId);
-    if (existing) {
+    const baseRunId = `${questionId}__${fingerprint}`;
+    const existing = runs.get(baseRunId);
+    if (!fresh && existing) {
       // 题面回退到旧版本时，旧 run 仍是当前题面的有效记录：重新指向它，避免误报版本变化。
       if (!Array.isArray(existing.questionIds) || existing.questionIds.length === 0) existing.questionIds = questionIds;
-      latest.set(questionId, runId);
+      latest.set(questionId, baseRunId);
       return { run: cloneRun(existing), reused: existing.state !== SOLVE_STATES.READY, invalidated: false };
+    }
+    // fresh=true：即使同指纹已有作答，也新建一个 run 强制重新独立作答（用户明确要求“重新解题”时使用）。
+    let runId = baseRunId;
+    if (fresh && runs.has(baseRunId)) {
+      let n = 1;
+      while (runs.has(`${baseRunId}__fresh${n}`)) n += 1;
+      runId = `${baseRunId}__fresh${n}`;
     }
     const run = remember({
       runId,
@@ -2298,8 +2306,9 @@ export default {
       // ===== 讲题运行记录（题面就绪 → 作答已提交 → 核验完成）=====
       // 题面准备：分离题面与答案解析，指纹绑定题面；已有同指纹已提交 run 时直接复用。
       // 无法判定题答边界时指出具体题目，请教师确认，不猜测。
-      async prepareSolve(questionId) {
+      async prepareSolve(questionId, options) {
         try {
+          const prepareOptions = options && typeof options === 'object' ? options : {};
           await ensureSolveRunsLoaded();
           const ctxInfo = await questionRunContext(questionId);
           if (ctxInfo.notFound) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
@@ -2320,7 +2329,8 @@ export default {
           const ensured = solveRegistry.ensureRun({
             questionId: ctxInfo.groupKey,
             questionFingerprint: ctxInfo.fingerprint,
-            questionIds: ctxInfo.questions.map((item) => item.questionId)
+            questionIds: ctxInfo.questions.map((item) => item.questionId),
+            fresh: prepareOptions.fresh === true
           });
           const run = ensured.run;
           return {
@@ -2333,6 +2343,10 @@ export default {
             questionFingerprint: ctxInfo.fingerprint,
             state: run.state,
             reused: ensured.reused,
+            // reused=true 表示没有新建子会话：作答来自此前某个隔离会话（answer.childSessionId），
+            // 渲染与技能必须如实说明，不能表述成“本次重新解题”。
+            answerOrigin: run.answer ? (ensured.reused ? 'reused' : 'fresh') : 'none',
+            answerSessionId: run.answer ? (run.answer.childSessionId || '') : '',
             invalidatedPrevious: ensured.invalidated,
             material: ctxInfo.q.material || '',
             questions: ctxInfo.questions,
@@ -2345,6 +2359,7 @@ export default {
               ? {
                 answerText: run.answer.answerText,
                 keyEvidence: run.answer.keyEvidence,
+                childSessionId: run.answer.childSessionId || '',
                 submittedAt: run.answer.submittedAt || run.submittedAt,
                 answerHash: run.answer.answerHash
               }

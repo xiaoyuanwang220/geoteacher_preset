@@ -249,9 +249,10 @@ function isolationProblem(ctx, exec) {
 }
 
 // 在全新上下文执行独立解题：题面 + 图片 → 子会话 → 作答回传 → 服务端保存。
-async function runIsolatedSolve(ctx, exec, qid) {
+async function runIsolatedSolve(ctx, exec, qid, options) {
   const kernel = ctx.geoKernel;
-  const prepared = await kernel.prepareSolve(qid);
+  const solveOptions = options && typeof options === 'object' ? options : {};
+  const prepared = await kernel.prepareSolve(qid, { fresh: solveOptions.fresh === true });
   if (prepared.status !== 'success') return prepared;
   if (prepared.reused && prepared.answer) {
     return {
@@ -420,7 +421,11 @@ export function renderSolve(args, value) {
   if (d.status !== 'success') return renderJson(args, value);
   const lines = [];
   lines.push(`# 独立作答 ${d.questionId || ''}（隔离解题会话）`);
-  lines.push(`- 运行：${d.runId || '—'}｜状态：${d.state || '—'}｜提交：${formatTime(d.submittedAt)}${d.reused ? '｜复用已有作答（未重新解题）' : ''}`);
+  const answerSession = (d.answer && d.answer.childSessionId) || d.answerSessionId || '';
+  const origin = d.answerOrigin === 'reused' || d.reused
+    ? `复用已有隔离作答（提交于 ${formatTime(d.answer && d.answer.submittedAt)}；本次未重新解题）`
+    : `本次新建隔离会话作答（提交于 ${formatTime(d.answer && d.answer.submittedAt)}）`;
+  lines.push(`- 运行：${d.runId || '—'}｜状态：${d.state || '—'}｜来源：${origin}${answerSession ? '｜隔离会话：' + answerSession : ''}`);
   lines.push(`- 作答覆盖小问：${d.questionCount || 0} 个｜题面图片：${d.imageStatus || 'none'}（${d.imageCount || 0} 张）`);
   lines.push('');
   // 作答原文自带「## 答案 / ## 关键依据 / ## 推理过程」三段，原样呈现，不再另加同名标题（避免重复）。
@@ -779,11 +784,12 @@ export default {
     // 模型工具：隔离解题（讲题流水线第 1 步）
     ctx.tools.register({
       name: 'geo_solve',
-      description: '讲题第 1 步：在全新隔离会话中独立解题（只给题面与题面图片），返回独立答案与关键依据，服务端保存作答并绑定题面版本。答案与解析在提交后才由 geo_judge 开放。前置：有题库 qid；同题已有提交时复用。',
+      description: '讲题第 1 步：在全新隔离会话中独立解题（只给题面与题面图片），返回独立答案与关键依据，服务端保存作答并绑定题面版本。答案与解析在提交后才由 geo_judge 开放。前置：有题库 qid；同题已有提交时复用（reused=true，不新建子会话，作答来自此前的隔离会话）。',
       parameters: {
         type: 'object',
         properties: {
-          qid: { type: 'string', description: '题目 ID（如 2025-广东-地理-...-Q1）' }
+          qid: { type: 'string', description: '题目 ID（如 2025-广东-地理-...-Q1）' },
+          fresh: { type: 'boolean', description: '强制重新独立作答：新建隔离会话，不复用同指纹的已有作答（默认 false）' }
         },
         required: ['qid'],
         additionalProperties: false
@@ -795,7 +801,7 @@ export default {
       async execute(args, exec) {
         const qid = String((args && args.qid) || '').trim();
         if (!qid) return { status: 'error', code: 'MISSING_QID', message: '缺少 qid' };
-        return await runIsolatedSolve(ctx, exec, qid);
+        return await runIsolatedSolve(ctx, exec, qid, { fresh: args.fresh === true });
       }
     });
 

@@ -921,9 +921,9 @@ async function checkPipelineDiscipline() {
     overBudget.length === 0
       ? toolLens.map(t => `${t.name} ${t.len}`).join(' / ')
       : '超限/缺失: ' + overBudget.map(t => `${t.name}(${t.len})`).join(', '));
-  const expectParams = { geo_solve: 'qid', geo_judge: 'qid,conclusion', geo_explain: 'qid,audience' };
+  const expectParams = { geo_solve: 'qid,fresh', geo_judge: 'qid,conclusion', geo_explain: 'qid,audience' };
   const badParams = toolLens.filter(t => t.params.join(',') !== expectParams[t.name]);
-  add('tool-params', '讲题工具参数只留入口参数（qid / conclusion / audience）', badParams.length === 0,
+  add('tool-params', '讲题工具参数只留入口参数（qid / fresh / conclusion / audience）', badParams.length === 0,
     badParams.length === 0
       ? talkingTools.map(n => `${n}(${expectParams[n]})`).join(' / ')
       : badParams.map(t => `${t.name}(${t.params.join(',') || '空'})`).join(', '));

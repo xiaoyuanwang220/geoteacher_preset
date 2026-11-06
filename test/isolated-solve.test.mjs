@@ -275,6 +275,26 @@ test('run 状态机：未提交不给答案、未开答案不能归档、verdict
   assert.equal(replay.run.answer.answerText.includes('覆盖作答'), false);
 });
 
+test('fresh=true 强制新建 run，不复用已有作答', () => {
+  let clock = 1_700_000_000_000;
+  const registry = createSolveRegistry({ now: () => (clock += 1000) });
+  const fingerprint = questionFingerprint({ questionId: 'F-1', material: '材料', stems: ['题干'], options: [], images: [] });
+  const first = registry.ensureRun({ questionId: 'F-1', questionIds: ['F-1'], questionFingerprint: fingerprint }).run;
+  registry.submit(first.runId, { answerText: '## 答案\nA' });
+  registry.openReference(first.runId);
+  registry.recordVerification(first.runId, 'F-1', { verdict: 'consistent' });
+
+  const second = registry.ensureRun({ questionId: 'F-1', questionIds: ['F-1'], questionFingerprint: fingerprint, fresh: true });
+  assert.notEqual(second.run.runId, first.runId, 'fresh 必须新建 run');
+  assert.equal(second.run.state, SOLVE_STATES.READY);
+  assert.equal(second.reused, false);
+  assert.equal(registry.statusFor('F-1', fingerprint).runId, second.run.runId, 'latest 指向新 run');
+  assert.equal(registry.list().length, 2, '旧作答保留在历史记录中');
+
+  const reused = registry.ensureRun({ questionId: 'F-1', questionIds: ['F-1'], questionFingerprint: fingerprint });
+  assert.equal(reused.run.runId, second.run.runId);
+});
+
 test('run 持久化兼容：旧单条结论迁移为按小问结论，题组扩容时要求重新核验', () => {
   const registry = createSolveRegistry({});
   const fingerprint = questionFingerprint({ questionId: 'OLD-1', material: '材料', stems: ['题干'], options: [], images: [] });

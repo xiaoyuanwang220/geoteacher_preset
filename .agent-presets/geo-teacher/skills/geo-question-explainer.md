@@ -30,6 +30,7 @@ whenToUse: 讲题、怎么讲、讲解题思路、面向学生/教师/命题人�
 
 - 调用一次 `geo_solve(qid)`（题组用任一小问的 qid 即可），由插件启动隔离解题会话完成**整个题组**的作答并保存，返回独立作答与关键依据。不得把题面、答案或任何提示交给解题侧，解题期间不干预。
 - 返回 `reused` 表示同指纹已有 submitted／verified run，直接沿用；**不要对同题组的其它小问重复调用**（会复用同一次作答）。
+- **`reused=true` 时必须如实说明**："复用已有隔离作答（提交于 …），本次未重新解题"，并带出隔离会话 id；不得表述成"本次新建隔离会话/重新解题"。如果用户要求"重新独立作答/换个会话再解"，调用 `geo_solve(qid, { fresh: true })` 强制新建隔离会话；不传 `fresh` 时保持复用。
 - 失败时如实报告错误码（如 `SOLVER_ISOLATION_UNAVAILABLE`、`IMAGE_DELIVERY_INCOMPLETE`、`SOLVER_RUN_FAILED`），不回落主会话自解。
 
 ### 第二步 核验（geo_judge，两阶段）
