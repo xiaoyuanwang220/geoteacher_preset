@@ -699,37 +699,264 @@ function checkSkills() {
     dangling.length === 0 ? `${refCount} 处引用全部可达` : `悬空: ${dangling.join('; ')}`);
 }
 
-// ── 9. 讲题流水线纪律（源码断言，回归保护） ─────────────────
-function checkPipelineDiscipline() {
+// ── 9. 讲题流水线纪律（源码 + 行为断言，回归保护） ───────────
+// 契约 §7：题答分离、隔离执行、作答绑定与门禁、核验状态、工具描述预算、
+// 索引版本与题面图片字段同步。可 import 的契约直接 import 后断言行为，
+// 无导出面的契约用源码 token 断言；不把"字符串还在"当作唯一证据。
+const TOOL_DESC_BUDGET = 350; // 三个讲题工具 description 的字符预算（教学细则移入技能）
+async function checkPipelineDiscipline() {
+  const coreFile = join(PRESET_SRC, 'plugins', 'core', 'index.js');
+  const analysisFile = join(PRESET_SRC, 'plugins', 'analysis', 'index.js');
+  const coreSrc = readFileSync(coreFile, 'utf8');
+  const analysisSrc = readFileSync(analysisFile, 'utf8');
+
+  let coreMod = null;
+  try { coreMod = await import(pathToFileURL(coreFile).href); } catch (e) { /* checkImport 已报错 */ }
+  let analysisMod = null;
+  try { analysisMod = await import(pathToFileURL(analysisFile).href); } catch (e) { /* checkImport 已报错 */ }
+
+  const missingOf = (src, tokens) => tokens.filter(t => !src.includes(t));
+
   // (a) solver 不得含解析派生的 distractorClues（等于泄露答案）
-  const coreSrc = readFileSync(join(PRESET_SRC, 'plugins', 'core', 'index.js'), 'utf8');
   const noClues = !/distractorClues/.test(coreSrc);
   add('solve-leak', 'solve 无解析派生泄漏 (distractorClues)', noClues,
     noClues ? 'solutionScaffold 无 distractorClues' : 'core/index.js 仍含 distractorClues');
 
-  // (b) geo_solve 必须交付 DSH 原生图片，并显式表达图片交付状态
-  const analysisSrc = readFileSync(join(PRESET_SRC, 'plugins', 'analysis', 'index.js'), 'utf8');
-  const nativeImages = /attachments\.saveImage/.test(analysisSrc) && /type:\s*['"]image['"]/.test(analysisSrc) && /imageDelivery/.test(analysisSrc);
-  add('native-images', 'geo_solve 原生图片附件契约', nativeImages,
-    nativeImages ? 'saveImage + ImageBlock + imageDelivery' : 'analysis/index.js 缺少原生图片交付契约');
-  const explicitDelivery = /'none'/.test(analysisSrc) && /'complete'/.test(analysisSrc) && /'partial'/.test(analysisSrc) && /'degraded'/.test(analysisSrc);
-  add('image-degrade', '图片交付显式降级', explicitDelivery,
-    explicitDelivery ? 'none / complete / partial / degraded 状态齐全' : 'imageDelivery 状态不完整');
+  // (b) 题答分离：core 解析层必须给出题面图片 / 解析图 / 边界检测三类输出
+  const sepTokens = ['questionImages', 'analysisImages', 'boundaryIssues', 'QUESTION_BOUNDARY_UNCERTAIN', 'stripImageMarkdown'];
+  const sepMissing = missingOf(coreSrc, sepTokens);
+  add('solve-separation', '题答分离（题面图片 / 解析图 / 边界不明指题）', sepMissing.length === 0,
+    sepMissing.length === 0
+      ? 'questionImages / analysisImages / boundaryIssues / QUESTION_BOUNDARY_UNCERTAIN / stripImageMarkdown 齐全'
+      : '缺: ' + sepMissing.join(', '));
 
-  // (c) 活跃预设不得残留旧视觉服务、工具或路由
-  const activeFiles = walkFiles(PRESET_SRC).filter(f => /\.(?:js|yml|md|html)$/.test(f));
-  const activeText = activeFiles.map(f => readFileSync(f, 'utf8')).join('\n');
-  const legacyPattern = /geoVision|dshVision|vision_inspect|vision_ocr|vision_locate|geo_extract_images|\/geo\/vision\//;
-  const legacyRemoved = !legacyPattern.test(activeText) && !existsSync(join(PRESET_SRC, 'plugins', 'vision', 'index.js'));
-  add('legacy-vision', '旧视觉链路已从活跃预设移除', legacyRemoved,
-    legacyRemoved ? '无旧服务、工具、路由或 vision 插件' : '活跃预设仍含旧视觉引用');
+  // (c) 解题 prompt 只含题面：用插件导出的构造器实测，答案/解析/知识点/qid/路径一律不进入
+  if (analysisMod && typeof analysisMod.buildSolvePrompt === 'function') {
+    const S = { qid: 'QID-SENTINEL', run: 'RUN-SENTINEL', file: 'FILE-SENTINEL.md', answer: 'ANSWER-SENTINEL', analysis: 'ANALYSIS-SENTINEL', ku: 'KNOWLEDGE-SENTINEL', fp: 'FP-SENTINEL' };
+    const prompt = analysisMod.buildSolvePrompt({
+      questionId: S.qid,
+      runId: S.run,
+      questionFingerprint: S.fp,
+      file: S.file,
+      material: '材料正文',
+      questions: [{ questionId: S.qid, stem: '题干正文？', options: ['A 甲', 'B 乙'] }],
+      questionImages: [{ caption: '图1 图注', rel: 'sentinel.png' }],
+      answer: S.answer,
+      analysis: S.analysis,
+      knowledgePoints: [{ knowledge_unit: S.ku }]
+    });
+    const leaks = [S.qid, S.run, S.file, S.fp, S.answer, S.analysis, S.ku, '.png'].filter(t => prompt.includes(t));
+    const keeps = ['材料正文', '题干正文？', 'A 甲', '图1 图注', '## 答案', '## 关键依据', '## 推理过程'].filter(t => !prompt.includes(t));
+    add('solve-prompt-isolation', '解题 prompt 只含题面（无 qid/路径/答案/解析/知识点）',
+      leaks.length === 0 && keeps.length === 0,
+      leaks.length ? '泄漏: ' + leaks.join(', ') : keeps.length ? '缺题面字段或输出格式: ' + keeps.join(', ') : '题面与图片图注齐全，答案/解析/知识点/qid/路径 0 泄漏');
+  } else {
+    add('solve-prompt-isolation', '解题 prompt 只含题面（buildSolvePrompt 可导入）', false, 'analysis/index.js 未导出 buildSolvePrompt');
+  }
 
-  // (d) judge/explain 必须接收独立答案与核验结果（编排参数）
-  const hasOrchestration = /independentAnswer/.test(analysisSrc);
-  add('pipeline-orch', 'judge/explain 编排参数 (independentAnswer)', hasOrchestration,
-    hasOrchestration ? 'geo_judge/geo_explain 接收独立答案' : 'analysis/index.js 无 independentAnswer');
+  // (d) 旧解题路径已删除：geo_solve 不再组合 questionData + solutionScaffold 自解
+  const legacyCompose = ['questionData', 'solutionScaffold'].filter(t => analysisSrc.includes(t));
+  add('solve-no-legacy-compose', 'geo_solve 不再组合 questionData/solutionScaffold 取答案', legacyCompose.length === 0,
+    legacyCompose.length === 0 ? '解题输入只来自 prepareSolve（题面口径）' : 'analysis/index.js 仍含旧组合: ' + legacyCompose.join(', '));
 
-  // (e) 数据/解析层修复断言（会话复盘-20260817 §五 1-4 / 修复方案-20260817 P0-P1，防回归）
+  // (e) 隔离执行：内部预设 + spawn 子会话 + caller 交付 + 明确失败码
+  const isoTokens = ['subagents.startActivation', 'agentPreset', "delivery: 'caller'", 'SOLVER_ISOLATION_UNAVAILABLE', 'SOLVER_RUN_FAILED', 'INTERNAL_SOLVER_PRESET_ID'];
+  const isoMissing = missingOf(analysisSrc, isoTokens);
+  add('solve-isolation', '隔离执行（startActivation / agentPreset / caller / 失败不回落）', isoMissing.length === 0,
+    isoMissing.length === 0
+      ? 'startActivation + agentPreset + delivery:caller + SOLVER_ISOLATION_UNAVAILABLE + SOLVER_RUN_FAILED + INTERNAL_SOLVER_PRESET_ID'
+      : '缺: ' + isoMissing.join(', '));
+
+  // (f) 内部预设结构：id 固定、plugins 只有一行 persona（零工具）
+  if (analysisMod && typeof analysisMod.buildSolverPresetDefinition === 'function') {
+    const def = analysisMod.buildSolverPresetDefinition('PERSONA-SENTINEL') || {};
+    const plugins = Array.isArray(def.plugins) ? def.plugins : [];
+    const personaRow = plugins[0] || {};
+    const presetOk = def.id === 'geo-solver-internal'
+      && analysisMod.INTERNAL_SOLVER_PRESET_ID === 'geo-solver-internal'
+      && plugins.length === 1
+      && personaRow.name === '@deepseek-ai/dsh-persona'
+      && personaRow.config && personaRow.config.prefix === 'PERSONA-SENTINEL'
+      && !('tools' in def);
+    add('solver-preset', '内部解题预设：geo-solver-internal 只含 persona 一行（零工具）', presetOk,
+      presetOk ? `id=${def.id}，plugins=[persona]，无 tools 字段` : `id=${def.id}, plugins=${plugins.map(p => p.name).join('|') || '(空)'}, 含tools=${'tools' in def}`);
+  } else {
+    add('solver-preset', '内部解题预设结构可校验（buildSolverPresetDefinition 可导入）', false, 'analysis/index.js 未导出 buildSolverPresetDefinition');
+  }
+
+  // (g) persona 正文来自技能文件，且不含 {{ }} 模板变量、含固定输出格式
+  if (analysisMod && typeof analysisMod.loadSolverPersona === 'function') {
+    const loaded = analysisMod.loadSolverPersona() || {};
+    const body = String(loaded.persona || '');
+    const personaOk = loaded.fallback !== true
+      && [...body].length >= 1000
+      && !/\{\{[^}]*\}\}/.test(body)
+      && body.includes('## 答案') && body.includes('## 关键依据');
+    add('solver-persona', '解题 persona 来自 skills/geo-solver.md（无模板变量 / 含固定输出格式）', personaOk,
+      personaOk ? `来源 ${basename(String(loaded.source || ''))}，正文 ${[...body].length} 码点` : `fallback=${loaded.fallback}, 正文 ${[...body].length} 码点${loaded.error ? '，错误: ' + loaded.error : ''}`);
+  } else {
+    add('solver-persona', '解题 persona 可校验（loadSolverPersona 可导入）', false, 'analysis/index.js 未导出 loadSolverPersona');
+  }
+
+  // (h) 作答绑定与门禁（core 源码 + 状态机实测）
+  const gateTokens = ['SOLVE_NOT_SUBMITTED', 'JUDGE_NOT_OPENED', 'EXPLAIN_NOT_VERIFIED', 'questionFingerprint', 'solve-runs.json'];
+  const gateMissing = missingOf(coreSrc, gateTokens);
+  add('solve-gates', '作答绑定与门禁（门禁码 / 题面指纹 / run 持久化）', gateMissing.length === 0,
+    gateMissing.length === 0
+      ? 'SOLVE_NOT_SUBMITTED / JUDGE_NOT_OPENED / EXPLAIN_NOT_VERIFIED / questionFingerprint / solve-runs.json'
+      : '缺: ' + gateMissing.join(', '));
+
+  if (coreMod) {
+    const needExports = ['parseQuestionFileFull', 'questionFingerprint', 'createSolveRegistry', 'SOLVE_STATES', 'rankSimilarQuestions', 'buildExplainerReport', 'EXPLAIN_CONTENT_REQUIREMENTS', 'EXPLAIN_RULESET_VERSION'];
+    const lostExports = needExports.filter(k => coreMod[k] === undefined);
+    add('solve-exports', 'core 讲题契约导出齐全', lostExports.length === 0,
+      lostExports.length === 0 ? needExports.join(', ') : '缺导出: ' + lostExports.join(', '));
+
+    const reg = coreMod.createSolveRegistry({});
+    const qid = 'verify-group';
+    const fp = coreMod.questionFingerprint({ questionId: qid, material: '材料', stems: ['题干'], options: [], images: [] });
+    const run = reg.ensureRun({ questionId: qid, questionFingerprint: fp }).run;
+    const openBeforeSubmit = reg.openReference(run.runId);
+    const verifyBeforeOpen = reg.recordVerification(run.runId, { verdict: 'consistent' });
+    const submitted = reg.submit(run.runId, { answerText: '## 答案\nB', keyEvidence: '依据' });
+    const opened = reg.openReference(run.runId);
+    const badVerdict = reg.recordVerification(run.runId, { verdict: 'maybe' });
+    const verified = reg.recordVerification(run.runId, { verdict: 'consistent', matched: ['B'] });
+    const stateMachineOk = openBeforeSubmit.ok === false && openBeforeSubmit.code === 'SOLVE_NOT_SUBMITTED'
+      && verifyBeforeOpen.ok === false && verifyBeforeOpen.code === 'JUDGE_NOT_OPENED'
+      && submitted.ok === true && submitted.run.state === coreMod.SOLVE_STATES.SUBMITTED
+      && opened.ok === true
+      && badVerdict.ok === false && badVerdict.code === 'CONCLUSION_INVALID'
+      && verified.ok === true && verified.run.state === coreMod.SOLVE_STATES.VERIFIED;
+    add('solve-state-machine', 'run 状态机门禁（未提交不给答案 / 未开答案不能归档 / verdict 校验）', stateMachineOk,
+      stateMachineOk
+        ? 'question_ready → submitted → verified；三道门禁按序生效'
+        : `open前=${openBeforeSubmit.code}, 归档前=${verifyBeforeOpen.code}, 非法verdict=${badVerdict.code}, 最终=${verified.ok}`);
+  }
+
+  // (i) geo_judge 两阶段：无 conclusion 开答案，有 conclusion 归档
+  const judgeStart = analysisSrc.indexOf("name: 'geo_judge'");
+  const explainStart = analysisSrc.indexOf("name: 'geo_explain'");
+  const judgeBlock = judgeStart >= 0 && explainStart > judgeStart ? analysisSrc.slice(judgeStart, explainStart) : '';
+  const judgeTwoPhase = judgeBlock.includes('openReferenceAnswer') && judgeBlock.includes('recordVerification');
+  add('judge-two-phase', 'geo_judge 两阶段（开放答案 → 归档核验结论）', judgeTwoPhase,
+    judgeTwoPhase ? 'openReferenceAnswer + recordVerification 均在 geo_judge 分支内' : 'geo_judge 未同时接 openReferenceAnswer 与 recordVerification');
+
+  // (j) 核验状态只来自服务端记录：旧"提供材料待核验"路径与编排参数已删除
+  const removedVerification = ['self_reported_material', 'buildVerification', 'toJudgeReportJson', 'judgeReport'].filter(t => analysisSrc.includes(t));
+  add('verification-state', '核验状态来自服务端运行记录（无 self_reported_material/buildVerification/toJudgeReportJson/judgeReport）',
+    removedVerification.length === 0,
+    removedVerification.length === 0 ? '旧待核验路径与 judgeReport 编排参数均已移除' : '仍含: ' + removedVerification.join(', '));
+
+  const explainBlock = explainStart >= 0
+    ? analysisSrc.slice(explainStart, positionOf(analysisSrc, "name: 'geo_export_analysis'", explainStart))
+    : '';
+  const explainParams = explainBlock.slice(explainBlock.indexOf('parameters:'), explainBlock.indexOf('output:'));
+  const explainContractOk = analysisSrc.includes('assembleExplanation')
+    && coreSrc.includes('server_run_record')
+    && /qid/.test(explainParams) && /audience/.test(explainParams)
+    && !/independentAnswer|judgeReport|conclusion/.test(explainParams);
+  add('explain-verified-only', 'geo_explain 只读服务端核验记录（assembleExplanation + server_run_record）', explainContractOk,
+    explainContractOk
+      ? 'geo_explain 参数只剩 qid/audience；核验证据由 core 写入 server_run_record'
+      : 'geo_explain 仍接收模型自报材料或缺 server_run_record 证据（参数: ' + (explainParams.replace(/\s+/g, ' ').slice(0, 80) || '(未找到)') + '）');
+
+  // (k) 工具描述预算：三个讲题工具 ≤ 350 字符，教学细则归技能
+  const toolDefs = new Map();
+  if (analysisMod && analysisMod.default && typeof analysisMod.default.apply === 'function') {
+    const mockCtx = {
+      webServer: { register() {} },
+      tools: { register(def) { if (def && def.name) toolDefs.set(def.name, def); return () => {}; } },
+      geoKernel: {},
+      get() { return undefined; },
+      effect(cb) { try { return cb(); } catch (e) { return () => {}; } }
+    };
+    try { analysisMod.default.apply(mockCtx, {}); } catch (e) { /* apply 冒烟另有检查 */ }
+  }
+  const talkingTools = ['geo_solve', 'geo_judge', 'geo_explain'];
+  const toolLens = talkingTools.map(name => {
+    const def = toolDefs.get(name) || {};
+    return {
+      name,
+      len: [...String(def.description || '')].length,
+      params: Object.keys((def.parameters && def.parameters.properties) || {})
+    };
+  });
+  const overBudget = toolLens.filter(t => t.len === 0 || t.len > TOOL_DESC_BUDGET);
+  add('tool-desc-budget', `讲题工具 description ≤ ${TOOL_DESC_BUDGET} 字符`, overBudget.length === 0,
+    overBudget.length === 0
+      ? toolLens.map(t => `${t.name} ${t.len}`).join(' / ')
+      : '超限/缺失: ' + overBudget.map(t => `${t.name}(${t.len})`).join(', '));
+  const expectParams = { geo_solve: 'qid', geo_judge: 'qid,conclusion', geo_explain: 'qid,audience' };
+  const badParams = toolLens.filter(t => t.params.join(',') !== expectParams[t.name]);
+  add('tool-params', '讲题工具参数只留入口参数（qid / conclusion / audience）', badParams.length === 0,
+    badParams.length === 0
+      ? talkingTools.map(n => `${n}(${expectParams[n]})`).join(' / ')
+      : badParams.map(t => `${t.name}(${t.params.join(',') || '空'})`).join(', '));
+
+  // (l) 讲稿骨架契约（规则版本 3 / 四项内容要求 / knowledgeRole / comparison / transfer）
+  if (coreMod && typeof coreMod.buildExplainerReport === 'function') {
+    const sample = {
+      questionId: 'verify-q1',
+      file: 'verify.md',
+      material: '该地位于沿海，受暖流影响，气温较高，降水较多，地形以平原为主。',
+      stem: '分析该地气温高于同纬度的原因。',
+      options: [],
+      answer: '受暖流影响',
+      analysis: '暖流增温',
+      knowledgePoints: [
+        { role: 'core_exam_point', knowledge_unit: '洋流对地理环境的影响', weight: '1.0' },
+        { role: 'supporting_knowledge', knowledge_unit: '海水的性质', weight: '0.5' }
+      ],
+      meta: { year: 2025, region: '安徽', question_numbers: '1' }
+    };
+    const report = coreMod.buildExplainerReport(sample, false, [], 'student', { basis: [], insufficient: true, gap: '题库不足' }) || {};
+    const structure = report.structure || {};
+    const fourOk = Array.isArray(report.contentRequirements) && report.contentRequirements.length === 4
+      && report.contentRequirements.map(c => c.item).join(',') === '考查知识,解题过程,同类问题,迁移运用';
+    const knowledgeRoleOk = !!(structure.locate && structure.locate.knowledgeRole
+      && 'roleInSolving' in structure.locate.knowledgeRole
+      && Array.isArray(structure.locate.knowledgeRole.supporting));
+    const comparison = structure.solve && structure.solve.comparison;
+    const comparisonOk = !!(comparison
+      && Array.isArray(comparison.basis)
+      && 'insufficient' in comparison
+      && typeof comparison.citationRule === 'string'
+      && comparison.citationRule.includes('缺口'));
+    const transfer = structure.reflect && structure.reflect.transfer;
+    const transferOk = !!(transfer && typeof transfer.student === 'string' && typeof transfer.teacher === 'string');
+    const versionOk = report.schemaVersion === 3
+      && coreMod.EXPLAIN_RULESET_VERSION === 3
+      && typeof report.cacheKey === 'string' && report.cacheKey.includes('#rules3');
+    const skeletonProblems = [];
+    if (!fourOk) skeletonProblems.push('contentRequirements 非四项');
+    if (!knowledgeRoleOk) skeletonProblems.push('locate.knowledgeRole 缺失');
+    if (!comparisonOk) skeletonProblems.push('solve.comparison 字段或 citationRule 缺失');
+    if (!transferOk) skeletonProblems.push('reflect.transfer 缺失');
+    if (!versionOk) skeletonProblems.push('schemaVersion/cacheKey 规则版本非 3');
+    add('explain-skeleton', '讲稿骨架契约（规则 3 / 四项内容要求 / knowledgeRole / comparison / transfer）', skeletonProblems.length === 0,
+      skeletonProblems.length === 0 ? '四项内容要求 + knowledgeRole + comparison(citationRule) + transfer + cacheKey#rules3' : skeletonProblems.join('；'));
+
+    // (m) 同类题检索：同题组不算同类，按设问任务/材料检索，不足时标 insufficient
+    const cur = { questionId: 'SIM-CUR', file: 'A.md', material: '该地位于沿海，受暖流影响，气温较高，降水较多，地形以平原为主。', stem: '分析该地气温高于同纬度的原因。', options: [], knowledgePoints: [] };
+    const sibling = { ...cur, questionId: 'SIM-SIB', file: 'A.md' };
+    const near = { questionId: 'SIM-NEAR', file: 'B.md', material: '乙地位于沿海，受沿岸暖流影响，气温较高，降水较多，地形以平原为主。', stem: '分析乙地气温高于同纬度的原因。', options: [], knowledgePoints: [] };
+    const near2 = { questionId: 'SIM-NEAR2', file: 'D.md', material: '丙地位于沿海，受暖流影响，气温较高，降水偏多，地形以平原为主。', stem: '分析丙地气温高于同纬度的原因。', options: [], knowledgePoints: [] };
+    const far = { questionId: 'SIM-FAR', file: 'C.md', stem: '该地服务业发展的主导区位条件是（　）', material: '当地商业金融发达，市场需求大，销售渠道完善。', options: ['A 甲', 'B 乙', 'C 丙', 'D 丁'], knowledgePoints: [] };
+    const ranked = coreMod.rankSimilarQuestions([cur, sibling, near, near2, far], cur, 5) || { basis: [] };
+    const rankedIds = (ranked.basis || []).map(b => b.questionId);
+    const similarOk = !rankedIds.includes('SIM-SIB') && rankedIds.includes('SIM-NEAR') && rankedIds.includes('SIM-NEAR2')
+      && !rankedIds.includes('SIM-FAR')
+      && ranked.insufficient === false && (ranked.basis || []).every(b => typeof b.sharedTask === 'string' && typeof b.differences === 'string');
+    add('similar-questions', '同类题检索（同题组不算同类 / 按设问任务与材料检索）', similarOk,
+      similarOk ? `候选 ${rankedIds.join(', ')}；同文件题组已排除` : `候选 ${rankedIds.join(', ') || '(空)'}；同题组应为排除项、同类题应命中`);
+    const sparse = coreMod.rankSimilarQuestions([cur, sibling, near], cur, 5) || {};
+    const sparseOk = sparse.insufficient === true && typeof sparse.gap === 'string' && sparse.gap.includes('不足 2 道');
+    add('similar-insufficient', '同类题不足 2 道时标 insufficient 并给出缺口', sparseOk,
+      sparseOk ? 'insufficient=true + gap 指明缺口' : `insufficient=${sparse.insufficient}, gap=${sparse.gap || '(空)'}`);
+  }
+
+  // (n) 数据/解析层修复断言（会话复盘-20260817 §五 1-4 / 修复方案-20260817 P0-P1，防回归）
   const qidQuoteOk = coreSrc.includes('question_id:\\s*["`]?([^"`]+)');
   add('parser-qid-quote', 'qid 正则兼容双引号 (["`]?[^"`]+)', qidQuoteOk,
     qidQuoteOk ? '引号类 + 非引号捕获' : 'core/index.js qid 正则未兼容双引号');
@@ -743,6 +970,22 @@ function checkPipelineDiscipline() {
   add('index-fresh', 'loadBank mtime 新鲜度检查', mtimeOk,
     mtimeOk ? '含 mtime 判断' : 'core/index.js loadBank 无 mtime 检查');
 
+  const nativeImages = /attachments\.saveImage/.test(analysisSrc) && /type:\s*['"]image['"]/.test(analysisSrc) && /imageDelivery/.test(analysisSrc);
+  add('native-images', 'geo_solve 原生图片附件契约', nativeImages,
+    nativeImages ? 'saveImage + ImageBlock + imageDelivery' : 'analysis/index.js 缺少原生图片交付契约');
+  const explicitDelivery = /'none'/.test(analysisSrc) && /'complete'/.test(analysisSrc) && /'partial'/.test(analysisSrc) && /'degraded'/.test(analysisSrc);
+  add('image-degrade', '图片交付显式降级', explicitDelivery,
+    explicitDelivery ? 'none / complete / partial / degraded 状态齐全' : 'imageDelivery 状态不完整');
+
+  // (o) 活跃预设不得残留旧视觉服务、工具或路由
+  const activeFiles = walkFiles(PRESET_SRC).filter(f => /\.(?:js|yml|md|html)$/.test(f));
+  const activeText = activeFiles.map(f => readFileSync(f, 'utf8')).join('\n');
+  const legacyPattern = /geoVision|dshVision|vision_inspect|vision_ocr|vision_locate|geo_extract_images|\/geo\/vision\//;
+  const legacyRemoved = !legacyPattern.test(activeText) && !existsSync(join(PRESET_SRC, 'plugins', 'vision', 'index.js'));
+  add('legacy-vision', '旧视觉链路已从活跃预设移除', legacyRemoved,
+    legacyRemoved ? '无旧服务、工具、路由或 vision 插件' : '活跃预设仍含旧视觉引用');
+
+  // (p) 索引版本与题面图片字段同步（v4：questionImages / analysisImages / boundaryIssues）
   const idxPath = join(PROJECT_ROOT, 'outputs', 'question-index.json');
   if (existsSync(idxPath)) {
     try {
@@ -751,15 +994,27 @@ function checkPipelineDiscipline() {
       const quoted = items.filter(i => typeof i.questionId === 'string' && i.questionId.includes('"'));
       const fakeStem = items.filter(i => i.stem === '题干');
       const noAnswer = items.filter(i => typeof i.answer !== 'string' || i.answer.trim() === '');
-      const dataOk = idx.version === 3 && quoted.length === 0 && fakeStem.length === 0 && noAnswer.length === 0;
-      add('index-data', '索引数据完整 (v3 / 无引号 qid / 无假 stem / 每项含答案)', dataOk,
-        dataOk ? `${items.length} 小问 (v${idx.version})` : `v=${idx.version}, 引号qid=${quoted.length}, 假stem=${fakeStem.length}, 缺答案=${noAnswer.length}（旧版本产物，需重建索引）`);
+      const badShape = items.filter(i => !Array.isArray(i.questionImages) || !Array.isArray(i.analysisImages) || !Array.isArray(i.boundaryIssues));
+      const withQuestionImages = items.filter(i => Array.isArray(i.questionImages) && i.questionImages.length > 0).length;
+      const withAnalysisImages = items.filter(i => Array.isArray(i.analysisImages) && i.analysisImages.length > 0).length;
+      const withBoundaryIssues = items.filter(i => Array.isArray(i.boundaryIssues) && i.boundaryIssues.length > 0).length;
+      const dataOk = idx.version === 4 && badShape.length === 0
+        && quoted.length === 0 && fakeStem.length === 0 && noAnswer.length === 0;
+      add('index-data', '索引数据完整 (v4 / 题面图片·解析图·边界字段 / 无引号 qid / 无假 stem / 每项含答案)', dataOk,
+        dataOk
+          ? `${items.length} 小问 (v4)；含题面图片 ${withQuestionImages}、含解析图 ${withAnalysisImages}、含边界问题 ${withBoundaryIssues}`
+          : `v=${idx.version}（须为 4，旧版本产物需重建索引）, 缺字段=${badShape.length}, 引号qid=${quoted.length}, 假stem=${fakeStem.length}, 缺答案=${noAnswer.length}`);
     } catch (e) {
       add('index-data', '索引数据检查', false, '索引解析失败: ' + e.message);
     }
   } else {
     add('index-data', '索引数据检查', true, '索引不存在（首次 loadBank 将自动重建）');
   }
+}
+
+function positionOf(text, needle, from) {
+  const idx = text.indexOf(needle, from || 0);
+  return idx >= 0 ? idx : text.length;
 }
 
 // ── 10. 部署形态（仅提示，不判源码失败） ─────────────────────
@@ -883,7 +1138,7 @@ if (flags.source) {
   }
   checkRoutes();
   checkSkills();
-  checkPipelineDiscipline();
+  await checkPipelineDiscipline();
   await checkQuestionPackage();
   checkDeployment();
   checkBackups();

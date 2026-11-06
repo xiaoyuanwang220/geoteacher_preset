@@ -270,32 +270,8 @@ function resolveImagePath(baseDir, rel) {
   const abs = /^[A-Za-z]:/.test(stack[0] || '') ? joined : ('/' + joined);
   return toBackslashes(abs);
 }
-// 提取 md 文本中的图片引用数组
-function extractImageRefs(text, mdDiskPath) {
-  const out = [];
-  const mdDir = String(mdDiskPath).replace(/\\/g, '/');
-  const slashIdx = mdDir.lastIndexOf('/');
-  const baseDir = slashIdx > 0 ? mdDir.slice(0, slashIdx) : mdDir;
-  const re = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
-  let m = null; let idx = 0;
-  while ((m = re.exec(text)) !== null) {
-    idx++;
-    const rel = m[2];
-    const ext = rel.split('.').pop().toLowerCase();
-    out.push({
-      imageId: 'fig_' + idx,
-      caption: (m[1] || '').trim(),
-      sourcePath: resolveImagePath(baseDir, rel),
-      rel,
-      // 只接受真正的栅格图片扩展
-      image: /png|jpe?g|webp|gif/.test(ext)
-    });
-  }
-  return out;
-}
-
 // ========== frontmatter 解析 ==========
-function parseFrontmatter(text) {
+export function parseFrontmatter(text) {
   const meta = {};
   text = text.replace(/\r\n/g, '\n');
   const m = text.match(/^---\n([\s\S]*?)\n---/);
@@ -314,6 +290,12 @@ function parseFrontmatter(text) {
   return meta;
 }
 
+// 题面文字里的图片语法替换为图注占位：图片本体由题面图片附件交付，
+// 文字中不得残留图片路径（路径常含题号/文件名，等于把原卷线索带进解题输入）。
+function stripImageMarkdown(text) {
+  return String(text || '').replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, caption) => (caption ? '[图：' + caption + ']' : '[图]'));
+}
+
 // ========== 题目文件解析 ==========
 function extractMaterial(lines) {
   const out = [];
@@ -327,7 +309,7 @@ function extractMaterial(lines) {
       continue;
     }
     if (t === '') continue;
-    out.push(t);
+    out.push(stripImageMarkdown(t));
   }
   return out.join('\n');
 }
@@ -375,14 +357,50 @@ function parseKmBlock(block) {
   return { knowledgePoints, extraTags };
 }
 
-function parseQuestionFileFull(text) {
+// ========== 题答分离：题面图片 / 解析图 / 边界检测 ==========
+// 题库 md 版式（真实题库实测）：`## 题组材料`、`## 相关图片`、`## 第N题`
+// （综合题为 `### 第17题（1）`）、`## 教学备注`；答案与解析以加粗行 `**答案**：`、
+// `**解析**：` 开头。解题输入只能含题面：材料 + 题干 + 选项 + 小问 + 题面图片；
+// 解析图、答案/解析、`**知识点归属**` 与 MANAGED-KM 块一律不进入。
+const ANSWER_MARK_RE = /^\*\*答案\*\*\s*[：:]/;
+// 只把"答案/解析怎么起头"的整行视为答案痕迹：行首可带列表符或编号，
+// 但不得匹配 question_id、字段名或"精品解析"这类文件名/标题（避免误判整份题组）。
+const ANSWER_HINT_LINE_RE = /^(?:[-*+>]\s*|\d+[.、)\]]\s*)?(?:【答案】|【解析】|参考答案|正确答案|(?:答案|解析)\s*[：:])/;
+
+function sectionImageRefs(lines) {
+  const out = [];
+  const re = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+  for (const line of lines) {
+    re.lastIndex = 0;
+    let m = null;
+    while ((m = re.exec(line)) !== null) {
+      const rel = m[2];
+      const ext = String(rel).split('.').pop().toLowerCase();
+      if (!/png|jpe?g|webp|gif/.test(ext)) continue;
+      out.push({ caption: (m[1] || '').trim(), rel });
+    }
+  }
+  return out;
+}
+
+// 按第一个 `**答案**` 加粗行切分小节：head = 题干/选项区（题面），tail = 答案/解析区。
+function splitQuestionBody(lines) {
+  let idx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (ANSWER_MARK_RE.test(lines[i].trim())) { idx = i; break; }
+  }
+  if (idx < 0) return { head: lines, tail: [], hasAnswerMarker: false };
+  return { head: lines.slice(0, idx), tail: lines.slice(idx), hasAnswerMarker: true };
+}
+
+export function parseQuestionFileFull(text) {
   const sections = [];
   let current = null;
   for (const rawLine of text.split('\n')) {
     const line = rawLine.replace(/\r$/, '');
-    const m = line.match(/^#{2,3} (.+)$/);
+    const m = line.match(/^(#{2,3}) (.+)$/);
     if (m) {
-      current = { title: m[1], lines: [] };
+      current = { level: m[1].length, title: m[2].trim(), lines: [] };
       sections.push(current);
     } else if (current) {
       current.lines.push(line);
@@ -390,16 +408,81 @@ function parseQuestionFileFull(text) {
   }
   let material = '';
   const questions = [];
+  const questionImages = []; // 题面图片：材料图 + 相关图片 + 各小问答案标记之前的正文图
+  const analysisImages = []; // 解析图：答案/解析区与教学备注中的图片，永不进入解题输入
+  const boundaryIssues = [];
+  const addQuestionImage = (ref, source) => {
+    if (questionImages.some((img) => img.rel === ref.rel)) return;
+    questionImages.push({ imageId: 'fig_' + (questionImages.length + 1), caption: ref.caption, rel: ref.rel, source, order: questionImages.length + 1 });
+  };
+  const addAnalysisImage = (ref, source) => {
+    if (analysisImages.some((img) => img.rel === ref.rel)) return;
+    analysisImages.push({ imageId: 'ana_' + (analysisImages.length + 1), caption: ref.caption, rel: ref.rel, source, order: analysisImages.length + 1 });
+  };
   for (const sec of sections) {
-    const body = sec.lines.join('\n');
-    if (/^题组材料/.test(sec.title)) {
+    const title = sec.title;
+    if (/^题组材料/.test(title)) {
       material = extractMaterial(sec.lines);
-    } else if (/^第\d+题/.test(sec.title)) {
-      const q = parseOneQuestion(sec.title, body);
-      if (q) questions.push(q);
+      for (const ref of sectionImageRefs(sec.lines)) addQuestionImage(ref, 'material');
+      continue;
+    }
+    if (/^相关图片/.test(title)) {
+      for (const ref of sectionImageRefs(sec.lines)) addQuestionImage(ref, 'related_images');
+      continue;
+    }
+    if (/^教学备注/.test(title)) {
+      for (const ref of sectionImageRefs(sec.lines)) addAnalysisImage(ref, 'teacher_notes');
+      continue;
+    }
+    if (/^第\d+题/.test(title)) {
+      const body = sec.lines.join('\n');
+      const q = parseOneQuestion(title, body);
+      const split = splitQuestionBody(sec.lines);
+      for (const ref of sectionImageRefs(split.head)) addQuestionImage(ref, 'question');
+      for (const ref of sectionImageRefs(split.tail)) addAnalysisImage(ref, 'analysis');
+      if (!q) {
+        boundaryIssues.push({
+          kind: 'unparsed_question_section',
+          sectionTitle: title,
+          snippet: body.trim().slice(0, 120),
+          message: '该小节未能解析出题面（缺 question_id 或题干），题答边界无法确定'
+        });
+        continue;
+      }
+      if (!split.hasAnswerMarker) {
+        boundaryIssues.push({
+          questionId: q.questionId,
+          kind: 'missing_answer_marker',
+          sectionTitle: title,
+          message: '该小问缺少 **答案** 标记，无法判定题面与答案的分界'
+        });
+      } else {
+        const hintLine = split.head
+          .map((l) => l.trim())
+          .find((l) => l && !/^question_id\s*[：:]/.test(l) && !/^<!--/.test(l) && !/^#{1,6}\s/.test(l) && ANSWER_HINT_LINE_RE.test(l));
+        if (hintLine) {
+          boundaryIssues.push({
+            questionId: q.questionId,
+            kind: 'answer_text_in_question_area',
+            sectionTitle: title,
+            snippet: hintLine.slice(0, 120),
+            message: '答案标记之前的区域出现答案或解析痕迹，题面可能混入答案内容'
+          });
+        }
+      }
+      questions.push(q);
+      continue;
     }
   }
-  return { material, questions };
+  return { material, questions, questionImages, analysisImages, boundaryIssues };
+}
+
+// 把题面图片的相对引用按 md 所在目录解析为绝对路径；不改动顺序。
+function resolveQuestionImagePaths(images, mdDiskPath) {
+  const mdDir = String(mdDiskPath || '').replace(/\\/g, '/');
+  const slashIdx = mdDir.lastIndexOf('/');
+  const baseDir = slashIdx > 0 ? mdDir.slice(0, slashIdx) : mdDir;
+  return (images || []).map((img) => ({ ...img, sourcePath: resolveImagePath(baseDir, img.rel) }));
 }
 
 function parseOneQuestion(title, body) {
@@ -498,9 +581,12 @@ function parseOneQuestion(title, body) {
     }
   }
 
-  stem = stem.replace(/\\\./g, '.');
-  if (!questionId || (!stem && options.length === 0)) return null;
-  return { questionId, stem, options, answer, analysis, knowledgePoints: km.knowledgePoints, extraTags: km.extraTags };
+  stem = stripImageMarkdown(stem).replace(/\\\./g, '.');
+  const cleanedOptions = options.map(o => stripImageMarkdown(o)).filter(Boolean);
+  const cleanedAnswer = stripImageMarkdown(answer);
+  const cleanedAnalysis = stripImageMarkdown(analysis);
+  if (!questionId || (!stem && cleanedOptions.length === 0)) return null;
+  return { questionId, stem, options: cleanedOptions, answer: cleanedAnswer, analysis: cleanedAnalysis, knowledgePoints: km.knowledgePoints, extraTags: km.extraTags };
 }
 
 // ========== 分析引擎 ==========
@@ -620,7 +706,307 @@ function detectDistractors(analysisText) {
   return result;
 }
 
+// ========== 同类题比较（题库检索，讲稿依据） ==========
+// 先按设问任务、推理关系、材料特征检索相关题目；不能只因考点相同就归为同类。
+function chartKindsOf(material) {
+  const text = String(material || '');
+  const kinds = [];
+  if (/柱状|折线|曲线/.test(text)) kinds.push('折线/柱状图');
+  if (/表格|统计表/.test(text)) kinds.push('统计表');
+  if (/区域图|地形图|分布图|地图/.test(text)) kinds.push('区域/分布图');
+  if (/剖面图|示意图/.test(text)) kinds.push('示意图');
+  if (/景观|照片/.test(text)) kinds.push('景观照片');
+  return kinds;
+}
+
+function similarityFeatures(item) {
+  const stem = item.stem || '';
+  const material = item.material || '';
+  const isChoice = (item.options || []).length > 0;
+  const scans = dimensionScan(material);
+  const coreKp = (item.knowledgePoints || []).find(kp => kp.role === 'core_exam_point') || (item.knowledgePoints || [])[0] || {};
+  return {
+    isChoice,
+    framework: classifyQuestion(stem),
+    scans,
+    dimensionKeys: Object.keys(scans),
+    contextTypes: detectContextType(material),
+    literacy: detectLiteracy(stem, material),
+    ability: detectAbility(stem, isChoice),
+    corePoint: coreKp.knowledge_unit || coreKp.knowledgeUnit || '',
+    chartKinds: chartKindsOf(material),
+    hasImageMaterial: /图|示意|坐标|曲线|统计|表格/.test(material)
+  };
+}
+
+function overlap(a, b) {
+  return (a || []).filter(x => (b || []).includes(x));
+}
+
+export function rankSimilarQuestions(all, current, limit = 5) {
+  if (!current) return { basis: [], insufficient: true, gap: '缺少本题信息，无法检索同类题' };
+  const base = similarityFeatures(current);
+  const scored = [];
+  for (const item of all || []) {
+    if (!item || item.questionId === current.questionId) continue;
+    // 同题组共用材料，不构成"同类题"比较对象（方法与条件差异无法从不同材料验证）。
+    if (item.file && current.file && item.file === current.file) continue;
+    const feat = similarityFeatures(item);
+    let score = 0;
+    const shared = [];
+    if (feat.framework.key === base.framework.key) { score += 3; shared.push(`设问任务相同（${feat.framework.name}）`); }
+    if (feat.isChoice === base.isChoice) score += 2;
+    if (feat.ability === base.ability) score += 1;
+    if (feat.corePoint && feat.corePoint === base.corePoint) { score += 2; shared.push(`核心考点相同（${feat.corePoint}）`); }
+    const dims = overlap(feat.dimensionKeys, base.dimensionKeys);
+    if (dims.length) { score += Math.min(2, dims.length); shared.push(`材料证据维度相近（${dims.map(k => ELEMENT_DIMENSIONS[k] && ELEMENT_DIMENSIONS[k].name).filter(Boolean).join('、')}）`); }
+    const contexts = overlap(feat.contextTypes, base.contextTypes);
+    if (contexts.length) { score += 1; shared.push(`情境类型相同（${contexts.join('、')}）`); }
+    const charts = overlap(feat.chartKinds, base.chartKinds);
+    if (charts.length) { score += 1; shared.push(`图表类型相同（${charts.join('、')}）`); }
+    if (score < 4) continue;
+    const differences = [];
+    if (feat.isChoice !== base.isChoice) differences.push(`题型不同（${feat.isChoice ? '选择题' : '综合题'}）`);
+    if (feat.ability !== base.ability) differences.push(`能力层次不同（${feat.ability}）`);
+    if (feat.corePoint && base.corePoint && feat.corePoint !== base.corePoint) differences.push(`核心考点不同（${feat.corePoint}）`);
+    const baseOnly = base.dimensionKeys.filter(k => !feat.dimensionKeys.includes(k));
+    if (baseOnly.length) differences.push(`材料缺少本题的维度证据（${baseOnly.map(k => ELEMENT_DIMENSIONS[k] && ELEMENT_DIMENSIONS[k].name).filter(Boolean).join('、')}）`);
+    scored.push({
+      questionId: item.questionId,
+      file: item.file || '',
+      groupLabel: `${(item.meta && item.meta.year) || ''}${(item.meta && item.meta.region) || ''}卷 第${(item.meta && String(item.meta.question_numbers || '').replace(/,/g, '-')) || ''}题`,
+      stem: (item.stem || '').slice(0, 80),
+      materialSnippet: (item.material || '').slice(0, 80),
+      questionType: feat.framework.name,
+      ability: feat.ability,
+      score,
+      sharedTask: shared.find(s => s.startsWith('设问任务')) || '',
+      sharedReasoning: shared.find(s => s.startsWith('材料证据')) || '',
+      sharedMaterial: shared.find(s => s.startsWith('情境类型')) || shared.find(s => s.startsWith('图表类型')) || '',
+      sameCorePoint: Boolean(feat.corePoint && feat.corePoint === base.corePoint),
+      differences: differences.join('；')
+    });
+  }
+  scored.sort((a, b) => b.score - a.score || String(a.questionId).localeCompare(String(b.questionId)));
+  const basis = scored.slice(0, Math.max(0, limit));
+  const insufficient = basis.length < 2;
+  return {
+    basis,
+    insufficient,
+    gap: insufficient
+      ? `题库中与该题设问任务/推理关系相近的题目不足 2 道（已检索到 ${basis.length} 道）；只能依据本题与已列题目比较，不凭单题经验编造通用套路`
+      : ''
+  };
+}
+
+// ========== 解题运行记录（题面就绪 → 作答已提交 → 核验完成） ==========
+// 服务端持有 run：绑定题目、题面指纹、独立作答与核验结论；答案接口只在作答提交后开放。
+export const SOLVE_STATES = Object.freeze({
+  READY: 'question_ready',
+  SUBMITTED: 'submitted',
+  VERIFIED: 'verified'
+});
+export const SOLVE_RUNS_SCHEMA = 1;
+
+// 题面指纹：只取题面（材料/题干/选项/题面图片），绝不含答案/解析，保证"题面变化后重新解题"。
+export function questionFingerprint(parts) {
+  const material = String((parts && parts.material) || '');
+  const stems = ((parts && parts.stems) || []).join('\u0001');
+  const options = ((parts && parts.options) || []).map(o => (o || []).join('\u0003')).join('\u0001');
+  const images = ((parts && parts.images) || []).map(img => (img && (img.rel || img)) || '').join('\u0001');
+  const text = [String((parts && parts.questionId) || ''), material, stems, options, images].join('\u0002');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return 'fp_' + h.toString(16).padStart(8, '0');
+}
+
+function hashAnswer(text) {
+  let h = 0x811c9dc5;
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+export function createSolveRegistry(options) {
+  const opts = options || {};
+  const nowFn = typeof opts.now === 'function' ? opts.now : () => Date.now();
+  const maxRuns = Number.isSafeInteger(opts.maxRuns) && opts.maxRuns > 0 ? opts.maxRuns : 200;
+  const runs = new Map();
+  const latest = new Map();
+
+  function cloneRun(run) {
+    return JSON.parse(JSON.stringify(run));
+  }
+
+  function remember(run) {
+    runs.set(run.runId, run);
+    latest.set(run.questionId, run.runId);
+    if (runs.size > maxRuns) {
+      const ordered = [...runs.values()].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const drop = ordered.slice(0, runs.size - maxRuns);
+      for (const r of drop) {
+        runs.delete(r.runId);
+        if (latest.get(r.questionId) === r.runId) latest.delete(r.questionId);
+      }
+    }
+    return run;
+  }
+
+  function list() {
+    return [...runs.values()].map(cloneRun);
+  }
+
+  function restore(items) {
+    runs.clear();
+    latest.clear();
+    for (const item of Array.isArray(items) ? items : []) {
+      if (!item || !item.runId || !item.questionId) continue;
+      runs.set(item.runId, item);
+      const prev = latest.get(item.questionId);
+      const prevRun = prev ? runs.get(prev) : null;
+      if (!prevRun || (item.createdAt || 0) >= (prevRun.createdAt || 0)) latest.set(item.questionId, item.runId);
+    }
+  }
+
+  function ensureRun(input) {
+    const questionId = String((input && input.questionId) || '');
+    const fingerprint = String((input && input.questionFingerprint) || '');
+    const previousId = latest.get(questionId);
+    const previous = previousId ? runs.get(previousId) : null;
+    if (previous && previous.questionFingerprint === fingerprint) {
+      const reusable = previous.state === SOLVE_STATES.SUBMITTED || previous.state === SOLVE_STATES.VERIFIED;
+      return { run: cloneRun(previous), reused: reusable, invalidated: false };
+    }
+    const runId = `${questionId}__${fingerprint}`;
+    const existing = runs.get(runId);
+    if (existing) {
+      // 题面回退到旧版本时，旧 run 仍是当前题面的有效记录：重新指向它，避免误报版本变化。
+      latest.set(questionId, runId);
+      return { run: cloneRun(existing), reused: existing.state !== SOLVE_STATES.READY, invalidated: false };
+    }
+    const run = remember({
+      runId,
+      questionId,
+      questionFingerprint: fingerprint,
+      state: SOLVE_STATES.READY,
+      createdAt: nowFn(),
+      submittedAt: null,
+      judgeOpenedAt: null,
+      verifiedAt: null,
+      answer: null,
+      conclusion: null
+    });
+    return { run: cloneRun(run), reused: false, invalidated: Boolean(previous) };
+  }
+
+  function get(runId) {
+    const run = runs.get(String(runId || ''));
+    return run ? cloneRun(run) : null;
+  }
+
+  function latestForQuestion(questionId) {
+    const runId = latest.get(String(questionId || ''));
+    const run = runId ? runs.get(runId) : null;
+    return run ? cloneRun(run) : null;
+  }
+
+  function submit(runId, payload) {
+    const run = runs.get(String(runId || ''));
+    if (!run) return { ok: false, code: 'RUN_NOT_FOUND' };
+    const p = payload || {};
+    const answerText = String(p.answerText || '').trim();
+    if (!answerText) return { ok: false, code: 'EMPTY_ANSWER' };
+    // 原始独立作答不可被覆盖：已提交/已核验时，只有同一份作答可重复提交（幂等）。
+    if (run.state !== SOLVE_STATES.READY) {
+      const sameHash = run.answer && run.answer.answerHash === hashAnswer(answerText);
+      if (sameHash) return { ok: true, run: cloneRun(run) };
+      return { ok: false, code: 'ANSWER_IMMUTABLE' };
+    }
+    run.answer = {
+      answerText: answerText.slice(0, 8000),
+      keyEvidence: String(p.keyEvidence || '').slice(0, 2000),
+      childSessionId: String(p.childSessionId || ''),
+      answerHash: hashAnswer(answerText),
+      submittedAt: nowFn()
+    };
+    run.state = SOLVE_STATES.SUBMITTED;
+    run.submittedAt = run.answer.submittedAt;
+    remember(run);
+    return { ok: true, run: cloneRun(run) };
+  }
+
+  function openReference(runId) {
+    const run = runs.get(String(runId || ''));
+    if (!run) return { ok: false, code: 'RUN_NOT_FOUND' };
+    if (run.state === SOLVE_STATES.READY) return { ok: false, code: 'SOLVE_NOT_SUBMITTED' };
+    run.judgeOpenedAt = run.judgeOpenedAt || nowFn();
+    remember(run);
+    return { ok: true, run: cloneRun(run) };
+  }
+
+  const VERDICTS = ['consistent', 'partially_consistent', 'inconsistent'];
+  function recordVerification(runId, conclusion) {
+    const run = runs.get(String(runId || ''));
+    if (!run) return { ok: false, code: 'RUN_NOT_FOUND' };
+    if (!run.judgeOpenedAt) return { ok: false, code: 'JUDGE_NOT_OPENED' };
+    const c = conclusion || {};
+    if (!VERDICTS.includes(c.verdict)) return { ok: false, code: 'CONCLUSION_INVALID', message: 'verdict 必须是 consistent | partially_consistent | inconsistent' };
+    const toList = (v) => (Array.isArray(v) ? v : []).map(x => String(x).slice(0, 300)).filter(Boolean).slice(0, 12);
+    run.conclusion = {
+      verdict: c.verdict,
+      matched: toList(c.matched),
+      missed: toList(c.missed),
+      wrong: toList(c.wrong),
+      disputed: toList(c.disputed),
+      correction: String(c.correction || '').slice(0, 1200),
+      verifiedAt: nowFn()
+    };
+    run.state = SOLVE_STATES.VERIFIED;
+    run.verifiedAt = run.conclusion.verifiedAt;
+    remember(run);
+    return { ok: true, run: cloneRun(run) };
+  }
+
+  function statusFor(questionId, currentFingerprint) {
+    const run = latestForQuestion(questionId);
+    if (!run) {
+      return { state: 'none', runId: null, fingerprintMatches: false, submittedAt: null, judgedAt: null, canJudge: false, canExplain: false };
+    }
+    const matches = !currentFingerprint || run.questionFingerprint === currentFingerprint;
+    return {
+      state: run.state,
+      runId: run.runId,
+      fingerprintMatches: matches,
+      submittedAt: run.submittedAt || null,
+      judgedAt: run.judgeOpenedAt || null,
+      verifiedAt: run.verifiedAt || null,
+      canJudge: matches && run.state !== SOLVE_STATES.READY,
+      canExplain: matches && run.state === SOLVE_STATES.VERIFIED
+    };
+  }
+
+  return {
+    ensureRun,
+    submit,
+    openReference,
+    recordVerification,
+    get,
+    latestForQuestion,
+    statusFor,
+    list,
+    restore,
+    hashAnswer
+  };
+}
+
 // ========== 蓝图引擎 ==========
+
 function collectSamePointContexts(all, currentQ, coreKp) {
   const kuId = coreKp.knowledge_unit_id || coreKp.knowledgeUnitId;
   const out = [];
@@ -635,8 +1021,7 @@ function collectSamePointContexts(all, currentQ, coreKp) {
   return out;
 }
 
-function buildBlueprint(analysis, all, q) {
-  const coreKp = analysis.examPoints[0] || {};
+function buildBlueprint(analysis, all, q) {  const coreKp = analysis.examPoints[0] || {};
   const alternatives = collectSamePointContexts(all, q, coreKp);
   const suggested = alternatives.length > 0
     ? `换用同考点其他情境（如「${alternatives[0].material.replace(/[，。].*$/, '')}」）或结合时事素材`
@@ -786,75 +1171,18 @@ function buildScorePoints(q, isChoice) {
   return points;
 }
 
-// judge 核验骨架：给模型开放的答案/解析/采分点 + 待填的命中/遗漏/干扰项分栏
-function buildJudgeScaffold(q, isChoice) {
-  const scorePoints = buildScorePoints(q, isChoice);
-  const distractors = isChoice ? detectDistractors(q.analysis) : [];
-  return {
-    isChoice,
-    standardAnswer: q.answer || '',
-    analysis: q.analysis || '',
-    scorePoints,
-    coverageGrid: scorePoints.map(p => ({
-      match: p.option ? ('正确项=' + p.option) : '',
-      hit: '',            // 待模型填：完全命中 / 部分 / 遗漏
-      note: ''            // 待模型填：独立答案与该点的关系
-    })),
-    distractorTargets: distractors.map(d => ({ option: d.option, reason: d.reason, independentJudged: '' }))
-  };
-}
+// 讲题 Judge 骨架：答案/解析/采分点由 openReferenceAnswer 按题组逐小问组装（见 api.openReferenceAnswer）。
+
 
 // ========== 讲题 Explainer 骨架（P3 · 三对象） ==========
 // 将已验证解题过程按讲解对象重组（教学化重组，不照抄解析）。
 // 输入：题目 + solver 已生成的题干/选项 + judge 核验结果 + 同考点变式 + 讲解对象 audience。
 export const EXPLAIN_AUDIENCES = ['student', 'teacher', 'setter'];
-export const EXPLAIN_RULESET_VERSION = 2;
+export const EXPLAIN_RULESET_VERSION = 3;
 const AUDIENCE_LABELS = { student: '学生', teacher: '教师', setter: '命题人' };
 
-// 题面指纹：区分"题目版本"，防止切换对象或题目改版后返回旧稿。
-function questionFingerprint(q) {
-  const text = [q.questionId, q.material, q.stem, (q.options || []).join('\u0001'), q.answer].join('\u0002');
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h.toString(16).padStart(8, '0');
-}
-
-function explainLanguageGuide(audience) {
-  if (audience === 'teacher') {
-    return {
-      objective: '让教师能设计出让学生自己产生、检验和修正想法的教学引导，而不是替学生解释答案',
-      opening: '无寒暄，直接进入教学问题',
-      voice: '教学引导文体：面向教师写“怎么问、怎么撤支架”，不套用学生对象的讲课口吻',
-      reasoning: '正确解题逻辑必须清楚，主体篇幅用于学生的思维动作、可能回答与分支引导',
-      transfer: '反思与迁移落到“怎样让学生自己概括方法”，并给出独立迁移检测与观察点',
-      answerPresentation: '不把诱导学生猜标准答案当作思维启发；答案出现在学生自己检验之后',
-      ending: '以可撤去的支架条件与撤去后的观察点收束'
-    };
-  }
-  if (audience === 'setter') {
-    return {
-      objective: '评价这道题实际考到了什么、设计是否奏效',
-      opening: '无寒暄，直接从考查目标进入',
-      voice: '设计评价分析文体：术语精确，不使用教学口吻',
-      reasoning: '逐层检查设问、材料、选项中的干扰，说明位置、错误路径与辨别依据',
-      transfer: '评估是否测到迁移、是否仅靠记忆套路即可完成',
-      answerPresentation: '不复述答案本身，重点是答案成立条件与错误路径',
-      ending: '以题组与质量评价收束；无原作者说明时标注“依据题面推断”'
-    };
-  }
-  return {
-    objective: '教会学生解决一类地理问题，讲“怎么想”，不以呈现答案为终点',
-    opening: '无开场白或寒暄，直接进入审题',
-    voice: '使用“我们/大家”的讲课口吻；口语化，但地理术语必须严谨',
-    reasoning: '从“拿到题第一步想什么”起步；每一步说明“为什么能推出下一步”（材料证据 × 原理 × 设问）',
-    transfer: '破题与反思落到可迁移的思维模板、判断标尺或排除逻辑',
-    answerPresentation: '答案由推理自然引出，不先亮答案再凑理由',
-    ending: '以可迁移的方法收束，不留客套话'
-  };
-}
+// 讲稿语言与文体、对象细则只维护一份：skills/references/explainer-audiences.md。
+// 内核骨架只给出结构、对象侧重与待填字段，不重复教学话术（计划 §三）。
 
 // 三对象共同要求：讲题由地理问题、材料证据与学科原理推动。
 function buildCommonAnalysis() {
@@ -923,12 +1251,8 @@ function buildStudentPlan() {
         anchor: '下一次遇到同类问题，第一步该做什么、什么时候要换方法'
       }
     ],
-    guidance: [
-      '答案由推理自然引出，不先亮答案再凑理由',
-      '重点写“下一步可以做什么以及为什么”',
-      '教师如何安排课堂、如何诊断学情的内容不占正文',
-      '“无答案练习支架”是另一种可选交付形式，不等于学生对象本身'
-    ]
+    // 语言与对象细则统一在 references，内核不重复：见 skills/references/explainer-audiences.md §4。
+    reference: 'skills/references/explainer-audiences.md §4（学生对象写法、语言文体与六步推进约束）'
   };
 }
 
@@ -941,13 +1265,8 @@ function buildTeacherPlan() {
     scaffolds: [],          // 待填写：必要支架
     scaffoldRemoval: { signal: '', observe: '' }, // 待填写：何时撤、撤后观察什么
     independentTransfer: { task: '', observe: '' }, // 待填写：独立迁移检测与观察点
-    guidance: [
-      '正确解题逻辑必须清楚，但主体篇幅用于学生如何产生、检验和修正想法，而不只是教师如何解释答案',
-      '至少给出一条“学生自主提出解释→证据检验→独立迁移”的完整引导路径并标明思维培养目的',
-      '避免连续使用只需回答“是/否”的诱导问题，把学生带向预设答案',
-      '没有真实学情时只提出待验证障碍；“粗心”不得替代具体错误环节分析',
-      '不得把教师对象做成“可照读的学生讲稿”或“学生解析后追加泛化教学建议”'
-    ]
+    // 语言与对象细则统一在 references，内核不重复：见 skills/references/explainer-audiences.md §5。
+    reference: 'skills/references/explainer-audiences.md §5（教师对象组织模板、启发式追问与支架撤除要求）'
   };
 }
 
@@ -955,68 +1274,93 @@ function buildSetterPlan(isChoice) {
   return {
     structure: ['考查目标', '情境/材料/设问', '设问、材料与选项的干扰辨析', '预期认知路径', '答案成立条件及错误路径', '迁移与跨学科设计', '题组和质量评价'],
     interferenceLayers: [
-      {
-        layer: '设问', applicable: true,
-        focus: '易被忽略或误读的对象、任务动词、时间空间尺度、比较基准、条件限定，以及可能诱发惯性作答的表述',
-        mustCheck: '限定词通常是必要条件，不能直接认定为干扰或故意陷阱',
-        findings: []
-      },
-      {
-        layer: '材料（含图表）', applicable: true,
-        focus: '与当前小问无直接关系的信息、显著但非主导的因素、可能诱发错误归因的数据或现象、适用尺度不同的信息',
-        mustCheck: '区分关键证据、必要背景、其他小问所需信息与实际干扰',
-        findings: []
-      },
-      isChoice ? {
-        layer: '选项', applicable: true,
-        focus: '概念混淆、因果倒置、证据遗漏、尺度错配、部分正确但不回答当前问题',
-        mustCheck: '说明吸引力、可能对应的认知偏差、排除依据与正确项依赖的条件',
-        findings: []
-      } : {
-        layer: '选项', applicable: false,
-        note: '综合题无选项：选项层不适用；可分析典型偏离思路，但不得虚构选项',
-        findings: []
-      }
+      { layer: '设问', applicable: true, findings: [] },
+      { layer: '材料（含图表）', applicable: true, findings: [] },
+      isChoice
+        ? { layer: '选项', applicable: true, findings: [] }
+        : { layer: '选项', applicable: false, note: '综合题无选项：选项层不适用；可分析典型偏离思路，但不得虚构选项', findings: [] }
     ],
-    perFindingFields: ['所在位置及原文/图表证据', '可能诱发的错误思路', '辨别所需的知识或证据', '对考查的作用', '质量判断（有效认知辨析／无效噪声／歧义风险）'],
     constraints: [
       '无原作者说明时标注“依据题面推断”，不冒称原作者故意如此设计',
       '无试测数据时不生成正确率、区分度数值或实际测量效果断言',
       '某层未发现干扰时如实说明，不强凑三层',
       '不把必要背景、其他小问所需信息或未用于最终答案的内容一律判作干扰；不把合理限定误判为文字陷阱'
     ],
+    // 三层识别内容、每条干扰必给字段与负例约束只维护一份：references §6。
     reference: 'skills/references/explainer-audiences.md §6（三层干扰辨析完整表）'
   };
 }
 
-function buildStudentTeacherStructure(q, isChoice, difficulty, framework, scans, variants, coreKp, audience) {
+function buildStudentTeacherStructure(q, isChoice, difficulty, framework, scans, variants, coreKp, audience, comparison) {
   const emphasis = audience === 'teacher' ? {
     locate: '教学价值、核心与支撑知识、重点难点及原因、应培养的思维',
-    examine: '设计让学生自主界定问题的切入与追问；引导提出分析角度，而非教师宣布框架',
-    solve: '沿同一解题逻辑组织思维启发：追问、学生思维动作、可能回答、分支引导、图示/反例、支架撤除',
-    reflect: '怎样引导学生自己概括、比较、修正方法；独立迁移检测与观察点'
+    examine: '设计让学生自主界定问题的切入与追问，而非教师宣布框架',
+    solve: '关键处怎样提问、给提示、检验理解，逐步让学生独立完成',
+    reflect: '引导学生自己概括、比较、修正方法；设计独立迁移检测与观察点'
   } : {
-    locate: '要解决什么问题、核心知识与必要联系；压缩与理解无关的元信息',
+    locate: '要解决什么问题、核心知识与必要联系，以及该知识在本题解题中的作用',
     examine: '识别对象、任务动词、限定条件、时空尺度；第一步想什么、为什么',
-    solve: '读图、定向取证、知识选择依据、证据—原理—结论、关键辨析；有价值时引入跨学科视角',
-    reflect: '错因、可迁移思路与适用边界、简短变式或条件变化'
+    solve: '怎么想、怎么做、每步依据与关键辨析；同类题的识别与调整',
+    reflect: '错因、可迁移思路与适用边界、条件变化时如何调整'
   };
+  const examPoint = (coreKp && (coreKp.knowledge_unit || coreKp.knowledgeUnit)) || '待填';
+  const supporting = (q.knowledgePoints || [])
+    .filter(kp => kp && kp.role !== 'core_exam_point')
+    .map(kp => ({
+      knowledgeUnit: kp.knowledge_unit || kp.knowledgeUnit || '',
+      weight: kp.weight || ''
+    }))
+    .filter(kp => kp.knowledgeUnit)
+    .slice(0, 4);
+  const cmp = comparison || { basis: [], insufficient: true, gap: '未检索同类题' };
   return {
     frame: '题目定位—审题—破题—反思与迁移',
     note: '四维（知识/解题/方法/跨学科）融入四段段内，不另设替代四段式的顶层目录；子标题按题目与对象灵活设置。',
-    locate: { title: '题目定位', fields: bestowBasicLabels(q, isChoice, difficulty, framework), audienceEmphasis: emphasis.locate },
-    examine: { title: '审题', hint: framework.hint, audienceEmphasis: emphasis.examine },
+    reference: 'skills/references/explainer-audiences.md §4/§5',
+    locate: {
+      title: '题目定位',
+      fields: bestowBasicLabels(q, isChoice, difficulty, framework),
+      knowledgeRole: {
+        examPoint,
+        supporting,
+        roleInSolving: '', // 待填：该知识点在本题解题中起什么作用（为什么用它、它把哪一步推下去）
+        note: '学生对象讲"为什么用它、它怎样帮助解题"；教师对象讲"学生需建立哪些知识联系、如何引导其选择并运用"'
+      },
+      audienceFocus: emphasis.locate
+    },
+    examine: { title: '审题', hint: framework.hint, audienceFocus: emphasis.examine },
     solve: {
       title: '破题',
       choiceNote: isChoice ? '选择题：读图→定向读材料→逐项排除链（材料证据×知识×设问），每个干扰项讲清错因；不让排除选项替代问题分析' : '综合题：读图→定向读材料→要素维度排查→采分点组织（要素+证据+结论）→术语规范；不凑采分点替代问题分析',
       dimensionScan: scans,
-      audienceEmphasis: emphasis.solve
+      comparison: {
+        basis: (cmp.basis || []).map(item => ({
+          questionId: item.questionId,
+          file: item.file,
+          groupLabel: item.groupLabel,
+          stem: item.stem,
+          questionType: item.questionType,
+          sharedTask: item.sharedTask,
+          sharedReasoning: item.sharedReasoning,
+          sharedMaterial: item.sharedMaterial,
+          differences: item.differences
+        })),
+        insufficient: Boolean(cmp.insufficient),
+        gap: cmp.gap || '',
+        citationRule: '总结须列出所依据的题目（题组+题号）及具体对应关系；相关题不足时明确缺口，不凭单题经验编造通用套路',
+        focus: '学生：说明如何识别同类、从哪里入手、推理怎样展开、条件变化怎样调整；教师：用相关题目的比较引导学生自己归纳方法与适用条件'
+      },
+      audienceFocus: emphasis.solve
     },
     reflect: {
       title: '反思与迁移',
       alternatives: variants,
-      coreKnowledgeUnit: (coreKp && (coreKp.knowledge_unit || coreKp.knowledgeUnit)) || '',
-      audienceEmphasis: emphasis.reflect
+      coreKnowledgeUnit: examPoint,
+      transfer: {
+        student: '换一道相关题时，怎样沿用本题方法，哪些条件变了要调整',
+        teacher: '怎样安排独立尝试，观察哪些表现判断学生是否真正具备迁移能力'
+      },
+      audienceFocus: emphasis.reflect
     }
   };
 }
@@ -1080,7 +1424,23 @@ function buildSetterStructure(q, isChoice, framework, scans, variants, coreKp) {
   };
 }
 
-export function buildExplainerReport(q, isChoice, judge, variants, audience) {
+// 讲稿内容要求（计划 §四 的四项）：骨架只给一句可执行侧重，详细写法见 references。
+export const EXPLAIN_CONTENT_REQUIREMENTS = {
+  student: [
+    { item: '考查知识', focus: '考什么知识点、为什么用它、它怎样帮助解题' },
+    { item: '解题过程', focus: '清楚展示怎么想、怎么做、每步依据和关键辨析' },
+    { item: '同类问题', focus: '用易懂的方法说明如何识别、入手、推理及条件变化时怎样调整' },
+    { item: '迁移运用', focus: '知道换一道相关题时如何使用方法' }
+  ],
+  teacher: [
+    { item: '考查知识', focus: '学生需要建立哪些知识联系，如何引导其选择并运用知识' },
+    { item: '解题过程', focus: '在关键处怎样提问、提供提示和检验学生理解，逐步让学生独立完成' },
+    { item: '同类问题', focus: '怎样用题库相关题目的比较，引导学生自己归纳方法与适用条件' },
+    { item: '迁移运用', focus: '怎样安排独立尝试，观察学生是否真正具备解决问题的能力' }
+  ]
+};
+
+export function buildExplainerReport(q, isChoice, variants, audience, comparison) {
   const aud = EXPLAIN_AUDIENCES.includes(audience) ? audience : 'student';
   const coreKp = (q.knowledgePoints || []).find(kp => kp.role === 'core_exam_point');
   const framework = classifyQuestion(q.stem);
@@ -1088,6 +1448,7 @@ export function buildExplainerReport(q, isChoice, judge, variants, audience) {
   const literacy = detectLiteracy(q.stem, q.material || '');
   const difficulty = detectDifficulty(q);
   const focusElements = Object.keys(scans).map(k => scans[k].name);
+  const cmp = comparison || { basis: [], insufficient: true, gap: '未检索同类题' };
   const report = {
     schemaVersion: EXPLAIN_RULESET_VERSION,
     audience: aud,
@@ -1102,31 +1463,30 @@ export function buildExplainerReport(q, isChoice, judge, variants, audience) {
       materialLength: q.material ? q.material.length : 0,
       hasImage: /图|示意|坐标|曲线|统计|表格/.test(q.material || '')
     },
-    languageGuide: explainLanguageGuide(aud),
     commonAnalysis: buildCommonAnalysis(),
     interdisciplinary: buildInterdisciplinary(),
-    // 必须无损 JSON：judgeReport 的 scaffold 缺这两个数组时，写成 {scorePoints: undefined}
-    // 会在 JSON 往返中丢键，被 DSH 工具边界判为 "value is not lossless JSON"，
-    // 导致整个 geo_explain 调用失败（核验材料其实合法）。
-    judgeSummary: judge
-      ? {
-        scorePoints: Array.isArray(judge.scorePoints) ? judge.scorePoints : [],
-        coverageGrid: Array.isArray(judge.coverageGrid) ? judge.coverageGrid : []
-      }
-      : null
+    contentRequirements: aud === 'setter' ? [] : EXPLAIN_CONTENT_REQUIREMENTS[aud]
   };
   if (aud === 'setter') {
     report.structure = buildSetterStructure(q, isChoice, framework, scans, variants, coreKp);
     report.audiencePlan = buildSetterPlan(isChoice);
     report.audienceDeliverable = '命题分析文档：设计评价 + 三层干扰辨析；保留独立的命题分析结构，不套用学生/教师四段式';
   } else {
-    report.structure = buildStudentTeacherStructure(q, isChoice, difficulty, framework, scans, variants, coreKp, aud);
+    report.structure = buildStudentTeacherStructure(q, isChoice, difficulty, framework, scans, variants, coreKp, aud, cmp);
     report.audiencePlan = aud === 'teacher' ? buildTeacherPlan() : buildStudentPlan();
     report.audienceDeliverable = aud === 'teacher'
       ? '教师对象：四段式教学引导稿，含思维培养目标、递进追问、支架撤除与独立迁移检测'
       : '学生对象：四段式讲稿（可直接用于讲解），可含答案；“无答案练习支架”另附，不混为同一模式';
   }
-  report.cacheKey = `${q.questionId}#${questionFingerprint(q)}#${aud}#rules${EXPLAIN_RULESET_VERSION}`;
+  // 缓存键区分题目（题面口径）、对象与讲稿规则版本；题面变化必须换键。
+  const fp = questionFingerprint({
+    questionId: q.questionId,
+    material: q.material,
+    stems: [q.stem],
+    options: [q.options || []],
+    images: []
+  });
+  report.cacheKey = `${q.questionId}#${fp}#${aud}#rules${EXPLAIN_RULESET_VERSION}`;
   return report;
 }
 
@@ -1304,7 +1664,8 @@ export default {
     let _bankCache = null; // 内存缓存：{ byId: Map, all: [], filesCount, builtAt }
     const INDEX_PATH = OUTPUT_PATH + '/question-index.json';
     // 索引格式版本：items 结构/字段变化时必须递增；scripts/geo-verify.mjs 的 index-data 断言按此版本校验
-    const INDEX_VERSION = 3;
+    // v4：题答分离（questionImages/analysisImages/boundaryIssues），服务端解题运行记录依赖题面图片字段
+    const INDEX_VERSION = 4;
 
     async function loadBank() {
       requirePath(QUESTION_BANK_PATH, '真题库', 'questionBankPath');
@@ -1334,6 +1695,9 @@ export default {
           for (const item of idx.items) {
             // 确保 knowledgePoints 是数组
             if (!Array.isArray(item.knowledgePoints)) item.knowledgePoints = [];
+            if (!Array.isArray(item.questionImages)) item.questionImages = [];
+            if (!Array.isArray(item.analysisImages)) item.analysisImages = [];
+            if (!Array.isArray(item.boundaryIssues)) item.boundaryIssues = [];
             byId.set(item.questionId, item);
             all.push(item);
           }
@@ -1351,12 +1715,25 @@ export default {
       for (const f of files) {
         const content = await fsService.readText(f.target);
         const meta = parseFrontmatter(content);
-        const parsed = parseQuestionFileFull(content);
-        // 获取文件磁盘绝对路径（供 imageRefs 直接读文件，不重新遍历）
+        // 先取得文件磁盘绝对路径：题答分离要在解析期按 md 目录解析题面图片引用
         let filePath = '';
         try { filePath = fsService.processPath(f.target); } catch (e) { filePath = f.name; }
+        const parsed = parseQuestionFileFull(content);
         for (const q of parsed.questions) {
-          const item = { ...q, file: f.name, filePath, material: parsed.material, meta, knowledgePoints: q.knowledgePoints || [] };
+          const boundaryIssues = (parsed.boundaryIssues || []).filter(
+            (issue) => !issue.questionId || issue.questionId === q.questionId
+          );
+          const item = {
+            ...q,
+            file: f.name,
+            filePath,
+            material: parsed.material,
+            meta,
+            knowledgePoints: q.knowledgePoints || [],
+            questionImages: parsed.questionImages || [],
+            analysisImages: parsed.analysisImages || [],
+            boundaryIssues
+          };
           byId.set(q.questionId, item);
           all.push(item);
         }
@@ -1380,6 +1757,9 @@ export default {
             material: item.material,
             answer: item.answer || '',
             analysis: item.analysis || '',
+            questionImages: item.questionImages || [],
+            analysisImages: item.analysisImages || [],
+            boundaryIssues: item.boundaryIssues || [],
             meta: item.meta || {},
             knowledgePoints: (item.knowledgePoints || []).map(kp => ({
               role: kp.role,
@@ -1419,6 +1799,105 @@ export default {
       const nums = String(meta.question_numbers || '').replace(/,/g, '-');
       const label = `${meta.year || ''}${meta.region || ''}卷 ${typeLabel} · 第${nums}题`;
       return { year: meta.year || '', region: meta.region || '', questionNumbers: nums, typeLabel, label };
+    }
+
+    // ========== 解题运行记录：持久化 + 题面上下文 ==========
+    // 服务端持有 run（题面就绪 → 作答已提交 → 核验完成），绑定题目与题面指纹。
+    // 记录落盘在 outputPath/solve-runs.json，重启后仍可核验/讲题；写盘失败只降级为内存态并如实记录。
+    const SOLVE_RUNS_PATH = OUTPUT_PATH + '/solve-runs.json';
+    const solveRegistry = createSolveRegistry({});
+    let solveRunsLoaded = null;
+    async function ensureSolveRunsLoaded() {
+      if (solveRunsLoaded) return solveRunsLoaded;
+      solveRunsLoaded = (async () => {
+        try {
+          const target = await fsService.resolve(SOLVE_RUNS_PATH);
+          const raw = await fsService.readText(target);
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.runs)) solveRegistry.restore(parsed.runs);
+        } catch (e) {
+          // 首次运行或记录损坏：从空记录开始，不伪造历史
+        }
+        return true;
+      })();
+      return solveRunsLoaded;
+    }
+    let solvePersistChain = Promise.resolve(true);
+    function persistSolveRuns() {
+      const payload = JSON.stringify({
+        version: SOLVE_RUNS_SCHEMA,
+        updatedAt: new Date().toISOString(),
+        runs: solveRegistry.list()
+      }, null, 2);
+      solvePersistChain = solvePersistChain.then(async () => {
+        try {
+          const target = await fsService.resolve(SOLVE_RUNS_PATH);
+          await fsService.writeText(target, payload, undefined, undefined, WRITE_POLICY);
+          return true;
+        } catch (e) {
+          console.error('geo-core: 解题运行记录写盘失败（内存状态仍有效）:', e.message);
+          return false;
+        }
+      });
+      return solvePersistChain;
+    }
+
+    // 题目所在 md 的磁盘路径：优先索引 filePath；旧索引缺失时遍历题库定位。
+    async function resolveQuestionFilePath(bank, q, questionId) {
+      const direct = q && q.filePath ? String(q.filePath) : '';
+      if (direct) return direct;
+      try {
+        const bankDir = await fsService.resolve(requirePath(QUESTION_BANK_PATH, '真题库', 'questionBankPath'));
+        const files = [];
+        await collectMdFiles(fsService, bankDir, files);
+        for (const f of files) {
+          try {
+            const text = await fsService.readText(f.target);
+            if (text && text.indexOf(questionId) >= 0) return fsService.processPath(f.target);
+          } catch (e) { /* skip */ }
+        }
+      } catch (e) { /* ignore */ }
+      return '';
+    }
+
+    // 题组题面 + 指纹 + run 状态（prepareSolve / solveStatus / open / explain 共用）。
+    async function questionRunContext(questionId) {
+      const bank = await loadBank();
+      const q = bank.byId.get(questionId);
+      if (!q) return { notFound: true };
+      const siblings = bank.all.filter(i => i.file === q.file);
+      // 题组（含相互提示的小题）作为一个整体提交与核验：run 以题组首题 id 为键。
+      const groupKey = (siblings[0] && siblings[0].questionId) || q.questionId;
+      const questions = siblings.map(i => ({ questionId: i.questionId, stem: i.stem, options: i.options || [] }));
+      const questionImages = (q.questionImages || []).map(img => ({
+        imageId: img.imageId, caption: img.caption, rel: img.rel, source: img.source,
+        order: typeof img.order === 'number' ? img.order : 0
+      }));
+      const questionFingerprintValue = questionFingerprint({
+        questionId: groupKey,
+        material: q.material || '',
+        stems: questions.map(x => x.stem || ''),
+        options: questions.map(x => x.options || []),
+        images: questionImages
+      });
+      const boundaryIssues = [];
+      for (const s of siblings) {
+        for (const issue of (s.boundaryIssues || [])) {
+          const key = [issue.kind, issue.questionId || '', issue.sectionTitle || ''].join('|');
+          if (!boundaryIssues.some(x => [x.kind, x.questionId || '', x.sectionTitle || ''].join('|') === key)) boundaryIssues.push(issue);
+        }
+      }
+      return {
+        bank,
+        q,
+        siblings,
+        groupKey,
+        questions,
+        questionImages,
+        fingerprint: questionFingerprintValue,
+        boundaryIssues,
+        isChoice: (q.options || []).length > 0
+      };
     }
 
     const api = {
@@ -1644,7 +2123,7 @@ export default {
         }
       },
 
-      // 讲题 Solver（P1）：只给题面，绝不含答案/解析 —— 供模型独立解题。
+      // 题面访问：只返回材料、题干、选项与小问（不含答案/解析/知识点/图片）。
       async questionData(questionId) {
         try {
           const bank = await loadBank();
@@ -1660,11 +2139,7 @@ export default {
             questions: siblings.map(i => ({
               questionId: i.questionId,
               stem: i.stem,
-              options: i.options,
-              // solve 阶段不给角色/证据（避免暴露"哪个是核心考点"）；完整信息由 judge(answerData) 阶段开放
-              knowledgePoints: (i.knowledgePoints || []).map(kp => ({
-                knowledgeUnit: kp.knowledge_unit || kp.knowledgeUnit || ''
-              }))
+              options: i.options || []
             }))
           };
         } catch (e) {
@@ -1672,52 +2147,28 @@ export default {
         }
       },
 
-      // 视觉预处理（V1）：imageRefs(qid) —— 解析该题 md 中所有图片引用为磁盘绝对路径。
-      // 返回 [{imageId, caption, sourcePath, rel}]；只含真正的栅格图片（png/jpg/webp/gif）。
+      // 题面图片引用：只返回题面图片（材料图 / 相关图片 / 各小问答案标记之前的正文图）。
+      // 解析图（答案、解析、教学备注中的图片）永不进入解题输入，见 prepareSolve。
       async imageRefs(questionId) {
         try {
           const bank = await loadBank();
           const q = bank.byId.get(questionId);
           if (!q) return { status: 'error', message: `未找到题目：${questionId}` };
-
-          // 优先用索引里存的 filePath（不再重新遍历全部文件）
-          let mdDiskPath = q.filePath || '';
-          let mdText = '';
-
-          if (mdDiskPath) {
-            // 从索引的 filePath 直接读文件
-            try {
-              const target = await fsService.resolve(mdDiskPath);
-              mdText = await fsService.readText(target);
-            } catch (e) {
-              mdDiskPath = ''; // 读失败，降级到遍历
-            }
-          }
-
-          // 降级：遍历题库找文件（兼容无 filePath 的旧索引）
+          const mdDiskPath = await resolveQuestionFilePath(bank, q, questionId);
           if (!mdDiskPath) {
-            const bankDir = await fsService.resolve(requirePath(QUESTION_BANK_PATH, '真题库', 'questionBankPath'));
-            const files = [];
-            await collectMdFiles(fsService, bankDir, files);
-            for (const f of files) {
-              try {
-                const text = await fsService.readText(f.target);
-                if (text && text.indexOf(questionId) >= 0) {
-                  mdDiskPath = fsService.processPath(f.target);
-                  mdText = text;
-                  break;
-                }
-              } catch (e) { /* skip */ }
-            }
+            return { status: 'warning', questionId, hasImages: false, images: [], message: '未找到该题所在文件，无法解析题面图片' };
           }
-
-          if (!mdDiskPath || !mdText) {
-            return { status: 'success', questionId, hasImages: false, images: [], message: '未找到该题所在文件' };
-          }
-          const refs = extractImageRefs(mdText, mdDiskPath).filter(r => r.image);
-          return { status: 'success', questionId, file: (mdDiskPath.split('\\').pop() || ''), hasImages: refs.length > 0, images: refs };
+          const images = resolveQuestionImagePaths(q.questionImages || [], mdDiskPath);
+          return {
+            status: 'success',
+            questionId,
+            file: (String(mdDiskPath).split(/[\\/]/).pop() || ''),
+            hasImages: images.length > 0,
+            images,
+            analysisImageCount: (q.analysisImages || []).length
+          };
         } catch (e) {
-          return { status: 'error', message: '图片引用解析失败：' + (e && e.message ? e.message : e) };
+          return { status: 'error', message: '题面图片引用解析失败：' + (e && e.message ? e.message : e) };
         }
       },
 
@@ -1745,41 +2196,273 @@ export default {
         }
       },
 
-      // 讲题 Judge（P2）：开放标准答案/解析 + 倒推采分点 + 核验骨架。
-      // 仅 judge 阶段使用（需显式授权）；返回内容含答案/解析，不得在 solve 阶段调用。
-      async answerData(questionId) {
+      // ===== 讲题运行记录（题面就绪 → 作答已提交 → 核验完成）=====
+      // 题面准备：分离题面与答案解析，指纹绑定题面；已有同指纹已提交 run 时直接复用。
+      // 无法判定题答边界时指出具体题目，请教师确认，不猜测。
+      async prepareSolve(questionId) {
         try {
-          const bank = await loadBank();
-          const q = bank.byId.get(questionId);
-          if (!q) return { status: 'error', message: `未找到题目：${questionId}` };
-          const isChoice = q.options && q.options.length > 0;
+          await ensureSolveRunsLoaded();
+          const ctxInfo = await questionRunContext(questionId);
+          if (ctxInfo.notFound) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
+          if (ctxInfo.boundaryIssues.length) {
+            return {
+              status: 'error',
+              code: 'QUESTION_BOUNDARY_UNCERTAIN',
+              questionId: ctxInfo.q.questionId,
+              file: ctxInfo.q.file,
+              boundaryIssues: ctxInfo.boundaryIssues,
+              message: '题答边界无法确定：已指出具体题目，请教师确认后再解题（不猜测切分）'
+            };
+          }
+          const mdDiskPath = await resolveQuestionFilePath(ctxInfo.bank, ctxInfo.q, questionId);
+          const resolvedImages = mdDiskPath
+            ? resolveQuestionImagePaths(ctxInfo.questionImages, mdDiskPath)
+            : ctxInfo.questionImages.map(img => ({ ...img, sourcePath: '' }));
+          const ensured = solveRegistry.ensureRun({
+            questionId: ctxInfo.groupKey,
+            questionFingerprint: ctxInfo.fingerprint
+          });
+          const run = ensured.run;
           return {
             status: 'success',
-            questionId,
-            isChoice,
-            scaffold: buildJudgeScaffold(q, isChoice)
+            runId: run.runId,
+            questionId: ctxInfo.q.questionId,
+            groupKey: ctxInfo.groupKey,
+            file: ctxInfo.q.file,
+            group: groupInfo(ctxInfo.q),
+            questionFingerprint: ctxInfo.fingerprint,
+            state: run.state,
+            reused: ensured.reused,
+            invalidatedPrevious: ensured.invalidated,
+            material: ctxInfo.q.material || '',
+            questions: ctxInfo.questions,
+            questionImages: resolvedImages,
+            analysisImageCount: (ctxInfo.q.analysisImages || []).length,
+            // 成功路径下边界问题为空数组（有边界问题时上面已返回 QUESTION_BOUNDARY_UNCERTAIN）。
+            boundaryIssues: [],
+            // 已提交（或已核验）的 run 直接复用：把服务端保存的独立作答一并返回，避免重复解题。
+            answer: run.answer
+              ? {
+                answerText: run.answer.answerText,
+                keyEvidence: run.answer.keyEvidence,
+                submittedAt: run.answer.submittedAt || run.submittedAt,
+                answerHash: run.answer.answerHash
+              }
+              : null,
+            solveStatus: solveRegistry.statusFor(ctxInfo.groupKey, ctxInfo.fingerprint)
           };
         } catch (e) {
-          return { status: 'error', message: '答案/核验骨架获取失败：' + (e && e.message ? e.message : e) };
+          return { status: 'error', code: 'PREPARE_SOLVE_FAILED', message: '题面准备失败：' + (e && e.message ? e.message : e) };
         }
       },
 
-      // 讲题 Explainer（P3）：同考点变式候选 + 讲题稿重组骨架（按讲解对象）。
-      // 只消费已验证解题过程与同考点情境，不重新解题、不直接拿解析推导讲法。
-      async explainerData(questionId, independentAnswer, judge, audience) {
+      // 记录独立作答：只能由插件在隔离解题子会话结束后调用；主模型传入的答案不经此接口。
+      async recordIndependentAnswer(runId, payload) {
+        try {
+          await ensureSolveRunsLoaded();
+          const res = solveRegistry.submit(runId, payload || {});
+          if (!res.ok) return { status: 'error', code: res.code, message: '独立作答记录失败：' + res.code };
+          await persistSolveRuns();
+          return {
+            status: 'success',
+            runId: res.run.runId,
+            questionId: res.run.questionId,
+            state: res.run.state,
+            submittedAt: res.run.submittedAt,
+            answerHash: res.run.answer ? res.run.answer.answerHash : '',
+            answerLength: res.run.answer ? res.run.answer.answerText.length : 0
+          };
+        } catch (e) {
+          return { status: 'error', code: 'RECORD_ANSWER_FAILED', message: '独立作答记录失败：' + (e && e.message ? e.message : e) };
+        }
+      },
+
+      async solveStatus(questionId) {
+        try {
+          await ensureSolveRunsLoaded();
+          const ctxInfo = await questionRunContext(questionId);
+          if (ctxInfo.notFound) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
+          return {
+            status: 'success',
+            questionId: ctxInfo.q.questionId,
+            questionFingerprint: ctxInfo.fingerprint,
+            boundaryIssues: ctxInfo.boundaryIssues,
+            ...solveRegistry.statusFor(ctxInfo.groupKey, ctxInfo.fingerprint)
+          };
+        } catch (e) {
+          return { status: 'error', code: 'SOLVE_STATUS_FAILED', message: '状态读取失败：' + (e && e.message ? e.message : e) };
+        }
+      },
+
+      // 开放参考答案（Judge 前半）：作答提交前一律拒绝，题面变化后旧作答失效。
+      async openReferenceAnswer(questionId) {
+        try {
+          await ensureSolveRunsLoaded();
+          const ctxInfo = await questionRunContext(questionId);
+          if (ctxInfo.notFound) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
+          const status = solveRegistry.statusFor(ctxInfo.groupKey, ctxInfo.fingerprint);
+          if (!status.runId || status.state === SOLVE_STATES.READY) {
+            return {
+              status: 'error',
+              code: 'SOLVE_NOT_SUBMITTED',
+              questionId: ctxInfo.q.questionId,
+              solveStatus: status,
+              message: '该题尚未完成独立作答，不能开放参考答案。先调用 geo_solve。'
+            };
+          }
+          if (!status.fingerprintMatches) {
+            return {
+              status: 'error',
+              code: 'QUESTION_VERSION_CHANGED',
+              questionId: ctxInfo.q.questionId,
+              solveStatus: status,
+              message: '题面已变化，旧作答失效，必须重新解题后再开放答案。'
+            };
+          }
+          const opened = solveRegistry.openReference(status.runId);
+          if (!opened.ok) return { status: 'error', code: opened.code, message: '答案开放失败：' + opened.code };
+          await persistSolveRuns();
+          const run = opened.run;
+          const reference = ctxInfo.siblings.map((item) => {
+            const itemIsChoice = (item.options || []).length > 0;
+            const scorePoints = buildScorePoints(item, itemIsChoice);
+            return {
+              questionId: item.questionId,
+              isChoice: itemIsChoice,
+              standardAnswer: item.answer || '',
+              analysis: item.analysis || '',
+              scorePoints,
+              coverageGrid: scorePoints.map((p) => ({ match: p.option ? ('正确项=' + p.option) : p.point, hit: '', note: '' })),
+              distractorTargets: itemIsChoice
+                ? detectDistractors(item.analysis).map((d) => ({ option: d.option, reason: d.reason, independentJudged: '' }))
+                : []
+            };
+          });
+          return {
+            status: 'success',
+            questionId: ctxInfo.q.questionId,
+            runId: run.runId,
+            state: run.state,
+            independent: {
+              answerText: run.answer ? run.answer.answerText : '',
+              keyEvidence: run.answer ? run.answer.keyEvidence : '',
+              submittedAt: run.submittedAt,
+              answerHash: run.answer ? run.answer.answerHash : ''
+            },
+            isChoice: ctxInfo.isChoice,
+            reference,
+            judgeOpenedAt: run.judgeOpenedAt,
+            nextStep: '对照完成后，再次调用 geo_judge 并传入 conclusion 归档核验结论（一致/遗漏/错误/争议 + 修正结论）'
+          };
+        } catch (e) {
+          return { status: 'error', code: 'OPEN_ANSWER_FAILED', message: '答案开放失败：' + (e && e.message ? e.message : e) };
+        }
+      },
+
+      // 归档核验结论（Judge 后半）：必须已开放答案；结论结构见 geo_judge 工具。
+      async recordVerification(questionId, conclusion) {
+        try {
+          await ensureSolveRunsLoaded();
+          const ctxInfo = await questionRunContext(questionId);
+          if (ctxInfo.notFound) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
+          const status = solveRegistry.statusFor(ctxInfo.groupKey, ctxInfo.fingerprint);
+          if (!status.runId || status.state === SOLVE_STATES.READY) {
+            return { status: 'error', code: 'SOLVE_NOT_SUBMITTED', solveStatus: status, message: '该题尚未完成独立作答，不能归档核验结论。' };
+          }
+          if (!status.fingerprintMatches) {
+            return { status: 'error', code: 'QUESTION_VERSION_CHANGED', solveStatus: status, message: '题面已变化，旧作答与核验失效，必须重新解题。' };
+          }
+          const res = solveRegistry.recordVerification(status.runId, conclusion);
+          if (!res.ok) return { status: 'error', code: res.code, message: res.message || ('核验结论记录失败：' + res.code) };
+          await persistSolveRuns();
+          return {
+            status: 'success',
+            questionId: ctxInfo.q.questionId,
+            runId: res.run.runId,
+            state: res.run.state,
+            verifiedAt: res.run.verifiedAt,
+            conclusion: res.run.conclusion
+          };
+        } catch (e) {
+          return { status: 'error', code: 'RECORD_VERIFICATION_FAILED', message: '核验结论归档失败：' + (e && e.message ? e.message : e) };
+        }
+      },
+
+      // 讲题骨架（Explainer）：必须已完成核验；只读服务端记录，不再接收模型自报的独立答案/核验材料。
+      async assembleExplanation(questionId, audience) {
+        try {
+          await ensureSolveRunsLoaded();
+          const ctxInfo = await questionRunContext(questionId);
+          if (ctxInfo.notFound) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
+          const status = solveRegistry.statusFor(ctxInfo.groupKey, ctxInfo.fingerprint);
+          if (!status.runId || status.state === SOLVE_STATES.READY) {
+            return {
+              status: 'error',
+              code: 'EXPLAIN_NOT_VERIFIED',
+              solveStatus: status,
+              message: '未完成核验，不能生成讲稿。先完成 geo_solve → geo_judge（开放答案）→ geo_judge（归档 conclusion）。'
+            };
+          }
+          if (!status.fingerprintMatches) {
+            return {
+              status: 'error',
+              code: 'QUESTION_VERSION_CHANGED',
+              solveStatus: status,
+              message: '题面已变化，旧作答与核验失效：必须重新解题与核验后才能生成讲稿。'
+            };
+          }
+          if (status.state !== SOLVE_STATES.VERIFIED) {
+            return {
+              status: 'error',
+              code: 'EXPLAIN_NOT_VERIFIED',
+              solveStatus: status,
+              message: '未完成核验，不能生成讲稿。先完成 geo_solve → geo_judge（开放答案）→ geo_judge（归档 conclusion）。'
+            };
+          }
+          const run = solveRegistry.get(status.runId);
+          if (!run) {
+            return { status: 'error', code: 'EXPLAIN_NOT_VERIFIED', solveStatus: status, message: '未找到该题的有效运行记录，请重新解题与核验。' };
+          }
+          const coreKp = (ctxInfo.q.knowledgePoints || []).find(kp => kp.role === 'core_exam_point') || (ctxInfo.q.knowledgePoints || [])[0] || {};
+          const variants = collectSamePointContexts(ctxInfo.bank.all, ctxInfo.q, coreKp);
+          const comparison = rankSimilarQuestions(ctxInfo.bank.all, ctxInfo.q, 5);
+          const aud = EXPLAIN_AUDIENCES.includes(audience) ? audience : 'student';
+          const report = buildExplainerReport(ctxInfo.q, ctxInfo.isChoice, variants, aud, comparison);
+          return {
+            status: 'success',
+            questionId: ctxInfo.q.questionId,
+            audience: aud,
+            report,
+            variants,
+            comparison,
+            verification: {
+              status: 'verified',
+              verified: true,
+              evidence: 'server_run_record',
+              runId: run.runId,
+              submittedAt: run.submittedAt,
+              judgeOpenedAt: run.judgeOpenedAt,
+              verifiedAt: run.verifiedAt,
+              independentAnswerHash: run.answer ? run.answer.answerHash : '',
+              conclusion: run.conclusion,
+              message: '核验状态来自服务端运行记录：答案在作答提交后开放，核验结论已归档。该记录证明流程顺序与材料交接，不证明内容正确。'
+            }
+          };
+        } catch (e) {
+          return { status: 'error', code: 'ASSEMBLE_EXPLANATION_FAILED', message: '讲题骨架生成失败：' + (e && e.message ? e.message : e) };
+        }
+      },
+
+      // 同类题比较依据：按设问任务 / 推理关系 / 材料特征检索，不只看考点是否相同。
+      async similarQuestions(questionId, limit) {
         try {
           const bank = await loadBank();
           const q = bank.byId.get(questionId);
-          if (!q) return { status: 'error', message: `未找到题目：${questionId}` };
-          const isChoice = q.options && q.options.length > 0;
-          const coreKp = (q.knowledgePoints || []).find(kp => kp.role === 'core_exam_point') || (q.knowledgePoints || [])[0] || {};
-          const variants = collectSamePointContexts(bank.all, q, coreKp);
-          const judgeSummary = judge && (judge.scaffold || judge.standard) ? (judge.scaffold || judge.standard) : null;
-          const aud = EXPLAIN_AUDIENCES.includes(audience) ? audience : 'student';
-          const report = buildExplainerReport(q, isChoice, judgeSummary, variants, aud);
-          return { status: 'success', questionId, audience: aud, report, variants };
+          if (!q) return { status: 'error', code: 'QUESTION_NOT_FOUND', message: `未找到题目：${questionId}` };
+          const result = rankSimilarQuestions(bank.all, q, Number.isSafeInteger(limit) && limit > 0 ? limit : 5);
+          return { status: 'success', questionId, ...result };
         } catch (e) {
-          return { status: 'error', message: '讲题重组失败：' + (e && e.message ? e.message : e) };
+          return { status: 'error', code: 'SIMILAR_QUESTIONS_FAILED', message: '同类题检索失败：' + (e && e.message ? e.message : e) };
         }
       },
 
