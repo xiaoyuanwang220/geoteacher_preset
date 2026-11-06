@@ -813,7 +813,7 @@ async function checkPipelineDiscipline() {
   }
 
   // (h) 作答绑定与门禁（core 源码 + 状态机实测）
-  const gateTokens = ['SOLVE_NOT_SUBMITTED', 'JUDGE_NOT_OPENED', 'EXPLAIN_NOT_VERIFIED', 'questionFingerprint', 'solve-runs.json'];
+  const gateTokens = ['SOLVE_NOT_SUBMITTED', 'JUDGE_NOT_OPENED', 'EXPLAIN_NOT_VERIFIED', 'QUESTION_NOT_IN_GROUP', 'conclusions', 'questionFingerprint', 'solve-runs.json'];
   const gateMissing = missingOf(coreSrc, gateTokens);
   add('solve-gates', '作答绑定与门禁（门禁码 / 题面指纹 / run 持久化）', gateMissing.length === 0,
     gateMissing.length === 0
@@ -829,13 +829,13 @@ async function checkPipelineDiscipline() {
     const reg = coreMod.createSolveRegistry({});
     const qid = 'verify-group';
     const fp = coreMod.questionFingerprint({ questionId: qid, material: '材料', stems: ['题干'], options: [], images: [] });
-    const run = reg.ensureRun({ questionId: qid, questionFingerprint: fp }).run;
+    const run = reg.ensureRun({ questionId: qid, questionIds: [qid], questionFingerprint: fp }).run;
     const openBeforeSubmit = reg.openReference(run.runId);
-    const verifyBeforeOpen = reg.recordVerification(run.runId, { verdict: 'consistent' });
+    const verifyBeforeOpen = reg.recordVerification(run.runId, qid, { verdict: 'consistent' });
     const submitted = reg.submit(run.runId, { answerText: '## 答案\nB', keyEvidence: '依据' });
     const opened = reg.openReference(run.runId);
-    const badVerdict = reg.recordVerification(run.runId, { verdict: 'maybe' });
-    const verified = reg.recordVerification(run.runId, { verdict: 'consistent', matched: ['B'] });
+    const badVerdict = reg.recordVerification(run.runId, qid, { verdict: 'maybe' });
+    const verified = reg.recordVerification(run.runId, qid, { verdict: 'consistent', matched: ['B'] });
     const stateMachineOk = openBeforeSubmit.ok === false && openBeforeSubmit.code === 'SOLVE_NOT_SUBMITTED'
       && verifyBeforeOpen.ok === false && verifyBeforeOpen.code === 'JUDGE_NOT_OPENED'
       && submitted.ok === true && submitted.run.state === coreMod.SOLVE_STATES.SUBMITTED
@@ -846,6 +846,26 @@ async function checkPipelineDiscipline() {
       stateMachineOk
         ? 'question_ready → submitted → verified；三道门禁按序生效'
         : `open前=${openBeforeSubmit.code}, 归档前=${verifyBeforeOpen.code}, 非法verdict=${badVerdict.code}, 最终=${verified.ok}`);
+
+    // 题组按小问分别归档：只有全部小问都有结论才算 verified，且不能张冠李戴。
+    const groupReg = coreMod.createSolveRegistry({});
+    const groupFp = coreMod.questionFingerprint({ questionId: 'verify-g1', material: '材料', stems: ['一', '二'], options: [], images: [] });
+    const groupRun = groupReg.ensureRun({ questionId: 'verify-g1', questionIds: ['verify-g1', 'verify-g2'], questionFingerprint: groupFp }).run;
+    groupReg.submit(groupRun.runId, { answerText: '## 答案\n一、二' });
+    groupReg.openReference(groupRun.runId);
+    const firstArchive = groupReg.recordVerification(groupRun.runId, 'verify-g1', { verdict: 'partially_consistent' });
+    const wrongQid = groupReg.recordVerification(groupRun.runId, 'verify-other', { verdict: 'consistent' });
+    const secondArchive = groupReg.recordVerification(groupRun.runId, 'verify-g2', { verdict: 'consistent' });
+    const groupOk = firstArchive.run.state === coreMod.SOLVE_STATES.SUBMITTED
+      && firstArchive.pending.length === 1
+      && wrongQid.code === 'QUESTION_NOT_IN_GROUP'
+      && secondArchive.run.state === coreMod.SOLVE_STATES.VERIFIED
+      && secondArchive.run.conclusions['verify-g1'].verdict === 'partially_consistent'
+      && secondArchive.run.conclusions['verify-g2'].verdict === 'consistent';
+    add('solve-group-verification', '题组核验按小问归档（未全归档不算 verified，跨题组 qid 拒绝）', groupOk,
+      groupOk
+        ? 'g1 归档后仍为 submitted（pending g2）；g2 归档后才 verified；结论按 qid 分开保存'
+        : `第一次=${firstArchive.run.state}, 待归档=${JSON.stringify(firstArchive.pending || [])}, 跨题组=${wrongQid.code}, 最终=${secondArchive.run.state}`);
   }
 
   // (i) geo_judge 两阶段：无 conclusion 开答案，有 conclusion 归档

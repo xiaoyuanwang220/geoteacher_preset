@@ -867,6 +867,29 @@ export function createSolveRegistry(options) {
     latest.clear();
     for (const item of Array.isArray(items) ? items : []) {
       if (!item || !item.runId || !item.questionId) continue;
+      // 兼容旧记录：旧版只有一个 conclusion 字段，且不知道它属于题组里的哪一问
+      // （真实会话已发现“最后一次归档覆盖前一次”的问题）。无法判定归属时 fail-closed：
+      // 丢弃旧结论、保留独立作答、回到 submitted，要求按小问重新核验。
+      const legacy = !item.conclusions && item.conclusion && item.conclusion.verdict;
+      if (!Array.isArray(item.questionIds) || item.questionIds.length === 0) item.questionIds = [item.questionId];
+      if (!item.conclusions || typeof item.conclusions !== 'object') item.conclusions = {};
+      if (legacy) {
+        item.conclusions = {};
+        item.verifiedAt = null;
+        if (item.state !== SOLVE_STATES.READY) item.state = SOLVE_STATES.SUBMITTED;
+        item.legacyMigrated = true;
+      }
+      item.conclusion = null;
+      if (item.state !== SOLVE_STATES.READY) {
+        const pending = item.questionIds.filter((id) => !item.conclusions[id]);
+        if (pending.length === 0 && Object.keys(item.conclusions).length > 0) {
+          item.state = SOLVE_STATES.VERIFIED;
+          item.verifiedAt = Math.max(...item.questionIds.map((id) => item.conclusions[id].verifiedAt || 0)) || item.verifiedAt || null;
+        } else {
+          item.state = SOLVE_STATES.SUBMITTED;
+          item.verifiedAt = null;
+        }
+      }
       runs.set(item.runId, item);
       const prev = latest.get(item.questionId);
       const prevRun = prev ? runs.get(prev) : null;
@@ -877,9 +900,29 @@ export function createSolveRegistry(options) {
   function ensureRun(input) {
     const questionId = String((input && input.questionId) || '');
     const fingerprint = String((input && input.questionFingerprint) || '');
+    const incomingIds = Array.isArray(input && input.questionIds)
+      ? input.questionIds.map((id) => String(id || '')).filter(Boolean)
+      : [];
+    const questionIds = incomingIds.length > 0 ? [...new Set(incomingIds)] : [questionId];
     const previousId = latest.get(questionId);
     const previous = previousId ? runs.get(previousId) : null;
     if (previous && previous.questionFingerprint === fingerprint) {
+      const previousIds = Array.isArray(previous.questionIds) && previous.questionIds.length
+        ? previous.questionIds
+        : [previous.questionId];
+      // 旧记录按“单题组”保存；题组变大时，旧的单条结论可能已被最后一次归档覆盖，
+      // 不能沿用：清空结论、回到已提交状态，要求按小问重新核验。
+      if (questionIds.length > previousIds.length && previous.state !== SOLVE_STATES.READY) {
+        previous.questionIds = questionIds;
+        previous.conclusions = {};
+        previous.conclusion = null;
+        previous.verifiedAt = null;
+        previous.state = SOLVE_STATES.SUBMITTED;
+        remember(previous);
+      } else if (!Array.isArray(previous.questionIds) || previous.questionIds.length === 0) {
+        previous.questionIds = questionIds;
+        remember(previous);
+      }
       const reusable = previous.state === SOLVE_STATES.SUBMITTED || previous.state === SOLVE_STATES.VERIFIED;
       return { run: cloneRun(previous), reused: reusable, invalidated: false };
     }
@@ -887,12 +930,14 @@ export function createSolveRegistry(options) {
     const existing = runs.get(runId);
     if (existing) {
       // 题面回退到旧版本时，旧 run 仍是当前题面的有效记录：重新指向它，避免误报版本变化。
+      if (!Array.isArray(existing.questionIds) || existing.questionIds.length === 0) existing.questionIds = questionIds;
       latest.set(questionId, runId);
       return { run: cloneRun(existing), reused: existing.state !== SOLVE_STATES.READY, invalidated: false };
     }
     const run = remember({
       runId,
       questionId,
+      questionIds,
       questionFingerprint: fingerprint,
       state: SOLVE_STATES.READY,
       createdAt: nowFn(),
@@ -900,6 +945,7 @@ export function createSolveRegistry(options) {
       judgeOpenedAt: null,
       verifiedAt: null,
       answer: null,
+      conclusions: {},
       conclusion: null
     });
     return { run: cloneRun(run), reused: false, invalidated: Boolean(previous) };
@@ -951,14 +997,28 @@ export function createSolveRegistry(options) {
   }
 
   const VERDICTS = ['consistent', 'partially_consistent', 'inconsistent'];
-  function recordVerification(runId, conclusion) {
+  /**
+   * 归档单个小问的核验结论。run 以题组为单位，但结论必须按小问分别保存：
+   * 题组内所有小问都归档后才算“核验完成”（state=verified）。
+   * 兼容旧记录：旧 run 只有一条 conclusion 时，restore 会迁移为单小问结论。
+   */
+  function recordVerification(runId, questionId, conclusion) {
     const run = runs.get(String(runId || ''));
     if (!run) return { ok: false, code: 'RUN_NOT_FOUND' };
     if (!run.judgeOpenedAt) return { ok: false, code: 'JUDGE_NOT_OPENED' };
+    const qid = String(questionId || '');
+    if (!Array.isArray(run.questionIds) || run.questionIds.length === 0) {
+      run.questionIds = [run.questionId];
+    }
+    if (!qid || !run.questionIds.includes(qid)) {
+      return { ok: false, code: 'QUESTION_NOT_IN_GROUP', message: '核验的小问不属于该题组 run：' + (qid || '(空)') };
+    }
+    if (!run.conclusions || typeof run.conclusions !== 'object') run.conclusions = {};
     const c = conclusion || {};
     if (!VERDICTS.includes(c.verdict)) return { ok: false, code: 'CONCLUSION_INVALID', message: 'verdict 必须是 consistent | partially_consistent | inconsistent' };
-    const toList = (v) => (Array.isArray(v) ? v : []).map(x => String(x).slice(0, 300)).filter(Boolean).slice(0, 12);
-    run.conclusion = {
+    const toList = (v) => (Array.isArray(v) ? v : []).map((x) => String(x).slice(0, 300)).filter(Boolean).slice(0, 12);
+    run.conclusions[qid] = {
+      questionId: qid,
       verdict: c.verdict,
       matched: toList(c.matched),
       missed: toList(c.missed),
@@ -967,18 +1027,32 @@ export function createSolveRegistry(options) {
       correction: String(c.correction || '').slice(0, 1200),
       verifiedAt: nowFn()
     };
-    run.state = SOLVE_STATES.VERIFIED;
-    run.verifiedAt = run.conclusion.verifiedAt;
+    const pending = run.questionIds.filter((id) => !run.conclusions[id]);
+    if (pending.length === 0) {
+      run.state = SOLVE_STATES.VERIFIED;
+      run.verifiedAt = Math.max(...run.questionIds.map((id) => run.conclusions[id].verifiedAt || 0));
+    } else {
+      run.state = SOLVE_STATES.SUBMITTED;
+      run.verifiedAt = null;
+    }
+    run.conclusion = null; // 旧的单条结论字段不再使用，避免被误读
     remember(run);
-    return { ok: true, run: cloneRun(run) };
+    return { ok: true, run: cloneRun(run), conclusion: run.conclusions[qid], pending };
   }
 
   function statusFor(questionId, currentFingerprint) {
     const run = latestForQuestion(questionId);
     if (!run) {
-      return { state: 'none', runId: null, fingerprintMatches: false, submittedAt: null, judgedAt: null, canJudge: false, canExplain: false };
+      return {
+        state: 'none', runId: null, fingerprintMatches: false, submittedAt: null, judgedAt: null,
+        questionIds: [], conclusions: {}, pendingQuestionIds: [], canJudge: false, canExplain: false
+      };
     }
     const matches = !currentFingerprint || run.questionFingerprint === currentFingerprint;
+    const questionIds = Array.isArray(run.questionIds) && run.questionIds.length ? run.questionIds : [run.questionId];
+    const conclusions = run.conclusions && typeof run.conclusions === 'object' ? run.conclusions : {};
+    const pendingQuestionIds = questionIds.filter((id) => !conclusions[id]);
+    const verified = pendingQuestionIds.length === 0;
     return {
       state: run.state,
       runId: run.runId,
@@ -986,8 +1060,13 @@ export function createSolveRegistry(options) {
       submittedAt: run.submittedAt || null,
       judgedAt: run.judgeOpenedAt || null,
       verifiedAt: run.verifiedAt || null,
+      questionIds,
+      conclusions,
+      pendingQuestionIds,
+      verifiedCount: questionIds.length - pendingQuestionIds.length,
+      questionCount: questionIds.length,
       canJudge: matches && run.state !== SOLVE_STATES.READY,
-      canExplain: matches && run.state === SOLVE_STATES.VERIFIED
+      canExplain: matches && run.state === SOLVE_STATES.VERIFIED && verified
     };
   }
 
@@ -2240,7 +2319,8 @@ export default {
             : ctxInfo.questionImages.map(img => ({ ...img, sourcePath: '' }));
           const ensured = solveRegistry.ensureRun({
             questionId: ctxInfo.groupKey,
-            questionFingerprint: ctxInfo.fingerprint
+            questionFingerprint: ctxInfo.fingerprint,
+            questionIds: ctxInfo.questions.map((item) => item.questionId)
           });
           const run = ensured.run;
           return {
@@ -2392,7 +2472,7 @@ export default {
           if (!status.fingerprintMatches) {
             return { status: 'error', code: 'QUESTION_VERSION_CHANGED', solveStatus: status, message: '题面已变化，旧作答与核验失效，必须重新解题。' };
           }
-          const res = solveRegistry.recordVerification(status.runId, conclusion);
+          const res = solveRegistry.recordVerification(status.runId, ctxInfo.q.questionId, conclusion);
           if (!res.ok) return { status: 'error', code: res.code, message: res.message || ('核验结论记录失败：' + res.code) };
           await persistSolveRuns();
           return {
@@ -2400,8 +2480,11 @@ export default {
             questionId: ctxInfo.q.questionId,
             runId: res.run.runId,
             state: res.run.state,
+            questionIds: res.run.questionIds,
+            verifiedCount: (res.run.questionIds || []).length - (res.pending || []).length,
+            pendingQuestionIds: res.pending || [],
             verifiedAt: res.run.verifiedAt,
-            conclusion: res.run.conclusion
+            conclusion: res.conclusion
           };
         } catch (e) {
           return { status: 'error', code: 'RECORD_VERIFICATION_FAILED', message: '核验结论归档失败：' + (e && e.message ? e.message : e) };
@@ -2431,17 +2514,29 @@ export default {
               message: '题面已变化，旧作答与核验失效：必须重新解题与核验后才能生成讲稿。'
             };
           }
-          if (status.state !== SOLVE_STATES.VERIFIED) {
+          if (status.state !== SOLVE_STATES.VERIFIED || (status.pendingQuestionIds || []).length > 0) {
             return {
               status: 'error',
               code: 'EXPLAIN_NOT_VERIFIED',
               solveStatus: status,
-              message: '未完成核验，不能生成讲稿。先完成 geo_solve → geo_judge（开放答案）→ geo_judge（归档 conclusion）。'
+              message: '未完成核验，不能生成讲稿：题组内还有小问未归档核验结论'
+                + ((status.pendingQuestionIds || []).length ? '（' + status.pendingQuestionIds.join('、') + '）' : '')
+                + '。先完成 geo_solve → geo_judge（开放答案）→ 按小问调用 geo_judge 归档 conclusion。'
             };
           }
           const run = solveRegistry.get(status.runId);
           if (!run) {
             return { status: 'error', code: 'EXPLAIN_NOT_VERIFIED', solveStatus: status, message: '未找到该题的有效运行记录，请重新解题与核验。' };
+          }
+          const conclusions = run.conclusions && typeof run.conclusions === 'object' ? run.conclusions : {};
+          const conclusion = conclusions[ctxInfo.q.questionId];
+          if (!conclusion) {
+            return {
+              status: 'error',
+              code: 'EXPLAIN_NOT_VERIFIED',
+              solveStatus: status,
+              message: '该小问没有归档核验结论（' + ctxInfo.q.questionId + '）：请对这个小问调用 geo_judge 归档 conclusion。'
+            };
           }
           const coreKp = (ctxInfo.q.knowledgePoints || []).find(kp => kp.role === 'core_exam_point') || (ctxInfo.q.knowledgePoints || [])[0] || {};
           const variants = collectSamePointContexts(ctxInfo.bank.all, ctxInfo.q, coreKp);
@@ -2460,12 +2555,17 @@ export default {
               verified: true,
               evidence: 'server_run_record',
               runId: run.runId,
+              questionId: ctxInfo.q.questionId,
               submittedAt: run.submittedAt,
               judgeOpenedAt: run.judgeOpenedAt,
               verifiedAt: run.verifiedAt,
               independentAnswerHash: run.answer ? run.answer.answerHash : '',
-              conclusion: run.conclusion,
-              message: '核验状态来自服务端运行记录：答案在作答提交后开放，核验结论已归档。该记录证明流程顺序与材料交接，不证明内容正确。'
+              questionIds: status.questionIds || run.questionIds || [],
+              verifiedCount: status.verifiedCount,
+              questionCount: status.questionCount,
+              conclusion,
+              conclusions,
+              message: '核验状态来自服务端运行记录：答案在作答提交后开放，题组按小问分别归档核验结论。该记录证明流程顺序与材料交接，不证明内容正确。'
             }
           };
         } catch (e) {

@@ -20,6 +20,7 @@ whenToUse: 讲题、怎么讲、讲解题思路、面向学生/教师/命题人�
 
 - 每道题一个 run，绑定题目与题面指纹；题面变化即旧 run 失效，必须重新解题（打开答案会返回 `QUESTION_VERSION_CHANGED`）。
 - 标准答案与解析只在"作答已提交"之后由 `geo_judge` 开放；未提交时返回 `SOLVE_NOT_SUBMITTED`，不得绕道读取。
+- **题组按小问归档核验结论**：一个 run 覆盖题组内全部小问，`geo_judge(qid, conclusion)` 按 qid 分别保存；题组内所有小问都归档后才算"核验完成"。只归档部分小问时状态仍是"作答已提交"，`geo_explain` 返回 `EXPLAIN_NOT_VERIFIED` 并列出未归档小问；跨题组 qid 归档返回 `QUESTION_NOT_IN_GROUP`。
 - 生成讲稿需"核验完成"；未归档核验结论时 `geo_explain` 返回 `EXPLAIN_NOT_VERIFIED`；未先打开答案就归档核验会得到 `JUDGE_NOT_OPENED`。
 - "核验完成"表示答案开放与对照结论归档的次序已完成，不等于内容正确；讲稿中不得扩大表述。
 
@@ -27,22 +28,30 @@ whenToUse: 讲题、怎么讲、讲解题思路、面向学生/教师/命题人�
 
 ### 第一步 解题（geo_solve）
 
-- 调用 `geo_solve(qid)`，由插件启动隔离解题会话完成作答并保存，返回独立作答与关键依据。不得把题面、答案或任何提示交给解题侧，解题期间不干预。
-- 返回 `reused` 表示同指纹已有 submitted／verified run，直接沿用，不重新解题。
+- 调用一次 `geo_solve(qid)`（题组用任一小问的 qid 即可），由插件启动隔离解题会话完成**整个题组**的作答并保存，返回独立作答与关键依据。不得把题面、答案或任何提示交给解题侧，解题期间不干预。
+- 返回 `reused` 表示同指纹已有 submitted／verified run，直接沿用；**不要对同题组的其它小问重复调用**（会复用同一次作答）。
 - 失败时如实报告错误码（如 `SOLVER_ISOLATION_UNAVAILABLE`、`IMAGE_DELIVERY_INCOMPLETE`、`SOLVER_RUN_FAILED`），不回落主会话自解。
 
 ### 第二步 核验（geo_judge，两阶段）
 
-1. 先调用 `geo_judge(qid)` 打开标准答案：得到独立作答、标准答案、解析、采分点、覆盖网格与干扰项目标，状态为答案已开放。
-2. 对照完成后再次调用 `geo_judge(qid, conclusion)` 归档核验结论：`verdict` 取 consistent／partially_consistent／inconsistent，并填 `matched`、`missed`、`wrong`、`disputed`、`correction`。
-- 取得答案只是开始核验，不能当成核验完成；参考解析有疑点时保留分歧，不强行判为一致。
+1. **只调用一次** `geo_judge(qid)` 打开标准答案：得到独立作答、题组内各小问的标准答案、解析、采分点、覆盖网格与干扰项目标。不要每个小问各开一次。
+2. 对照完成后**按小问**调用 `geo_judge(qid, conclusion)` 归档：每个小问一次，`qid` 必须是该小问自己的 id；`verdict` 取 consistent／partially_consistent／inconsistent，并填 `matched`、`missed`、`wrong`、`disputed`、`correction`。
+- **判定校准**：只要 `missed` 或 `wrong` 非空，就不能标 `consistent`（有遗漏用 `partially_consistent`）；判断不了时保留 `disputed`，不强行判为一致。
+- 取得答案只是开始核验，不能当成核验完成；参考解析有疑点时保留分歧。
 - 原始独立作答保持不变；修正写在 `correction` 中另记。
 
 ### 第三步 成稿（geo_explain）
 
-- 调用 `geo_explain(qid, audience)`：工具不接收 independentAnswer 或 judgeReport，讲稿只读服务端核验记录；模型侧不手工拼接"核验材料"。
+- 调用 `geo_explain(qid, audience)`：工具不接收 independentAnswer 或 judgeReport，讲稿只读服务端按小问保存的核验记录；模型侧不手工拼接"核验材料"。
+- 需要**整组一份讲稿**时，分别对每个小问调用 `geo_explain` 取各自的骨架，再合成一份；需要按小问分稿时就各自调用。不要为了同一个交付物重复调用同一 qid。
 - 同一题切换对象复用已归档核验，只重新组织讲稿；题面或作答依据变化后重新走一、二步。
 - 需要分析命题设计时走 `geo_analyze`；把已核验结果整理成命题人讲稿时才用 `geo_explain` 的 setter 对象。
+
+## 交付纯净度（硬性）
+
+- 讲稿交付**只输出讲稿正文**：不写"已完成/下面是成稿/流程说明"，不写核验状态、服务端记录、run id、时间戳等内部信息，不追加"需要切换对象/要我导出吗"一类话术。
+- 核验状态只用于你自己判断讲稿怎么讲，**不进入讲稿**；需要提醒教师时单独用一句话说明，不混入正文。
+- 同类题与变式**只能引用** `geo_explain` 返回的 `comparison.basis` 与 `variants` 中的题目；不得补充记忆中的其它题目。候选不足时按 `gap` 写明缺口，只保留本题可支持的结论。
 
 ## 缺失前置状态时的报告
 
@@ -90,13 +99,16 @@ whenToUse: 讲题、怎么讲、讲解题思路、面向学生/教师/命题人�
 ## 自检清单
 
 - [ ] 顺序合规：solve → judge（两阶段）→ explain，未跳步、未重新解题；
+- [ ] 题组只解题一次、只开放答案一次，核验结论按小问逐个归档；未全部归档前不出讲稿；
 - [ ] 未在讲题阶段自解、未直读题库 md 或图片、未向解题侧泄露答案或提示；
 - [ ] audience 已标注且正确，未因用户是教师默认选 teacher；
-- [ ] 讲稿只引用服务端核验记录；缺前置时如实报告，未自称已核验；
+- [ ] 讲稿只引用服务端按小问保存的核验记录；缺前置时如实报告，未自称已核验；
 - [ ] 学生、教师对象为四段式且四维在段内；学生对象的六步可执行（见 references §4.1）；
 - [ ] 学生对象讲清知识作用与思考过程，教师对象突出启发与能力培养；
 - [ ] 同类题比较按三要素检索，有共同步骤／条件差异／适用边界，列明所依据题目，缺口已说明；
+- [ ] 同类题与变式**全部来自工具返回的 basis/variants**，未补充记忆中的题目；
 - [ ] 命题人对象逐层检查干扰，不适用／未发现如实标注；
+- [ ] 交付纯净：只给讲稿正文，不含流程说明、核验状态、内部记录或“要不要切换对象”一类话术；
 - [ ] 无寒暄与过程性元话语，未照抄解析。
 
 ## 资源路由

@@ -235,7 +235,7 @@ test('run 状态机：未提交不给答案、未开答案不能归档、verdict
   assert.equal(ensured.run.runId, `T-SM-1__${fingerprint}`, 'runId 应绑定题组键与题面指纹');
 
   assert.equal(registry.openReference(ensured.run.runId).code, 'SOLVE_NOT_SUBMITTED', '未提交不能开放答案');
-  assert.equal(registry.recordVerification(ensured.run.runId, { verdict: 'consistent' }).code, 'JUDGE_NOT_OPENED', '未开放答案不能归档结论');
+  assert.equal(registry.recordVerification(ensured.run.runId, 'T-SM-1', { verdict: 'consistent' }).code, 'JUDGE_NOT_OPENED', '未开放答案不能归档结论');
   assert.equal(registry.submit(ensured.run.runId, { answerText: '   ' }).code, 'EMPTY_ANSWER', '空作答不得算提交');
 
   const submitted = registry.submit(ensured.run.runId, {
@@ -251,9 +251,9 @@ test('run 状态机：未提交不给答案、未开答案不能归档、verdict
   const opened = registry.openReference(ensured.run.runId);
   assert.equal(opened.ok, true);
   assert.ok(opened.run.judgeOpenedAt, '开放答案应记录时间');
-  assert.equal(registry.recordVerification(ensured.run.runId, { verdict: 'maybe' }).code, 'CONCLUSION_INVALID', 'verdict 只接受三值枚举');
+  assert.equal(registry.recordVerification(ensured.run.runId, 'T-SM-1', { verdict: 'maybe' }).code, 'CONCLUSION_INVALID', 'verdict 只接受三值枚举');
 
-  const verified = registry.recordVerification(ensured.run.runId, {
+  const verified = registry.recordVerification(ensured.run.runId, 'T-SM-1', {
     verdict: 'partially_consistent',
     matched: ['B'],
     missed: ['理由'],
@@ -263,8 +263,8 @@ test('run 状态机：未提交不给答案、未开答案不能归档、verdict
   });
   assert.equal(verified.ok, true);
   assert.equal(verified.run.state, SOLVE_STATES.VERIFIED);
-  assert.deepEqual(verified.run.conclusion.matched, ['B']);
-  assert.equal(verified.run.conclusion.correction, '补理由');
+  assert.deepEqual(verified.run.conclusions['T-SM-1'].matched, ['B']);
+  assert.equal(verified.run.conclusions['T-SM-1'].correction, '补理由');
 
   // 已核验的 run 不得被再次提交覆盖（原始作答保持不变，修正另存）。
   assert.equal(registry.submit(ensured.run.runId, { answerText: '覆盖作答' }).code, 'ANSWER_IMMUTABLE');
@@ -273,6 +273,42 @@ test('run 状态机：未提交不给答案、未开答案不能归档、verdict
   const replay = registry.submit(ensured.run.runId, { answerText: '## 答案\nB\n\n## 关键依据\n暖流增温' });
   assert.equal(replay.ok, true);
   assert.equal(replay.run.answer.answerText.includes('覆盖作答'), false);
+});
+
+test('run 持久化兼容：旧单条结论迁移为按小问结论，题组扩容时要求重新核验', () => {
+  const registry = createSolveRegistry({});
+  const fingerprint = questionFingerprint({ questionId: 'OLD-1', material: '材料', stems: ['题干'], options: [], images: [] });
+  registry.restore([{
+    runId: `OLD-1__${fingerprint}`,
+    questionId: 'OLD-1',
+    questionFingerprint: fingerprint,
+    state: SOLVE_STATES.VERIFIED,
+    createdAt: 1,
+    submittedAt: 2,
+    judgeOpenedAt: 3,
+    verifiedAt: 4,
+    answer: { answerText: '## 答案\nB', answerHash: 'h', childSessionId: 'child-old' },
+    conclusion: { verdict: 'consistent', matched: ['B'], missed: [], wrong: [], disputed: [], correction: '', verifiedAt: 4 }
+  }]);
+  const migrated = registry.statusFor('OLD-1', fingerprint);
+  assert.equal(migrated.state, SOLVE_STATES.SUBMITTED, '旧单条结论无法判定归属，fail-closed 回到已提交');
+  assert.equal(migrated.verifiedCount, 0);
+  assert.deepEqual(migrated.questionIds, ['OLD-1']);
+  assert.deepEqual(migrated.conclusions, {});
+  assert.equal(migrated.canExplain, false, '旧结论已丢弃，必须重新核验');
+  assert.ok(registry.latestForQuestion('OLD-1').answer.answerText, '独立作答保留，不丢原始作答');
+
+  // 题组扩容（同指纹、新增小问）：仍为 submitted，按小问重新核验后才 verified。
+  const expanded = registry.ensureRun({ questionId: 'OLD-1', questionIds: ['OLD-1', 'OLD-2'], questionFingerprint: fingerprint });
+  assert.equal(expanded.run.state, SOLVE_STATES.SUBMITTED);
+  assert.deepEqual(expanded.run.conclusions, {});
+  assert.deepEqual(expanded.run.questionIds, ['OLD-1', 'OLD-2']);
+  registry.openReference(expanded.run.runId);
+  registry.recordVerification(expanded.run.runId, 'OLD-1', { verdict: 'consistent' });
+  const afterSecond = registry.recordVerification(expanded.run.runId, 'OLD-2', { verdict: 'partially_consistent' });
+  assert.equal(afterSecond.run.state, SOLVE_STATES.VERIFIED);
+  assert.equal(afterSecond.run.conclusions['OLD-1'].verdict, 'consistent');
+  assert.equal(afterSecond.run.conclusions['OLD-2'].verdict, 'partially_consistent');
 });
 
 test('run 状态机：同指纹复用、题面变化重开 run 并标记失效', () => {
@@ -1149,7 +1185,7 @@ test('内核：未提交不给答案、未开答案不能归档、归档后讲�
   const badVerdict = await api.recordVerification('T-CORE-1-Q2', { verdict: 'consistent-ish' });
   assert.equal(badVerdict.code, 'CONCLUSION_INVALID');
 
-  const verified = await api.recordVerification('T-CORE-1-Q2', {
+  const firstVerified = await api.recordVerification('T-CORE-1-Q2', {
     verdict: 'partially_consistent',
     matched: ['暖流增温'],
     missed: ['地形抬升'],
@@ -1157,21 +1193,38 @@ test('内核：未提交不给答案、未开答案不能归档、归档后讲�
     disputed: [],
     correction: '补充地形抬升这一采分点'
   });
-  assert.equal(verified.status, 'success');
-  assert.equal(verified.state, SOLVE_STATES.VERIFIED);
-  assert.ok(verified.verifiedAt);
+  assert.equal(firstVerified.status, 'success');
+  assert.equal(firstVerified.state, SOLVE_STATES.SUBMITTED, '题组内还有小问未归档时不算核验完成');
+  assert.deepEqual(firstVerified.pendingQuestionIds, ['T-CORE-1-Q1']);
+  assert.equal((await api.solveStatus('T-CORE-1-Q2')).canExplain, false, '题组未全部归档时不能出讲稿');
+  assert.equal((await api.assembleExplanation('T-CORE-1-Q2', 'student')).code, 'EXPLAIN_NOT_VERIFIED');
+
+  const secondVerified = await api.recordVerification('T-CORE-1-Q1', {
+    verdict: 'consistent',
+    matched: ['暖流增温'],
+    missed: [],
+    wrong: [],
+    disputed: [],
+    correction: ''
+  });
+  assert.equal(secondVerified.state, SOLVE_STATES.VERIFIED);
+  assert.deepEqual(secondVerified.pendingQuestionIds, []);
+  assert.ok(secondVerified.verifiedAt);
 
   const status = await api.solveStatus('T-CORE-1-Q2');
   assert.equal(status.state, SOLVE_STATES.VERIFIED);
   assert.equal(status.canExplain, true);
   assert.equal(status.fingerprintMatches, true);
+  assert.equal(status.verifiedCount, 2);
+  assert.equal(status.questionCount, 2);
 
   const explained = await api.assembleExplanation('T-CORE-1-Q2', 'student');
   assert.equal(explained.status, 'success');
   assert.equal(explained.verification.evidence, 'server_run_record', '核验证据来自服务端运行记录');
   assert.equal(explained.verification.verified, true);
   assert.equal(explained.verification.runId, prep.runId);
-  assert.equal(explained.verification.conclusion.verdict, 'partially_consistent');
+  assert.equal(explained.verification.conclusion.verdict, 'partially_consistent', '讲稿读取的是本小问的核验结论');
+  assert.equal(explained.verification.conclusions['T-CORE-1-Q1'].verdict, 'consistent', '题组内各小问结论分别保存');
   assert.equal(explained.report.schemaVersion, 3);
   assert.equal(explained.report.cacheKey.includes('#rules3'), true);
   assert.equal(explained.report.contentRequirements.length, 4);
@@ -1192,6 +1245,7 @@ test('内核：run 持久化到 solve-runs.json，重启（重新挂载）后仍
   await api.recordIndependentAnswer(prep.runId, { answerText: '## 答案\n暖流增温', keyEvidence: '暖流', childSessionId: 'child-persist' });
   await api.openReferenceAnswer('T-CORE-1-Q1');
   await api.recordVerification('T-CORE-1-Q1', { verdict: 'consistent', matched: ['暖流增温'], missed: [], wrong: [], disputed: [], correction: '' });
+  await api.recordVerification('T-CORE-1-Q2', { verdict: 'consistent', matched: ['暖流增温'], missed: [], wrong: [], disputed: [], correction: '' });
 
   const saved = harness.readRuns();
   assert.ok(saved, '核验完成后应写 solve-runs.json');
@@ -1202,7 +1256,8 @@ test('内核：run 持久化到 solve-runs.json，重启（重新挂载）后仍
   assert.equal(run.state, SOLVE_STATES.VERIFIED);
   assert.equal(run.questionFingerprint, prep.questionFingerprint);
   assert.equal(run.answer.childSessionId, 'child-persist', '独立作答与子会话 id 一并持久化');
-  assert.equal(run.conclusion.verdict, 'consistent');
+  assert.deepEqual(Object.keys(run.conclusions).sort(), ['T-CORE-1-Q1', 'T-CORE-1-Q2'], '核验结论按小问分别持久化');
+  assert.equal(run.conclusions['T-CORE-1-Q1'].verdict, 'consistent');
 
   // 重新挂载：新实例从磁盘恢复 run，重启后仍能讲题。
   const restarted = harness.mount();
@@ -1223,6 +1278,7 @@ test('内核：题面变化使旧作答与核验失效，必须重新解题', as
   await api.recordIndependentAnswer(prep.runId, { answerText: '## 答案\n暖流增温', keyEvidence: '暖流' });
   await api.openReferenceAnswer('T-CORE-1-Q1');
   await api.recordVerification('T-CORE-1-Q1', { verdict: 'consistent' });
+  await api.recordVerification('T-CORE-1-Q2', { verdict: 'consistent' });
   assert.equal((await api.solveStatus('T-CORE-1-Q1')).state, SOLVE_STATES.VERIFIED);
 
   // 改题面（题干变化）→ 指纹变化 → 旧 run 失效。

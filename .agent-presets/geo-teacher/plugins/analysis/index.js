@@ -442,9 +442,11 @@ export function renderJudge(args, value) {
   const lines = [];
   if (d.conclusion) {
     const c = d.conclusion;
+    const total = Array.isArray(d.questionIds) ? d.questionIds.length : 1;
+    const pending = Array.isArray(d.pendingQuestionIds) ? d.pendingQuestionIds : [];
     lines.push(`# 核验结论已归档 ${d.questionId || ''}`);
-    lines.push(`- 状态：${d.state}｜归档时间：${formatTime(d.verifiedAt)}`);
-    lines.push(`- 判定：${c.verdict}（一致/部分一致/不一致）`);
+    lines.push(`- 判定：${c.verdict}（一致/部分一致/不一致）｜归档时间：${formatTime(c.verifiedAt || d.verifiedAt)}`);
+    lines.push(`- 题组核验：${total - pending.length}/${total} 个小问已归档${pending.length ? '；未归档：' + pending.join('、') : '；题组核验完成'}`);
     lines.push(`- 命中：${(c.matched || []).join('；') || '—'}`);
     lines.push(`- 遗漏：${(c.missed || []).join('；') || '—'}`);
     lines.push(`- 错误：${(c.wrong || []).join('；') || '—'}`);
@@ -455,7 +457,9 @@ export function renderJudge(args, value) {
       lines.push(c.correction);
     }
     lines.push('');
-    lines.push('> 核验结论已写入服务端运行记录。现在可以调用 geo_explain 生成讲稿；讲稿只读取这条记录。');
+    lines.push(pending.length
+      ? `> 核验结论按小问保存。题组内还有 ${pending.length} 个小问未归档：对剩余小问继续调用 geo_judge(qid, conclusion)；全部归档后才能生成讲稿。`
+      : '> 题组内所有小问的核验结论已按小问保存。现在可以调用 geo_explain 生成讲稿；讲稿只读取这些记录。');
     return [{ type: 'text', text: lines.join('\n') }];
   }
   lines.push(`# 核验材料 ${d.questionId || ''}（答案已开放）`);
@@ -499,16 +503,23 @@ export function renderExplain(args, value) {
   lines.push(`# 讲题稿骨架 ${d.questionId || ''}`);
   lines.push(`- 讲解对象：${label}（${audience}）${audience === 'student' ? ' · 默认' : ''}`);
   const b = r.basic || {};
-  lines.push(`- 题型：${b.type || '—'} · 难度：${b.difficulty || '—'} · 素养：${b.literacy || '—'} · 设问类型：${b.questionType || '—'} · 焦点要素：${(b.focusElements || []).join('、') || '—'} · 涉图：${b.hasImage ? '是' : '否'}`);
+  lines.push(`- 题型：${b.type || '—'} · 难度：${b.difficulty || '—'} · 素养：${b.literacy || '—'} · 设问类型：${b.questionType || '—'} · 涉图：${b.hasImage ? '是' : '否'}`);
+  lines.push(`- 本小问：${d.questionId || '—'}｜材料维度（整组，供参考，不等于本小问考查要素）：${(b.focusElements || []).join('、') || '—'}`);
 
   const v = d.verification || {};
   lines.push('');
   lines.push('## 核验状态');
-  lines.push(`- 状态：${v.status || '—'}｜verified=${v.verified === true}｜证据来源=${v.evidence || '—'}`);
+  lines.push(`- 状态：${v.status || '—'}｜verified=${v.verified === true}｜证据来源=${v.evidence || '—'}（按小问保存）`);
   lines.push(`- 运行：${v.runId || '—'}｜提交：${formatTime(v.submittedAt)}｜开放答案：${formatTime(v.judgeOpenedAt)}｜归档：${formatTime(v.verifiedAt)}`);
+  if (v.questionCount !== undefined) {
+    lines.push(`- 题组核验：${v.verifiedCount ?? '—'}/${v.questionCount} 个小问已归档`);
+  }
+  if (v.conclusions && typeof v.conclusions === 'object' && Object.keys(v.conclusions).length > 0) {
+    lines.push('- 各小问判定：' + Object.keys(v.conclusions).map((id) => `${id.split('-').pop()}（${v.conclusions[id].verdict}）`).join('；'));
+  }
   if (v.conclusion) {
-    lines.push(`- 判定：${v.conclusion.verdict}；遗漏 ${(v.conclusion.missed || []).length} 项；错误 ${(v.conclusion.wrong || []).length} 项；争议 ${(v.conclusion.disputed || []).length} 项`);
-    if (v.conclusion.correction) lines.push(`- 修正结论：${v.conclusion.correction}`);
+    lines.push(`- 本小问判定：${v.conclusion.verdict}；遗漏 ${(v.conclusion.missed || []).length} 项；错误 ${(v.conclusion.wrong || []).length} 项；争议 ${(v.conclusion.disputed || []).length} 项`);
+    if (v.conclusion.correction) lines.push(`- 本小问修正结论：${v.conclusion.correction}`);
   }
   if (v.message) lines.push(`- ${v.message}`);
 
@@ -647,6 +658,8 @@ export function renderExplain(args, value) {
   lines.push(audience === 'setter'
     ? '\n> 按上述命题分析结构重组讲稿：逐层检查设问、材料、选项中的干扰并给出位置、错误路径与辨别依据；不虚构选项，不伪造原作者意图或试测数据。'
     : '\n> 按上述内容要求与对象侧重，教学化重组为「题目定位—审题—破题—反思与迁移」四段式讲题稿；同类问题方法必须引用上面检索到的题目与对应关系，不足时写明缺口。不重新解题、不照抄解析。');
+  lines.push('> 交付边界：只输出讲稿正文（从第一段正文开始），不写“已完成…/下面是成稿”之类过程说明，不写核验状态、服务端记录、内部标识，不追加“需要切换对象/要我导出吗”一类话术；核验状态只供你判断，不进入讲稿。');
+  lines.push('> 引用边界：同类题与变式只能引用上面 comparison.basis 与 variants 中的题目；不得补充记忆中的其他题目；候选不足时按 gap 写明缺口。');
   return [{ type: 'text', text: lines.join('\n') }];
 }
 
