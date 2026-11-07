@@ -356,6 +356,17 @@ function checkPackageWiring(view) {
   } else {
     add('exports-relative', '无相对路径插件名', true, '本地插件均经包子路径导出');
   }
+  // 升级风险：@deepseek-ai 包的子路径导出会随版本合并/移除（0.2.2-rc.1 删除了
+  // dsh-tool-subagent-control/list-agents，导致整条 preset 挂载失败）。本预设应只引用
+  // 主入口；若确需子路径，这里降为提示，升级 DSH 后必须复验该子路径仍导出。
+  const shippedSubpaths = view.pluginRows.filter(r => typeof r.name === 'string'
+    && r.name.startsWith('@deepseek-ai/') && r.name.slice('@deepseek-ai/'.length).includes('/'));
+  if (shippedSubpaths.length > 0) {
+    addWarn('shipped-subpath', '预设引用了 @deepseek-ai 包的子路径（升级 DSH 后须复验该子路径仍导出）',
+      shippedSubpaths.map(r => `${r.id}(${r.name})`).join(', '));
+  } else {
+    add('shipped-subpath', '预设只引用 @deepseek-ai 包主入口', true, '无子路径引用，避免随版本被合并/移除');
+  }
   return pkg;
 }
 
