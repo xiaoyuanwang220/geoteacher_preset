@@ -791,10 +791,11 @@ async function checkPipelineDiscipline() {
 
   // Cordis 对未 inject 的服务属性会抛 `cannot get property "timer" without inject`，
   // 这一异常会直接把 preset 挂载打挂（真实故障：solver-isolation 的 ctx.timer）。
-  // 只检查代码，忽略注释里对故障的说明。
+  // 只检查代码，忽略注释里对故障的说明。按 `\r?\n` 切行：CRLF 工作树里保留的 `\r`
+  // 会让 `/\/\/.*$/` 匹配失败（无 `m` 标志时 `$` 只匹配输入末尾），注释被当成代码。
   const isolationCode = isolationSrc
     .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n').map((line) => line.replace(/\/\/.*$/, '')).join('\n');
+    .split(/\r?\n/).map((line) => line.replace(/\/\/.*$/, '')).join('\n');
   const injectViolation = /ctx\.timer\b/.test(isolationCode);
   add('solver-inject-discipline', '隔离插件只访问已 inject 的服务（不触碰 ctx.timer 等）', !injectViolation,
     injectViolation ? '仍访问未 inject 的 ctx.timer，会导致 preset 加载失败' : '仅访问 tools/systemPrompt（已 inject）与 ctx.get/ctx.effect');

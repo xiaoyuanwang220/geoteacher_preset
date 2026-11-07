@@ -8,6 +8,10 @@
 #
 # 本目录自身即 bundle（package.json 的 dsh.bundle.patch 指向本文件）。
 #
+# 0.2.2-rc.1 适配（2026-11-07）：删除 `@deepseek-ai/dsh-tool-subagent-control/list-agents`
+# 声明行——该子路径在新版已移除、list_agents 并入主入口；照旧声明会让整条 preset
+# 挂载失败（新建会话报 agent-preset/invalid）。详见 delegation 组注释。
+#
 # ⚠ 模块名解析基准：声明行由 profile 补丁层插入，registry 用
 #    `mountPreset(scope.ctx.extend({ baseUrl: record.context.baseUrl }), ...)`
 #    挂载 plugins；record.context 是声明插件自己的 ctx，其 baseUrl 是
@@ -205,10 +209,18 @@
           # composition. This preset contributes the delegation TOOLS, which resolve
           # that host registry.
           #
-          # `workflow-ptc` is the current workflow engine package: the older
-          # `@deepseek-ai/dsh-workflow-worker-thread` referenced by the legacy preset no
-          # longer exists in 0.1.7-rc.2, and the shipped presets use `workflow-ptc`
-          # with `subagentProvider: spawn` inside this same isolated group.
+          # ⚠ `list_agents` 不要单独声明行。0.2.2-rc.1 起 `@deepseek-ai/dsh-tool-subagent-control`
+          # 把 list_agents 并进主入口（lib/index.js 的 apply 内注册），并删除了
+          # `./list-agents` 子路径导出；照旧写 `@deepseek-ai/dsh-tool-subagent-control/list-agents`
+          # 会让该行 import 失败、entry 拿不到 fiber，auditRows 报
+          # "<id> (<name>): never started"，整个 preset 挂载失败（新建会话报
+          # agent-preset/invalid）。0.2.1-rc.5 及更早该子路径仍在、主入口只注册
+          # send_message/interrupt_agent；list_agents 不在本预设工作流内，删掉该行后
+          # 两代都能挂载（0.2.2 由主入口提供 list_agents，0.2.1 少这一个工具）。
+          #
+          # `workflow-ptc` 是现行工作流引擎包：旧版 preset 引用的
+          # `@deepseek-ai/dsh-workflow-worker-thread` 已不存在；配置键 0.2.1-rc.5 起
+          # 就是 `provider`（写成 `subagentProvider` 会被静默忽略并回落到默认 spawn）。
           - id: delegation
             name: cordis:group
             group: true
@@ -218,22 +230,19 @@
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
 
-              - id: tool-subagent-list-agents
-                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
-
+              # 委派一律 continuable；`backgroundMode` 已不在 Config（0.2.1-rc.5 起即无此键），
+              # 旧写法会被静默忽略，故不再保留。
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
-                  backgroundMode: continuable
 
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: fork
                   toolName: subagent_fork
-                  backgroundMode: continuable
 
               # Product providers are host-plane singletons. Remove `disabled` from
               # either row to expose that product only to agents composed from this preset.
@@ -258,7 +267,7 @@
               - id: workflow-ptc
                 name: '@deepseek-ai/dsh-workflow-ptc'
                 config:
-                  subagentProvider: spawn
+                  provider: spawn
 
               - id: tool-workflow
                 name: '@deepseek-ai/dsh-tool-workflow'

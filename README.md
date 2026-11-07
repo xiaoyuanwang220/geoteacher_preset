@@ -24,7 +24,7 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 
 | 项 | 要求 |
 | :-- | :-- |
-| DSH | Desktop **`0.2.1-rc.5`**（已验证版本；0.2.1 起桌面端端口由系统分配，以环境变量 `DSH_WEB_URL` 为准） |
+| DSH | Desktop **`0.2.1-rc.5`**（最后一个完整运行时验证版本）；**`0.2.2-rc.1`** 已按新版接口适配（2026-11-07，重启后待运行时验收）；0.2.1 起桌面端端口由系统分配，以环境变量 `DSH_WEB_URL` 为准 |
 | 平台 | Windows（本机验证平台）；核心逻辑为纯 Node ESM，其他平台未验证 |
 | Node | 随桌面附带（实测 `v24.21.0`）；仓库脚本只用 ESM 与 `node:test` |
 | Python | `3.12`（仅课程方案的文档渲染需要，依赖 `python-docx`） |
@@ -129,7 +129,7 @@ test/                         教师功能行为测试
 
 - [文档索引](docs/README.md) —— 现行规范、实施状态与历史记录的入口
 - [使用指南](docs/使用指南.md) —— 三个入口、话术示例、能力边界、故障排查
-- [DSH 基线](docs/DSH-0.2.1-rc.2-基线.md) —— 运行版本与包装形态的事实来源（现行验证版本 `0.2.1-rc.5`）
+- [DSH 基线](docs/DSH-0.2.1-rc.2-基线.md) —— 运行版本与包装形态的事实来源（现行运行 `0.2.2-rc.1`；最后一个完整运行时验证版本 `0.2.1-rc.5`）
 - [决策记录](docs/决策记录.md) —— 逐条记录决策、原因、证据与关联文件
 - [出题功能](docs/geography-question-generation-product-requirements.md)／[技术设计](docs/geography-question-generation-technical-design.md)／[执行方案](docs/geography-question-generation-execution-plan.md)
 - [讲题功能设计](docs/讲题功能设计.md)／[评测方案](docs/讲题评测方案.md)／[讲题优化计划](docs/讲题优化计划.md)
