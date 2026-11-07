@@ -134,6 +134,7 @@ test/                         教师功能行为测试
 - [出题功能](docs/geography-question-generation-product-requirements.md)／[技术设计](docs/geography-question-generation-technical-design.md)／[执行方案](docs/geography-question-generation-execution-plan.md)
 - [讲题功能设计](docs/讲题功能设计.md)／[评测方案](docs/讲题评测方案.md)／[讲题优化计划](docs/讲题优化计划.md)
 - [工作台聚合与一键安装方案](docs/工作台聚合与一键安装方案.md) —— 安装器、随仓库数据、`/geo-status` 与后续范围
+- [上传试卷讲题方案](docs/上传试卷讲题方案.md) —— 教师上传学生版试卷 + 答案、指定题组或小问的 V0 设计（方案阶段）
 - [仓库更新-给agent的提示词](docs/geo-teacher-仓库更新-给agent的提示词.md) —— 已安装用户更新时，把这篇文章交给 Agent，由它代教师完成同步与验证
 - [术语表](docs/术语表.md) —— 地理与交付术语的唯一权威
 - 历史方案与迁移记录通过 Git 历史追溯。
