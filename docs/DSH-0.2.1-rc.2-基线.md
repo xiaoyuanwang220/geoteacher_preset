@@ -1,11 +1,14 @@
 # DSH 0.2.1-rc.2 基线记录
 
-> **最后一个完整运行时验证版本（2026-11-06 实测）**：当时本机运行时 `runtime.json` = **`0.2.1-rc.5`**（Electron 44.7.0 / Node 24.21.0 / pnpm 11.28.5），现有功能可用；本文以下内容保留 **rc.2 时期**的记录原貌，作为历史基线，不追改。
-> 现行口径以 [工作台聚合与一键安装方案](工作台聚合与一键安装方案.md) §2 与 [docs/README](README.md) 索引为准：rc.5 记为「最后一个完整运行时验证版本」，最低版本待接口清单确认，`engines.dsh` 本期不声明。
+> **现行验证版本（2026-11-07 实测）**：本机 DSH Desktop **`0.2.2-rc.1`**（安装包 `FileVersion`、Windows 卸载注册项 `DisplayVersion`、安装目录 `resources/runtime/primary-runtime/runtime.json` 三处一致；Electron 44.7.0 / Node 24.21.0 / pnpm 11.28.5 / Python 3.12.14）。**实测面**：完整重启后预设挂载成功、`/geo-teacher` 200、`/geo/core/health` 200（162 考点节点 / 115 文件 / 279 小问）。本文以下内容保留 **rc.2 时期**的记录原貌，作为历史基线，不追改。
+> 现行口径以 [工作台聚合与一键安装方案](工作台聚合与一键安装方案.md) §2 与 [docs/README](README.md) 索引为准：`0.2.2-rc.1` 记为「已验证版本」；`0.2.1` 系列可安装但未完整验证（0.2.2 移除了 `list-agents` 子路径，0.2.1 上少一个 `list_agents` 工具）；最低版本待接口清单确认，`engines.dsh` 本期不声明。
 >
-> **2026-11-07 版本变更（追加）**：桌面已于 **2026-11-04 自动更新到 `0.2.2-rc.1`**（`app.asar/package.json` 的 `version` 与安装包 `FileVersion` 实测；上表的 `runtime.json` 未随之更新、仍是 0.2.1-rc.5 的旧缓存，**不要用它判断现行版本**）。该版本删除了 `@deepseek-ai/dsh-tool-subagent-control/list-agents` 子路径（`list_agents` 并入主入口），使本仓库预设新建会话失败；预设已按 0.2.2-rc.1 适配（见[决策记录](决策记录.md) 2026-11-07 行）。**`0.2.2-rc.1` 尚未完成运行时验收**：在完整重启并跑通预设会话之前，不把它写成「已验证版本」，也不沿用 rc.5 的运行时结论。
+> **2026-11-07 版本变更记录**：
+> - **2026-11-04 桌面自动更新到 `0.2.2-rc.1`**（updater 就地更新）。该版本删除了 `@deepseek-ai/dsh-tool-subagent-control/list-agents` 子路径（`list_agents` 并入主入口），旧预设新建会话报 `agent-preset/invalid`；预设已适配（见[决策记录](决策记录.md) 2026-11-07 行）。
+> - **版本读数来源变更**：桌面就地更新**不再刷新** `$DSH_HOME/dsh-runtimes/.../runtime.json`（本机仍是 0.2.1-rc.5 旧副本）。现行版本与运行时以**安装目录** `resources/runtime/primary-runtime` 为准；`scripts/setup.mjs` 与 `/geo-status` 已改为优先读安装包内置 runtime（安装器在 Windows 上经卸载注册项定位安装目录），旧副本仅作回落。
+> - **文件布局（本机实测）**：安装目录 `E:\deepseekharness`；应用 `resources\app.asar`（0.2.2-rc.1）；运行时 `resources\runtime\primary-runtime`（`payloadDigest 0881fbf6…`）；`$DSH_HOME` = `C:\Users\xxx\.dsh`（profile `desktop`）。
 >
-> 记录日期：2026-10-21；复验：2026-10-21（预设会话内）、2026-11-02（外部可验面与文档口径）
+> 记录日期：2026-10-21；复验：2026-10-21（预设会话内）、2026-11-02（外部可验面与文档口径）、2026-11-07（0.2.2-rc.1 预设挂载与状态面）
 > 触发：桌面从 `0.1.7-rc.2` 升级到 `0.2.1-rc.2` 后，预设会话**整轮运行失败**（见 §4）
 > 性质：本文件记录**实测与源码/发布说明核对**的结果，不用"旧版结论"代替新版验证
 > 取代范围：本文取代 [M0 基线](geography-question-generation-m0-baseline.md) 中**与运行版本相关**的事实（§1.1、§2 的版本前提）；M0 里与出题流程相关的过程性结论仍然有效，但涉及"机制在 rc.2 上如何表现"的部分须按本文重验

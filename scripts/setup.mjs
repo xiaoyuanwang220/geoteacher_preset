@@ -16,7 +16,7 @@
  *   - DSH 启动不会自动安装依赖，安装动作必须显式完成。
  *   - 只增/删本项目的两个依赖与两个 bundle 项；不重排既有顺序，不覆盖用户配置与数据。
  */
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, copyFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
@@ -39,9 +39,9 @@ const DATA_DIR = join(REPO_ROOT, 'data');
 const BANK_DIR = join(DATA_DIR, 'obsidian_vault', '04_题目');
 const CONFIG_DIR = join(DATA_DIR, 'config');
 const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh');
-const RUNTIME_DIR = join(DSH_HOME, 'dsh-runtimes', 'dsh-primary-runtime');
-const RUNTIME_JSON = join(RUNTIME_DIR, 'runtime.json');
-const VERIFIED_VERSION = '0.2.1-rc.5';
+const LEGACY_RUNTIME_ROOT = join(DSH_HOME, 'dsh-runtimes');
+const RUNTIME_DIR = join(LEGACY_RUNTIME_ROOT, 'dsh-primary-runtime');
+const VERIFIED_VERSION = '0.2.2-rc.1';
 const MINIMUM_VERSION = '0.2.1';
 
 const args = process.argv.slice(2);
@@ -99,23 +99,101 @@ function compareVersion(a, b) {
   return x.prerelease.localeCompare(y.prerelease, 'en', { numeric: true });
 }
 
-function runtimeVersion() {
-  if (!existsSync(RUNTIME_JSON)) return null;
+function runtimeInfo(file) {
   try {
-    const info = readJson(RUNTIME_JSON);
-    return info && info.desktopVersion ? String(info.desktopVersion) : null;
+    const info = readJson(file);
+    return info && info.desktopVersion ? { version: String(info.desktopVersion), file } : null;
   } catch {
     return null;
   }
 }
 
-function pnpmCommand() {
-  const candidates = [
-    join(RUNTIME_DIR, 'dependencies', 'pnpm', 'bin', 'pnpm.cjs'),
-    join(RUNTIME_DIR, 'dependencies', 'pnpm', 'bin', 'pnpm.mjs')
+/** Windows 安装信息：卸载注册项里的 DisplayVersion 与 InstallLocation。
+ * 桌面就地自动更新不会改写 $DSH_HOME 下的旧 runtime.json，安装注册信息才是现行版本来源。 */
+function desktopInstallInfo() {
+  if (process.platform !== 'win32') return null;
+  const uninstallKeys = [
+    'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+    'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
   ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return { kind: 'runtime', file: candidate };
+  for (const key of uninstallKeys) {
+    let output;
+    try {
+      output = execFileSync('reg.exe', ['query', key, '/s', '/f', 'DeepSeek Harness', '/d'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore']
+      });
+    } catch {
+      continue;
+    }
+    const block = output.split(/\r?\n\r?\n/).find((part) => /DisplayName\s+REG_SZ\s+DeepSeek Harness/i.test(part));
+    if (!block) continue;
+    // `/f` 只返回数据命中的值，DisplayVersion/InstallLocation 不含搜索词，需按命中的键名再查一次。
+    const keyLine = (block.match(/^(HKEY_[^\r\n]+)$/m) || [])[1];
+    if (!keyLine) continue;
+    let full;
+    try {
+      full = execFileSync('reg.exe', ['query', keyLine], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch {
+      continue;
+    }
+    const version = (full.match(/DisplayVersion\s+REG_SZ\s+(\S+)/i) || [])[1] || null;
+    const location = (full.match(/InstallLocation\s+REG_SZ\s+(.+?)\s*$/im) || [])[1] || null;
+    if (version || location) return { version, location };
+  }
+  return null;
+}
+
+/** 可能的 runtime 来源：桌面安装内置 runtime 优先，其次 $DSH_HOME/dsh-runtimes 下的旧副本。 */
+function runtimeCandidates() {
+  const candidates = [];
+  const install = desktopInstallInfo();
+  if (install && install.location) {
+    const dir = join(install.location, 'resources', 'runtime', 'primary-runtime');
+    const info = runtimeInfo(join(dir, 'runtime.json'));
+    if (info) candidates.push({ ...info, dir, source: '安装包内置 runtime' });
+  }
+  if (candidates.length === 0 && install && install.version) {
+    candidates.push({ version: install.version, file: null, dir: null, source: 'Windows 安装注册信息' });
+  }
+  if (existsSync(LEGACY_RUNTIME_ROOT)) {
+    for (const entry of readdirSync(LEGACY_RUNTIME_ROOT, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const dir = join(LEGACY_RUNTIME_ROOT, entry.name);
+      const info = runtimeInfo(join(dir, 'runtime.json'));
+      if (info) candidates.push({ ...info, dir, source: '$DSH_HOME/dsh-runtimes（旧版副本）' });
+    }
+  }
+  return candidates;
+}
+
+/** 选版本最高的 runtime；旧副本可能是升级前的缓存，不能让它覆盖现行版本。 */
+function resolveRuntime() {
+  let best = null;
+  for (const candidate of runtimeCandidates()) {
+    if (best === null) {
+      best = candidate;
+      continue;
+    }
+    const order = compareVersion(candidate.version, best.version);
+    if (!Number.isNaN(order) && order > 0) best = candidate;
+  }
+  return best;
+}
+
+function pnpmCommand() {
+  const runtime = resolveRuntime();
+  const roots = [];
+  if (runtime && runtime.dir) roots.push(runtime.dir);
+  roots.push(RUNTIME_DIR);
+  for (const root of roots) {
+    const candidates = [
+      join(root, 'dependencies', 'pnpm', 'bin', 'pnpm.cjs'),
+      join(root, 'dependencies', 'pnpm', 'bin', 'pnpm.mjs')
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return { kind: 'runtime', file: candidate };
+    }
   }
   return { kind: 'path', file: 'pnpm' };
 }
@@ -269,10 +347,15 @@ function dataCheck() {
 }
 
 function checkVersion() {
-  const version = runtimeVersion();
-  if (!version) {
-    return { ok: false, code: 'NO_RUNTIME', message: `未找到 DSH 运行时（${RUNTIME_JSON}）。请先安装/启动一次 DSH Desktop。` };
+  const runtime = resolveRuntime();
+  if (!runtime) {
+    return {
+      ok: false,
+      code: 'NO_RUNTIME',
+      message: `未找到 DSH 运行时：已查找桌面安装目录的 resources/runtime/primary-runtime/runtime.json（Windows 安装注册信息）与 ${LEGACY_RUNTIME_ROOT}。请先安装/启动一次 DSH Desktop。`
+    };
   }
+  const version = runtime.version;
   const parsed = parseVersion(version);
   const minimum = parseVersion(MINIMUM_VERSION);
   if (!parsed || !minimum) {
@@ -290,6 +373,7 @@ function checkVersion() {
   return {
     ok: true,
     version,
+    source: runtime.source,
     warning: verified ? '' : `当前 DSH 版本 ${version} 尚未完整验证；本项目在 ${VERIFIED_VERSION} 上验证通过。安装会继续，但遇到异常请优先回退到该版本。`
   };
 }
@@ -480,7 +564,7 @@ function checkOnly(profileDir) {
     console.error(fail(version.message));
     return 1;
   }
-  say(ok(`DSH 版本：${version.version}${version.warning ? '（未完整验证）' : '（已验证）'}`));
+  say(ok(`DSH 版本：${version.version}${version.warning ? '（未完整验证）' : '（已验证）'}${version.source ? dim(` · 来源：${version.source}`) : ''}`));
   if (version.warning) say(warn(version.warning));
   if (!existsSync(profileDir)) {
     console.error(fail(`profile 目录不存在：${profileDir}`));

@@ -9,9 +9,9 @@
 //   参考答案在作答提交后才开放，核验结论再次调用归档；讲稿只读服务端核验记录。
 // 注意：不 import 宿主包（C: 用户根无 node_modules，裸 import 会失败），工具定义直接构造对象。
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 
 function sendJson(res, status, data) {
   const body = JSON.stringify(data);
@@ -369,15 +369,38 @@ async function runIsolatedSolve(ctx, exec, qid, options) {
 }
 
 // ========== /geo-status：只读状态入口（不调用模型） ==========
-function readRuntimeVersion() {
-  try {
-    const home = process.env.DSH_HOME || join(homedir(), '.dsh');
-    const file = join(home, 'dsh-runtimes', 'dsh-primary-runtime', 'runtime.json');
-    const info = JSON.parse(readFileSync(file, 'utf8'));
-    return info && info.desktopVersion ? String(info.desktopVersion) : 'unknown';
-  } catch {
-    return 'unknown';
+// 版本读数：优先正在运行的桌面安装（<安装目录>/resources/runtime/primary-runtime/runtime.json），
+// 其次 $DSH_HOME/dsh-runtimes 下的旧版副本。桌面就地自动更新不会刷新旧副本，所以不能只读它。
+export function readDshVersion(options = {}) {
+  const execPath = options.execPath ?? process.execPath;
+  const resourcesPath = options.resourcesPath ?? process.resourcesPath;
+  const dshHome = options.dshHome ?? (process.env.DSH_HOME || join(homedir(), '.dsh'));
+  const files = [];
+  if (resourcesPath) files.push(join(resourcesPath, 'runtime', 'primary-runtime', 'runtime.json'));
+  if (typeof execPath === 'string' && execPath) {
+    files.push(join(dirname(execPath), 'resources', 'runtime', 'primary-runtime', 'runtime.json'));
+    // 宿主若以安装目录内 runtime 的 node 启动，execPath 本身就在 <安装目录>/resources 下。
+    const marker = `${sep}resources${sep}`;
+    const at = execPath.toLowerCase().indexOf(marker.toLowerCase());
+    if (at >= 0) files.push(join(execPath.slice(0, at + marker.length - 1), 'runtime', 'primary-runtime', 'runtime.json'));
   }
+  const legacyRoot = join(dshHome, 'dsh-runtimes');
+  try {
+    for (const entry of readdirSync(legacyRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) files.push(join(legacyRoot, entry.name, 'runtime.json'));
+    }
+  } catch {
+    // 旧版布局不存在：忽略
+  }
+  for (const file of files) {
+    try {
+      const info = JSON.parse(readFileSync(file, 'utf8'));
+      if (info && info.desktopVersion) return String(info.desktopVersion);
+    } catch {
+      // 该候选不可读：试下一个
+    }
+  }
+  return 'unknown';
 }
 
 const DATA_SOURCE_LABELS = { user: '教师配置', packaged: '随仓库 data/', missing: '缺失' };
@@ -386,7 +409,7 @@ const RUN_STATE_LABELS = { question_ready: '题面就绪', submitted: '作答已
 async function buildStatusText(ctx, kernel) {
   const summary = await kernel.statusSummary();
   const lines = ['地理教师辅助 · 状态'];
-  lines.push(`- DSH：${readRuntimeVersion()}`);
+  lines.push(`- DSH：${readDshVersion()}`);
   const data = summary.data;
   if (data) {
     lines.push(`- 考点库：${DATA_SOURCE_LABELS[data.knowledgeSource] || data.knowledgeSource}${data.knowledgeBasePath ? '（' + data.knowledgeBasePath + '）' : ''}`);

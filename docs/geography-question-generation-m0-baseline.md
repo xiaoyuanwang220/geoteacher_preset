@@ -14,7 +14,7 @@
 | 项 | 值 | 来源 |
 | :-- | :-- | :-- |
 | `desktopVersion` | `0.1.7-rc.2` | `<DSH_HOME>/dsh-runtimes/dsh-primary-runtime/runtime.json:2` |
-| ↑ **已过时** | 桌面已于 2026-10-21 升级到 **`0.2.1-rc.2`**；本表其余版本项（payloadDigest、pnpm、安装形态、源码可读性）随之改变 | [DSH 0.2.1-rc.2 基线记录](DSH-0.2.1-rc.2-基线.md) |
+| ↑ **已过时** | 桌面已于 2026-10-21 升级到 **`0.2.1-rc.2`**、2026-11-04 升级到 **`0.2.2-rc.1`（现行）**；本表其余版本项（payloadDigest、pnpm、安装形态、源码可读性）随之改变 | [DSH 基线记录](DSH-0.2.1-rc.2-基线.md) |
 | `platform` / `arch` | `win32` / `x64` | 同文件 `:3-4` |
 | `payloadDigest` | `a7dddb0dc2b5035d86c7f39a4e2c688ccf531a3ba11d0737d441d6376500c14e` | 同文件 `:5` |
 | Node | `24.21.0` | 同文件 `:7` |

@@ -1,8 +1,11 @@
 // /geo-status 命令：注册位置、只读输出与错误兜底。
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import analysisPlugin from '../.agent-presets/geo-teacher/plugins/analysis/index.js';
+import analysisPlugin, { readDshVersion } from '../.agent-presets/geo-teacher/plugins/analysis/index.js';
 
 function mountHarness(options = {}) {
   const registered = new Map();
@@ -108,4 +111,41 @@ test('内部预设不可用时，状态文本带出 broken 原因', async () => 
   const { commands } = mountHarness({ presetBroken: 'solver-isolation 挂载失败：restrict 不可用' });
   const result = await commands[0].handler({});
   assert.match(result.text, /内部解题预设：不可用：solver-isolation 挂载失败/);
+});
+
+test('版本读数优先安装包内置 runtime，其次旧版 dsh-runtimes 副本', () => {
+  const root = mkdtempSync(join(tmpdir(), 'geo-dsh-version-'));
+  try {
+    const install = join(root, 'install');
+    const runtimeDir = join(install, 'resources', 'runtime', 'primary-runtime');
+    mkdirSync(runtimeDir, { recursive: true });
+    writeFileSync(join(runtimeDir, 'runtime.json'), JSON.stringify({ desktopVersion: '0.2.2-rc.1' }));
+    const home = join(root, 'home');
+    const legacy = join(home, 'dsh-runtimes', 'dsh-primary-runtime');
+    mkdirSync(legacy, { recursive: true });
+    writeFileSync(join(legacy, 'runtime.json'), JSON.stringify({ desktopVersion: '0.2.1-rc.5' }));
+
+    assert.equal(
+      readDshVersion({ execPath: join(install, 'DeepSeek Harness.exe'), resourcesPath: '', dshHome: home }),
+      '0.2.2-rc.1',
+      '安装包内置 runtime 应优先于旧副本'
+    );
+    assert.equal(
+      readDshVersion({ execPath: join(runtimeDir, 'dependencies', 'node', 'bin', 'node.exe'), resourcesPath: '', dshHome: join(root, 'empty-home') }),
+      '0.2.2-rc.1',
+      'execPath 位于安装目录 resources 下时也能定位'
+    );
+    assert.equal(
+      readDshVersion({ execPath: join(root, 'no-install', 'node.exe'), resourcesPath: '', dshHome: home }),
+      '0.2.1-rc.5',
+      '安装目录不存在时回落到旧版副本'
+    );
+    assert.equal(
+      readDshVersion({ execPath: join(root, 'no-install', 'node.exe'), resourcesPath: '', dshHome: join(root, 'empty-home') }),
+      'unknown',
+      '两处都缺失时如实返回 unknown'
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
