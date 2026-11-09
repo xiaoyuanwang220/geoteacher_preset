@@ -45,6 +45,12 @@ secrets.yml
 deepseek-harness-skills-master/
 deepseek-harness-skills-master.zip
 
+# 比赛评判标准原件：比赛方公开、允许转发，但不随仓库分发（省去版权与版本说明负担）
+# 提取范围、逐条映射与内部评分标准见 docs/课程方案评判标准/ 与技能 references/
+/docs/课程方案评判标准/*原版*
+/docs/课程方案评判标准/*原始*
+/docs/课程方案评判标准/*.pdf
+
 # Open-source publishing staging area (own git repo)
 open/
 

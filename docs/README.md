@@ -20,6 +20,7 @@
 | 工作台与 UI 形态 | [输入区 UI 插件说明](../packages/dsh-geo-teacher-ui/README.md)、[聚合方案](工作台聚合与一键安装方案.md) | `plugins/panel` 提供静态受理台；输入区插件提供原生输入框的功能选择，两者不调用模型。工作台的聚合、安装与数据默认值见聚合方案（**方案阶段、未实施**） |
 | 插件与技能归属 | [功能插件与技能归属方案](geo-teacher-功能插件与技能归属方案.md) | **方案阶段、未实施**：三功能载体的分层判据、技能收归功能插件的目标形态与代价（`geo-verify` 8 处断言重写、失去技能目录热更新）、官方 `dsh-skill-badge` 先例、未验证项；其中「课程方案技能未加载」的缺口已按推荐修法解决（2026-10-24 技能物理移入预设技能根，2026-10-28 对齐修订），本文其余结论不变 |
 | 课程方案技能 | [技能说明](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/README.md)、[发布清单](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/RELEASE-MANIFEST.md) | V3.2 已放入预设技能根（`SKILL.md` + 5 份 references + Python 渲染脚本）；**桌面端加载与渲染链路未验收**；采用 Apache-2.0，派生自 *Agent Skills for K-12 Teachers*，`LICENSE` 与 `NOTICE` 随目录保留 |
+| 课程方案同质化治理 | [同质化治理方案](课程方案同质化治理方案.md) | **方案阶段、未实施**：两份真实产物的结构比对证据（板块序列、七要素标签、块分布、课标解读句式四层同构）；同构来源指向 `lesson-format.md` 板块要求、`delivery-checklist.md` 第 5—20 条、构思简报固定字段与四组闭环枚举；改造分两批（差异台账＋结构审计脚本／骨架分型＋构思简报分型＋灵感索引程序化＋语言去模板），含不建议项与待决点 |
 
 ## 文档维护规则
 
