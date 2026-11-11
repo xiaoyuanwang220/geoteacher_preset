@@ -4,7 +4,7 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 
 它解决的是「通用大模型能写教案，但写不准」的落差：考点要能对到自己的考点库，真题要能对到原题与答案，命题要能过结构校验，讲题要先把答案隔离在解题完成之后。所以本项目把三件事分开做——**工具的确定性部分交给代码，教学判断交给模型，人工评审保留人工**。
 
-数据（考点库、真题库）由使用者自行提供并在本机绑定，不随仓库分发。
+数据（考点库、真题库）默认随仓库提供（`data/`），也可改用自己目录并在本机绑定；考点库为维护者个人整理的教学索引，见下方「考点库说明与声明」。
 
 > *English summary: GeoSparkAI is a high-school geography teaching agent preset for DeepSeek Harness — question explaining, exam-item authoring, lesson planning, grounded in a local exam bank and curriculum taxonomy.*
 
@@ -67,6 +67,14 @@ node --test "test/*.test.mjs"           # 教师功能行为测试
 - 相对路径以配置文件所在目录为基准；插件 `config` 里显式设置的同名字段优先于本机配置。
 - `/geo-status` 与 `/geo/core/health` 会显示实际生效的路径与来源（教师配置 / 随仓库 data/）。
 - 出现「数据不可用」时，先确认对应目录存在；不要把读取错误解释成「没有相关题目」。
+
+## 考点库说明与声明
+
+**内容与用途**：`data/config/` 下的 4 个 `knowledge_taxonomy_*.yaml` 是维护者整理的高中地理考点索引，按 `领域（DM-）→ 主题（TH-）→ 知识单元（KU-）` 三级组织，当前为 **4 个领域、26 个主题、132 个知识单元（共 162 个节点，`meta.version: v0.2-draft`）**。它用于考点检索、命题定位与讲题时的知识分类，不是课标或教材原文；库内标了 `needs_review` 的节点，使用时会被标注为「待复核」。
+
+**怎么用**：默认读取（`knowledgeBasePath` 缺省指向 `data/config/`），可改用自己目录并在 `<DSH_HOME>/geo-teacher/config.json` 覆盖；`/geo/core/health` 与 `/geo-status` 会显示实际生效的路径与来源。
+
+**声明**：考点库的领域划分、主题归类、知识单元命名与边界，均为**维护者个人对高中地理课程内容的理解与整理，仅代表个人观点**，不代表教育部、课程标准编写组或任何机构的官方意见，也不构成对课标条目的权威解释。引用、考试统计与教学判断请以课标原文、教材正文与官方文件为准；本库内容与官方文件不一致时，以官方文件为准。使用者可以整体替换、局部修改或改用自建考点库——本项目不把该库当作权威标准。
 
 ## 怎么用
 
@@ -157,4 +165,5 @@ test/                         教师功能行为测试
 - 仓库主体采用 **MIT**，见 [LICENSE](LICENSE)。
 - 课程方案技能 `.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/` 采用 **Apache-2.0**，派生自 *Agent Skills for K-12 Teachers*（Copyright 2026 Anthropic PBC and Learning Commons）；该目录内自带 `LICENSE` 与 `NOTICE`，分发时须一并保留。
 - `课本与课标/` 收录课标与教材正文：课标属教育部官方文件，教材正文权利归原出版方；对外再分发前请自行确认授权。
+- `data/config/` 考点库为维护者个人整理的教学索引，不代表官方意见，详见「考点库说明与声明」。
 - 感谢 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 提供的 Agent 与插件框架；第三方参考材料 `deepseek-harness-skills-master/` 不随仓库发布（`.gitignore` 已排除），来源见 [Skills 应用方案](docs/harness-skills-应用方案.md)。
