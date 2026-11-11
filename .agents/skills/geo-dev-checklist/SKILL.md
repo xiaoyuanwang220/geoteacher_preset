@@ -30,7 +30,7 @@ description: Use when modifying geo-teacher plugins, composition, or skills — 
 | 技能 | 两个技能根（预设 + 开发）的入口唯一与跨根重名 / frontmatter 的 `name` 与 `description` 必填 / `description` ≤ 500 字符（运行时静默截断）与「: 」YAML 陷阱 / 正文 ≤ 8192 码点（压缩裁剪阈值）/ 消费方式申报 / `references`、`scripts` 引用可达 |
 | 回归 | 讲题流水线断言（solve 无答案泄漏 / 原生图片交付契约 / 旧视觉链路已移除 / 独立答案编排 / 解析层修复断言 / 索引数据完整性） |
 | 提示 | 部署形态（link 或包安装，**不作为失败项**）/ `tool-web` 的 fetch 开关 / 正文按消费方式的软上限、单节长度与可跳读性 / `.backups` |
-| 运行时 | `/geo/core/health` + `/geo-teacher`（仅 `--runtime`） |
+| 运行时 | `/geo/core/health`（仅 `--runtime`） |
 
 **⚠️ 静态检查边界**：`cordis.patch.yml` 含 `!!js` 表达式，脚本只做**结构扫描、不求值**——表达式语义与 Loader 实际挂载结果只能靠重启后验收。路由静态扫描也只能发现当前源码内的重复路径，不能发现运行进程中旧路径仍被占用的问题。
 

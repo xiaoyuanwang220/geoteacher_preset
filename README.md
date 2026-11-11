@@ -16,7 +16,7 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 | **出题助手** | 按考点与真题风格命制材料型**选择题组**或**综合题**（一个题包只用一种题型），产出教师版与学生版投影，并可做结构校验 | 开发中：完整流程已跑通，语义质量评审待做 |
 | **课程方案** | 依据课标与教材原文生成教学设计、学生学习材料与课堂观察记录，可渲染为 DOCX／HTML | 技能已就位，2026-11-09 完成第一阶段规则调整、2026-11-10 完成流程优化，仍需不断优化 |
 
-另有 `/geo-teacher` 静态页（把需求整理成可粘贴的提示词）与会话输入区的功能选择器，二者都不连模型、不写盘。
+另有会话输入区的功能选择器（不连模型、不写盘）；web 工作台页面已于 2026-11-11 移除，桌面端只保留输入区入口。
 
 > ⚠️ **本项目处于开发阶段**，接口、数据契约与技能内容仍会变化；数字、结论与「已验证／未验证」的边界逐条记录在 [决策记录](docs/决策记录.md)，不以规划代替现状。
 
@@ -24,7 +24,7 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 
 | 项 | 要求 |
 | :-- | :-- |
-| DSH | Desktop **`0.2.2-rc.1`**（已验证版本；2026-11-07 实测预设挂载、`/geo-teacher` 与 `/geo/core/health` 正常）；`0.2.1` 系列可安装但未完整验证；0.2.1 起桌面端端口由系统分配，以环境变量 `DSH_WEB_URL` 为准 |
+| DSH | Desktop **`0.2.2-rc.1`**（已验证版本；2026-11-07 实测预设挂载与 `/geo/core/health` 正常）；`0.2.1` 系列可安装但未完整验证；0.2.1 起桌面端端口由系统分配，以环境变量 `DSH_WEB_URL` 为准 |
 | 平台 | Windows（本机验证平台）；核心逻辑为纯 Node ESM，其他平台未验证 |
 | Node | 随桌面附带（实测 `v24.21.0`）；仓库脚本只用 ESM 与 `node:test` |
 | Python | `3.12`（仅课程方案的文档渲染需要，依赖 `python-docx`） |
@@ -78,7 +78,7 @@ node --test "test/*.test.mjs"           # 教师功能行为测试
 
 ## 怎么用
 
-**工作台**：在桌面端浏览器打开 `<DSH_WEB_URL>/geo-teacher`（Host 地址由 DSH 分配，取运行时环境变量 `DSH_WEB_URL`），选功能、填需求、选参数，复制生成的提示词到会话发送。
+入口只有两个：**会话输入区**与**对话**。web 工作台页面已于 2026-11-11 移除。
 
 **输入区**：在 `geo-teacher` 预设的会话里，输入框上方出现功能选择与参数设置，选完会把前缀直接写进原生输入框。
 
@@ -94,7 +94,7 @@ node --test "test/*.test.mjs"           # 教师功能行为测试
 ## 架构
 
 ```text
-桌面会话 / /geo-teacher 工作台
+桌面会话
    │  HTTP
    ▼
 /geo/taxonomy/*  /geo/bank/*  /geo/analysis/*  /geo/generator/*  /geo/core/health
@@ -116,7 +116,7 @@ geo-core（内核：考点树 / 题库加载 / 真题分析 / 命题蓝图 / 风
 ## 仓库结构
 
 ```text
-.agent-presets/geo-teacher/   预设包：plugins/（core,taxonomy,bank,analysis,generator,question,panel,solver-isolation）+ skills/ + cordis.patch.yml
+.agent-presets/geo-teacher/   预设包：plugins/（core,taxonomy,bank,analysis,generator,question,solver-isolation）+ skills/ + cordis.patch.yml
 packages/dsh-geo-teacher-ui/  输入区 UI 插件
 data/                         随仓库数据：config/（考点库）+ obsidian_vault/（题库、题图、图谱笔记与导航）
 docs/                         运行基线、当前规范、需求与设计、验收待办

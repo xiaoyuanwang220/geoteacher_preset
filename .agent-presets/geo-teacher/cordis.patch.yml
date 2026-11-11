@@ -29,7 +29,7 @@
         name: 地理教师辅助
         description: >-
           基于 cordis 模式并内置「地理教师辅助 Agent」：本地真题库考点树浏览、真题分析（为什么这样考）、
-          命题蓝图（下一道题怎么设计）、真题风格出题。面板入口：/geo-teacher。
+          命题蓝图（下一道题怎么设计）、真题风格出题。
         order: 10
         plugins:
           # ── identity ────────────────────────────────────────────────────────────────
@@ -115,8 +115,7 @@
           # ── 地理教师辅助（插件化：geo group，isolate realm）────────────
           # geo-core 发布 geo.kernel 服务，功能插件在同一 group 内消费它；
           # `isolate: geoKernel` 使该服务仅本 preset 私有，不与其它 preset/会话冲突。
-          # 功能插件（taxonomy/bank/analysis/generator）各自注册 /geo/* 路由；
-          # geo-panel 只交付界面：/geo-teacher 工作台页面 + /geo-teacher/assets 静态资源（不消费 geoKernel）。
+          # 功能插件（taxonomy/bank/analysis/generator）各自注册 /geo/* 路由。
           - id: geo
             name: cordis:group
             group: true
@@ -140,8 +139,6 @@
               # 本插件只注册 geo_question_validate 工具（无 HTTP 路由，故不注入 webServer、不增 isolate 项）。
               - id: geo-question
                 name: '@geo-edu/dsh-geo-teacher-preset/plugins/question'
-              - id: geo-panel
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/panel'
 
           # ── goals ───────────────────────────────────────────────────────────────────
 

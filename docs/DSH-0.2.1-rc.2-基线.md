@@ -1,6 +1,6 @@
 # DSH 0.2.1-rc.2 基线记录
 
-> **现行验证版本（2026-11-07 实测）**：本机 DSH Desktop **`0.2.2-rc.1`**（安装包 `FileVersion`、Windows 卸载注册项 `DisplayVersion`、安装目录 `resources/runtime/primary-runtime/runtime.json` 三处一致；Electron 44.7.0 / Node 24.21.0 / pnpm 11.28.5 / Python 3.12.14）。**实测面**：完整重启后预设挂载成功、`/geo-teacher` 200、`/geo/core/health` 200（162 考点节点 / 115 文件 / 279 小问）。本文以下内容保留 **rc.2 时期**的记录原貌，作为历史基线，不追改。
+> **现行验证版本（2026-11-07 实测）**：本机 DSH Desktop **`0.2.2-rc.1`**（安装包 `FileVersion`、Windows 卸载注册项 `DisplayVersion`、安装目录 `resources/runtime/primary-runtime/runtime.json` 三处一致；Electron 44.7.0 / Node 24.21.0 / pnpm 11.28.5 / Python 3.12.14）。**实测面**：完整重启后预设挂载成功、`/geo/core/health` 200（162 考点节点 / 115 文件 / 279 小问）；`/geo-teacher` 页面当时为 200，该页面已于 2026-11-11 移除（相关 200 记录为历史事实）。本文以下内容保留 **rc.2 时期**的记录原貌，作为历史基线，不追改。
 > 现行口径以 [工作台聚合与一键安装方案](工作台聚合与一键安装方案.md) §2 与 [docs/README](README.md) 索引为准：`0.2.2-rc.1` 记为「已验证版本」；`0.2.1` 系列可安装但未完整验证（0.2.2 移除了 `list-agents` 子路径，0.2.1 上少一个 `list_agents` 工具）；最低版本待接口清单确认，`engines.dsh` 本期不声明。
 >
 > **2026-11-07 版本变更记录**：

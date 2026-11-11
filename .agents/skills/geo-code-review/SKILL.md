@@ -14,7 +14,7 @@ description: >-
 
 **审查对象**：
 - 本地改动：diff（staged / unstaged）、提交（commit）与补丁；
-- 插件代码：`.agent-presets/geo-teacher/plugins/*/index.js`、`plugins/panel/page.html` 等；
+- 插件代码：`.agent-presets/geo-teacher/plugins/*/index.js` 等；
 - composition 与 isolate 配置：`.agent-presets/geo-teacher/agent.cordis.yml`；
 - 模型工具：`geo_*` 工具的 description / 输入输出 schema / render；
 - Skill：`.agents/skills/` 下开发 Skill、`.agent-presets/geo-teacher/skills/` 下教师 Skill；
@@ -106,7 +106,7 @@ description: >-
 #### 测试与真实入口
 - 是否通过真实 Loader、composition、HTTP 路由或模型工具入口验证；mock `apply()`、`node --check`、正则扫描**不能替代**真实入口（查不出动态加载失败、路由冲突、服务未挂载）；
 - 测试是否会在目标回归出现时真正失败：断言检查外部状态 / 行为而非复述实现；**不得把文档中的"已验证"或 Agent 的报告当作测试证据**；
-- `geo-verify.mjs` 的运行时冒烟（`/geo/core/health`、`/geo-teacher`）必须在重启 DSH 后执行才有意义。
+- `geo-verify.mjs` 的运行时冒烟（`/geo/core/health`）必须在重启 DSH 后执行才有意义。
 
 #### 文档和 Skill 一致性
 - 涉及文档、Skill、工具 description 或可见字符串时，使用 `geo-doc-writing` 的命题保留和术语规则（`docs/术语表.md` 为唯一权威）；

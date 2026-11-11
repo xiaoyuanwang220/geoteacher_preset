@@ -1141,7 +1141,6 @@ function httpGet(url, timeoutMs = 10000, collectBody = false) {
 async function checkRuntime() {
   const endpoints = [
     { path: '/geo/core/health', expect: 200, checkJson: true },
-    { path: '/geo-teacher', expect: 200 },
   ];
   let allOk = true;
   for (const ep of endpoints) {
