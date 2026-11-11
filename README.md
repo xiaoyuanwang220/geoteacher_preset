@@ -30,22 +30,30 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 | Python | `3.12`（仅课程方案的文档渲染需要，依赖 `python-docx`） |
 | 数据 | **随仓库提供**：考点库 `data/config/`、真题库 `data/obsidian_vault/04_题目/`（含题图）；可改用自己目录，见下方「配置数据路径」 |
 
-## 快速开始
+## 安装与启动
+
+先按「环境要求」准备好 DSH Desktop 与 Node，然后：
 
 ```sh
 git clone https://github.com/xiaoyuanwang220/geoteacher_preset.git geo_edu_agent
 cd geo_edu_agent
-node scripts/setup.mjs --check     # 只读检查：DSH 版本、profile、包与仓库数据
-node scripts/setup.mjs --yes       # 备份 profile 清单 → 写入 → pnpm 安装并建立链接 → 静态校验
+node scripts/setup.mjs --check   # 只读：检查 DSH 版本、profile、包与数据
+node scripts/setup.mjs --yes     # 写入 link 依赖 → pnpm 安装 → 静态校验
 ```
 
-1. **运行安装器**：`--check` 不写任何文件；`--yes` 会备份 `profile/package.json` 与 `pnpm-lock.yaml`，把两个包以 `link:<仓库路径>` 写进目标 profile 的依赖与 `dsh.profile.bundles`，再用运行时自带 pnpm 在 profile 目录安装一次，生成 `node_modules` 链接。
-2. **完整重启 DSH**（关闭窗口可能只是隐藏，请确认进程已退出）。
-3. **开始使用**：新建「地理教师辅助」会话，输入框上方会出现功能选择；先发 `/geo-status`（或直接说「查看状态」，由 `geo_status` 工具回复）确认版本、数据来源与题库题数。
+`--yes` 会先备份 profile 的 `package.json` 与 `pnpm-lock.yaml`，再把两个包以 `link:<仓库路径>` 写进目标 profile 的依赖与 `dsh.profile.bundles`，用运行时自带 pnpm 安装并校验；不覆盖你的配置、数据与产物。
 
-卸载：`node scripts/setup.mjs --uninstall --yes`（只移除本项目的两个依赖与两个 bundle 项；保留配置、数据、产物与运行记录，不承诺“恢复原状”）。
+安装完**完全退出并重启 DSH Desktop**（关闭窗口可能只是隐藏，请确认进程已退出），新建「地理教师辅助」会话，输入 `/geo-status` 确认版本、数据来源与题数。数据默认用仓库内 `data/`，不配置也能用；要换自己的目录见下方「配置数据路径」。
 
-自检：
+### 卸载
+
+```sh
+node scripts/setup.mjs --uninstall --yes
+```
+
+只移除本项目的两个依赖与两个 bundle 项，保留配置、数据与产物，不承诺“恢复原状”。
+
+### 自检
 
 ```sh
 node scripts/setup.mjs --check          # 安装接线与数据是否就绪
