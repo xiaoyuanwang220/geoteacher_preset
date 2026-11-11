@@ -2,7 +2,7 @@
 // 路由：/geo/analysis/run?qid=、/geo/analysis/export?qid=
 // 模型工具：geo_analyze、geo_solve、geo_judge、geo_explain、geo_export_analysis
 // 消费 geoKernel 服务。
-// 讲题契约（docs/讲题优化计划.md、docs/讲题功能设计.md）：
+// 讲题契约（docs/讲题功能设计.md）：
 //   解题由隔离会话完成：bundle 声明内部 agent preset（geo-solver-internal，唯一插件
 //   plugins/solver-isolation：提供解题 persona 并隐藏/拒绝全部继承工具），analysis 用
 //   subagents(provider=spawn) 创建全新上下文的子 agent 独立作答，作答回传后由服务端保存；

@@ -1303,7 +1303,7 @@ function buildStudentPlan() {
     entryQuestion: '',      // 待在讲题阶段填写：拿到这道题第一步想什么
     steps: [],              // 待在讲题阶段填写：可执行的思考步骤
     methodBoundary: '',     // 待在讲题阶段填写：方法的适用条件与边界
-    // 设问先行六步：段内动作序列（不得作顶层目录，恒以列表项渲染）。见 docs/讲题学生版结构方案.md §二/§六。
+    // 设问先行六步：段内动作序列（不得作顶层目录，恒以列表项渲染）。见 docs/术语表.md「学生版教学流程（设问先行六步）」与技能 references/explainer-audiences.md §4.1。
     flow: ['设问先行', '定向读材料', '知识选择', '推理链', '作答与检查', '方法提炼'],
     stepPlacement: { examine: '①', solve: '②③④⑤', reflect: '⑥', note: '外层仍为四段式' },
     stepTemplate: [
