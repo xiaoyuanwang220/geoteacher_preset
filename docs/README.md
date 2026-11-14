@@ -53,6 +53,7 @@
 | 文档 | 内容 | 状态 |
 | :-- | :-- | :-- |
 | [课程方案治理记录](课程方案治理记录.md) | 2026-11-09/10 的规则调整（22 条）、流程优化（依据落盘、构思硬停、按需阅读、8→5 段）、28 条自查分析与不采用措施 | 已实施 |
+| [课程方案问题记录](课程方案问题记录.md) | 真实课例暴露的 27 项问题，按改动面分四级（规则文本／产物内容／脚本／渲染契约），含证据位置、建议与处理批次 | 待处理 |
 | [技能说明](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/README.md)、[发布清单](../.agent-presets/geo-teacher/skills/cn-high-school-geography-lesson-planning/RELEASE-MANIFEST.md) | 技能定位、文件构成、许可与修订记录 | 现行 |
 | `课程方案评判标准/` | 田家炳杯评分量表**原版**（本机保留，已由 `.gitignore` 排除，不随仓库分发） | 参考 |
 
