@@ -265,3 +265,145 @@ test('图块：能嵌入真实位图，缺失时报告而不是留空', { skip }
   assert.match(html, /图片未能嵌入/, '缺失图片应被明确报告');
   assert.match(html, /缺少 src/, '缺少 src 应被明确报告');
 });
+
+// ---- 图片格式：HTML 与 DOCX 必须显示同一张图 ----------------------------------------
+//
+// Word 读不了 WebP 和 SVG，而浏览器两者都支持。修复前 DOCX 会把这两种图悄悄换成
+// <<Q1>>图片格式无法嵌入<<Q2>>，同时 --format both 和 verify 都返回 0——两种产物因此内容不一致。
+// 这组测试锁住两件事：能转的必须转成 PNG 嵌进去；转不了必须失败，不能静默降级。
+
+// DOCX 里真正嵌入的图片：word/media/ 下的条目数，以及是否含失败占位文字。
+function docxImages(path) {
+  const out = py(['-c', [
+    'import sys,zipfile',
+    'z=zipfile.ZipFile(sys.argv[1])',
+    'media=[n for n in z.namelist() if n.startswith("word/media/")]',
+    'xml=z.read("word/document.xml").decode("utf-8")',
+    'print(len(media))',
+    'print("PLACEHOLDER" if "图片格式无法嵌入" in xml else "CLEAN")',
+  ].join(';'), path]);
+  const [count, flag] = out.trim().split('\n');
+  return { media: Number(count), clean: flag === 'CLEAN' };
+}
+
+// 用渲染器自己的 Pillow 造一张指定格式的图，字节一定合法。
+function makeImage(t, fmt) {
+  const dir = tmp(t, `mk-${fmt.toLowerCase()}`);
+  const file = join(dir, `x.${fmt.toLowerCase()}`);
+  py(['-c', [
+    'import sys',
+    'from PIL import Image',
+    'Image.new("RGB",(48,32),(20,90,180)).save(sys.argv[1], format=sys.argv[2])',
+  ].join(';'), file, fmt]);
+  return fs.readFileSync(file);
+}
+
+// 每个资产一个 figure 块，渲染两种格式，返回产物路径。
+function renderFigures(t, assets, id) {
+  const out = tmp(t, `fig-${id}`);
+  const dir = join(out, 'assets');
+  fs.mkdirSync(dir);
+  for (const [name, bytes] of Object.entries(assets)) {
+    fs.writeFileSync(join(dir, name), bytes);
+  }
+  const blocks = Object.keys(assets).map((name, i) => ({
+    type: 'figure', src: `assets/${name}`, alt: `图${i}`, caption: `图${i + 1} ${name}`,
+  }));
+  const src = join(out, `${id}.json`);
+  fs.writeFileSync(src, JSON.stringify({
+    documents: [{
+      id, audience: 'student', title: id,
+      sections: [{ heading: '图', blocks }],
+    }],
+  }, null, 1), 'utf8');
+  renderBoth(src, out);
+  return { out, src, html: join(out, `${id}.html`), docx: join(out, `${id}.docx`) };
+}
+
+test('图格式：WebP 在 DOCX 里被转成 PNG 嵌入，两边都显示同一张图', { skip }, t => {
+  const webp = makeImage(t, 'WEBP');
+  const { html, docx } = renderFigures(t, { 'pie.webp': webp }, 'webp');
+  assert.match(fs.readFileSync(html, 'utf8'), /src="data:image\/webp;base64,/,
+    'HTML 应内联 WebP');
+  const { media, clean } = docxImages(docx);
+  assert.equal(media, 1, 'DOCX 应嵌入 1 张图片（WebP 需先转 PNG）');
+  assert.ok(clean, 'DOCX 不应残留图片格式无法嵌入占位文字');
+});
+
+test('图格式：SVG 不支持输出到 DOCX，应明确报错并指向 PNG', { skip }, t => {
+  const svg = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="32">'
+    + '<rect width="48" height="32" fill="#3366cc"/></svg>', 'utf8');
+  const out = tmp(t, 'svgfig');
+  const dir = join(out, 'assets');
+  fs.mkdirSync(dir);
+  fs.writeFileSync(join(dir, 'map.svg'), svg);
+  const src = join(out, 'svgfig.json');
+  fs.writeFileSync(src, JSON.stringify({
+    documents: [{
+      id: 'svgfig', audience: 'student', title: 'svgfig',
+      sections: [{ heading: '图', blocks: [
+        { type: 'figure', src: 'assets/map.svg', alt: 'SVG' }] }],
+    }],
+  }, null, 1), 'utf8');
+
+  // DOCX 不应静默丢图：必须报错，且错误信息要告诉用户改用 PNG。
+  let stderr = '';
+  assert.throws(
+    () => py([join(SCRIPTS, 'render_documents.py'), src,
+      '--format', 'both', '--outdir', out], { stdio: 'pipe' }),
+    (err) => {
+      stderr = String(err.stderr || '');
+      return true;
+    },
+    'SVG 图应让 DOCX 渲染失败');
+  assert.match(stderr, /SVG/, 'stderr 应点名 SVG');
+  assert.match(stderr, /PNG/, 'stderr 应指向改用 PNG');
+
+  // HTML 侧仍然支持 SVG：单独渲染 html 应成功且内联。
+  py([join(SCRIPTS, 'render_documents.py'), src,
+    '--format', 'html', '--outdir', out], { stdio: 'pipe' });
+  assert.match(fs.readFileSync(join(out, 'svgfig.html'), 'utf8'),
+    /src="data:image\/svg\+xml;base64,/, 'HTML 仍应内联 SVG');
+});
+
+test('图格式：原生位图格式不被无谓转码，六种位图都能嵌入', { skip }, t => {
+  const assets = {};
+  for (const fmt of ['PNG', 'JPEG', 'GIF', 'BMP', 'TIFF', 'WEBP']) {
+    assets[`x.${fmt.toLowerCase()}`] = makeImage(t, fmt);
+  }
+  const { docx } = renderFigures(t, assets, 'allfmt');
+  const { media, clean } = docxImages(docx);
+  assert.equal(media, 6, '六种位图格式都应嵌入 DOCX');
+  assert.ok(clean, 'DOCX 不应有失败占位文字');
+});
+
+test('图格式：verify 能抓出声称成功但丢了图的 DOCX', { skip }, t => {
+  const out = tmp(t, 'verify-catch');
+  fs.mkdirSync(join(out, 'assets'));
+  fs.writeFileSync(join(out, 'assets', 'a.png'), makeImage(t, 'PNG'));
+  const src = join(out, 'catch.json');
+  fs.writeFileSync(src, JSON.stringify({
+    documents: [{
+      id: 'catch', audience: 'student', title: 'catch',
+      sections: [{ heading: '图', blocks: [
+        { type: 'figure', src: 'assets/a.png', alt: 'A', caption: '图1' },
+        { type: 'figure', src: 'assets/a.png', alt: 'B', caption: '图2' }] }],
+    }],
+  }, null, 1), 'utf8');
+  py(['-c', [
+    'import sys',
+    'from docx import Document',
+    'd=Document()',
+    'd.add_paragraph("图片格式无法嵌入：UnrecognizedImageError")',
+    'd.save(sys.argv[1])',
+  ].join(';'), join(out, 'catch.docx')]);
+  py(['-c',
+    'import sys; from pathlib import Path; Path(sys.argv[1]).write_text("<p>x</p>", encoding="utf-8")',
+    join(out, 'catch.html')]);
+  assert.throws(
+    () => py([join(SCRIPTS, 'verify_rendered_outputs.py'), src,
+      '--format', 'both', '--outdir', out], { stdio: 'pipe' }),
+    /FAIL|placeholder|figure/i,
+    'verify 必须在 DOCX 丢图时返回非 0');
+});

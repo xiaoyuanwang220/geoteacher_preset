@@ -663,8 +663,75 @@ def _emit_chart(doc, blk, theme):
     doc.add_paragraph(style="LC Spacer")
 
 
+#: Raster formats python-docx can hand to Word unchanged (Word sniffs the bytes, so the
+#: extension is not what decides — these are the ones it reliably accepts).
+_DOCX_NATIVE_IMAGE_SUFFIXES = frozenset(
+    {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"})
+
+
+class FigureEmbedError(RuntimeError):
+    """A figure exists but cannot be turned into bytes DOCX can embed.
+
+    Raised instead of returning a placeholder, because a placeholder is invisible to the
+    exit code: `--format both` would report success while the DOCX silently lost the image.
+    """
+
+
+def _figure_png_like(path: Path) -> bytes:
+    """Return image bytes DOCX can embed, converting only when the format needs it.
+
+    Word reads raster formats only (it sniffs the bytes, so the extension is not what
+    decides); WebP is the case that matters, because browsers render it and Word does not.
+    Converting it here keeps the DOCX and the HTML showing the same picture instead of the
+    DOCX quietly swapping in a "format not supported" line.
+
+    SVG is deliberately rejected: rasterising it needs a native backend (cairo via
+    cairosvg, or a bundled MuPDF via pymupdf) that this skill does not depend on. Callers
+    get an actionable message telling them to export the figure as PNG instead.
+    """
+    data = path.read_bytes()
+    suffix = path.suffix.lower()
+    if suffix in _DOCX_NATIVE_IMAGE_SUFFIXES:
+        return data
+    if suffix == ".svg":
+        raise FigureEmbedError(
+            f"SVG 图片无法嵌入 DOCX：{path.name}。DOCX 只支持位图格式"
+            "（PNG/JPEG/GIF/BMP/TIFF）。请把该图另存为 PNG 后在 figure 块中引用；"
+            "若该课例需要向量图，请在材料源中改用 PNG，或改为 --format html 交付。"
+        )
+    # Any other raster format Pillow understands (WebP, AVIF, ...) -> PNG.
+    try:
+        from PIL import Image
+    except ImportError:
+        raise FigureEmbedError(
+            f"图片无法嵌入 DOCX：{path.name} 不是 Word 原生支持的格式，"
+            "且未安装 Pillow，无法转换。请安装 Pillow，或改用 PNG/JPEG。"
+        ) from None
+    try:
+        import io as _io
+
+        with Image.open(_io.BytesIO(data)) as im:
+            if im.mode not in ("RGB", "RGBA", "L"):
+                im = im.convert("RGBA" if "A" in im.getbands() else "RGB")
+            out = _io.BytesIO()
+            im.save(out, format="PNG")
+            return out.getvalue()
+    except FigureEmbedError:
+        raise
+    except Exception as exc:
+        raise FigureEmbedError(
+            f"图片无法嵌入 DOCX：{path.name} 无法转换为 PNG（{type(exc).__name__}: {exc}）"
+        ) from exc
+
+
 def _emit_figure(doc, blk, theme):
-    """Existing raster image -> embedded at its native size, scaled to the text column."""
+    """Existing image -> embedded at its native size, scaled to the text column.
+
+    Raster formats Word cannot read (WebP and friends) are converted to PNG first. SVG is
+    rejected with an actionable message because rasterising it needs a native backend this
+    skill does not depend on. Either way the render fails rather than silently dropping the
+    image; see FigureEmbedError.
+    """
     from io import BytesIO
 
     raw = str(blk.get("src") or blk.get("path") or "").strip()
@@ -676,7 +743,7 @@ def _emit_figure(doc, blk, theme):
                f"图片未能嵌入：{raw or '（缺少 src）'}（{alt}）")
         return
     try:
-        blob = BytesIO(path.read_bytes())
+        blob = BytesIO(_figure_png_like(path))
     except OSError as exc:
         add_md(doc.add_paragraph(style="LC Muted"), f"图片读取失败：{exc}")
         return
@@ -691,8 +758,7 @@ def _emit_figure(doc, blk, theme):
     try:
         p.add_run().add_picture(blob, width=Inches(width_in))
     except Exception as exc:  # python-docx raises a bare Exception for bad image data
-        add_md(doc.add_paragraph(style="LC Muted"), f"图片格式无法嵌入：{exc}")
-        return
+        raise FigureEmbedError(f"图片嵌入失败：{path.name} -> {exc}") from exc
     if caption:
         cp = doc.add_paragraph(style="LC Muted")
         add_md(cp, caption)
@@ -793,7 +859,13 @@ def main() -> int:
     args = ap.parse_args()
     src = Path(args.input)
     data = json.loads(src.read_text(encoding="utf-8"))
-    render(data, args.output, source_dir=src.parent)
+    try:
+        render(data, args.output, source_dir=src.parent)
+    except FigureEmbedError as exc:
+        # A figure that cannot be embedded is a delivery failure, not a cosmetic one: the
+        # HTML product shows the image, so a DOCX without it is a different document.
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     print(f"wrote {args.output}")
     return 0
 
