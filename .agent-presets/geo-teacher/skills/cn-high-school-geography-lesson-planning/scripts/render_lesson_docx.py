@@ -85,6 +85,11 @@ def setup_styles(doc, theme: Theme):
     # default of 10pt-after leaks into every plain paragraph.
     s["Normal"].paragraph_format.space_before = Pt(0)
     s["Normal"].paragraph_format.space_after = Pt(8)
+    # Which built-in style each custom style descends from. H1/H2/H3 descend from
+    # Word's Heading 1/2/3 so the Navigation pane builds an outline — the DOCX
+    # counterpart of the HTML <h2>/<h3> structure and its table of contents.
+    # Formatting is overridden below; only the outline level is inherited.
+    _OUTLINE_BASE = {"LC H1": "Heading 1", "LC H2": "Heading 2", "LC H3": "Heading 3"}
     for name, size, bold, color, before, after in [
         ("LC Eyebrow", 9, True, theme.safe("primary"), 0, 2),
         ("LC Title", float(theme.raw.get("title_size", 22)), True, theme.safe("text"), 2, 2),
@@ -97,7 +102,7 @@ def setup_styles(doc, theme: Theme):
         ("LC Spacer", 2, False, theme.safe("muted"), 4, 0),
     ]:
         st = s.add_style(name, 1)  # 1 = WD_STYLE_TYPE.PARAGRAPH
-        st.base_style = s["Normal"]
+        st.base_style = s[_OUTLINE_BASE[name]] if name in _OUTLINE_BASE else s["Normal"]
         st.font.size = Pt(size)
         st.font.bold = bold
         st.font.color.rgb = _hex_rgb(color)
@@ -437,8 +442,12 @@ def _emit_columns(doc, blk, theme):
 
 
 def _emit_source_card(doc, blk, theme):
-    head = " · ".join(str(blk.get(k))
-                      for k in ("title", "author", "date", "origin") if blk.get(k))
+    # Same shape as the HTML source card: title, then an em dash, then the metadata
+    # run (author · date · origin). Joining everything with " · " made the two
+    # products read differently on the same material card.
+    title = str(blk.get("title") or "")
+    meta = " · ".join(str(blk.get(k)) for k in ("author", "date", "origin") if blk.get(k))
+    head = f"{title} — {meta}" if title and meta else (title or meta)
     body = blk.get("excerpt") or blk.get("text") or ""
     if blk.get("url"):
         body = f"{body}\n来源链接：{blk['url']}"
@@ -585,6 +594,111 @@ def _emit_number_line(doc, blk, theme):
     doc.add_paragraph(style="LC Spacer")
 
 
+# ---- figures -----------------------------------------------------------------
+
+# Directory of the lesson JSON being rendered; relative figure paths resolve from here
+# first, so a lesson folder can carry its own assets/ next to lesson.json.
+_SOURCE_DIR = None
+
+
+def set_source_dir(path):
+    global _SOURCE_DIR
+    _SOURCE_DIR = Path(path).resolve() if path else None
+
+
+def _resolve_asset(raw: str):
+    """Resolve a figure `src` against the lesson folder, cwd, then the script folder."""
+    if not raw:
+        return None
+    p = Path(raw)
+    if p.is_absolute():
+        return p if p.is_file() else None
+    dirs = []
+    if _SOURCE_DIR is not None:
+        dirs.append(_SOURCE_DIR)
+    dirs.extend([Path.cwd(), Path(__file__).resolve().parent])
+    for base in dirs:
+        cand = (base / p)
+        try:
+            cand = cand.resolve()
+        except OSError:
+            continue
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _emit_chart(doc, blk, theme):
+    """Data chart -> PNG drawn from the SAME geometry the HTML SVG uses.
+
+    chart_bars.compute_layout is the single source of proportions; this function only
+    paints. That is what keeps the HTML and DOCX products from disagreeing about
+    whether焦作 is 6 percentage points above the national figure or level with it.
+    """
+    try:
+        import io
+
+        import chart_bars
+    except ImportError as exc:
+        add_md(doc.add_paragraph(style="LC Muted"), f"图表组件不可用：{exc}")
+        return
+    layout = chart_bars.compute_layout(blk, width_pt=theme.content_width * 72.0)
+    if not layout.get("ok"):
+        add_md(doc.add_paragraph(style="LC Muted"),
+               f"图表数据有误：{layout.get('error', '未知原因')}")
+        return
+    try:
+        png = chart_bars.render_png(layout, dpi=300)
+    except chart_bars.ChartError as exc:
+        add_md(doc.add_paragraph(style="LC Muted"), f"图表渲染失败：{exc}")
+        return
+    width_in = min(6.4, max(2.0, layout["width"] / 72.0))
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_after = Pt(2)
+    p.add_run().add_picture(io.BytesIO(png), width=Inches(width_in))
+    # The PNG already contains the title, legend, axis and the source note (the same
+    # layout draws both), so nothing is appended here — appending the note again would
+    # print it twice.
+    doc.add_paragraph(style="LC Spacer")
+
+
+def _emit_figure(doc, blk, theme):
+    """Existing raster image -> embedded at its native size, scaled to the text column."""
+    from io import BytesIO
+
+    raw = str(blk.get("src") or blk.get("path") or "").strip()
+    caption = str(blk.get("caption") or "").strip()
+    alt = str(blk.get("alt") or caption or "插图").strip()
+    path = _resolve_asset(raw) if raw else None
+    if path is None:
+        add_md(doc.add_paragraph(style="LC Muted"),
+               f"图片未能嵌入：{raw or '（缺少 src）'}（{alt}）")
+        return
+    try:
+        blob = BytesIO(path.read_bytes())
+    except OSError as exc:
+        add_md(doc.add_paragraph(style="LC Muted"), f"图片读取失败：{exc}")
+        return
+    try:
+        width_in = float(blk.get("width_in") or 5.6)
+    except (TypeError, ValueError):
+        width_in = 5.6
+    width_in = min(max(1.5, width_in), theme.content_width)
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_after = Pt(2)
+    try:
+        p.add_run().add_picture(blob, width=Inches(width_in))
+    except Exception as exc:  # python-docx raises a bare Exception for bad image data
+        add_md(doc.add_paragraph(style="LC Muted"), f"图片格式无法嵌入：{exc}")
+        return
+    if caption:
+        cp = doc.add_paragraph(style="LC Muted")
+        add_md(cp, caption)
+    doc.add_paragraph(style="LC Spacer")
+
+
 # Adding a block type or text field? Render it in render_lesson_html.py in the
 # same commit — the html and docx renderers must emit the same text.
 _EMITTERS = {
@@ -608,6 +722,8 @@ _EMITTERS = {
     "source_card": _emit_source_card,
     "fill_table": _emit_fill_table,
     "number_line": _emit_number_line,
+    "chart": _emit_chart,
+    "figure": _emit_figure,
 }
 
 
@@ -624,7 +740,8 @@ def emit_block(doc, blk: dict, theme: Theme):
 
 # ---- document assembly -------------------------------------------------------
 
-def render(data: dict, out_path: str) -> int:
+def render(data: dict, out_path: str, source_dir=None) -> int:
+    set_source_dir(source_dir)
     data = expand_document(data, data.get("audience", "teacher"))
     theme = Theme(data.get("theme"))
     (theme.answer_height, theme.answer_gap,
@@ -674,8 +791,9 @@ def main() -> int:
     ap.add_argument("input", help="lesson JSON file")
     ap.add_argument("-o", "--output", default="lesson_plan.docx")
     args = ap.parse_args()
-    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
-    render(data, args.output)
+    src = Path(args.input)
+    data = json.loads(src.read_text(encoding="utf-8"))
+    render(data, args.output, source_dir=src.parent)
     print(f"wrote {args.output}")
     return 0
 

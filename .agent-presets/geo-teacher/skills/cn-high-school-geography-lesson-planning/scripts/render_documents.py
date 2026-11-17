@@ -3,7 +3,10 @@
 # Copyright 2026 Learning Commons
 # SPDX-License-Identifier: Apache-2.0
 
-"""Render every document in a multi-document source JSON (HTML previews and/or editable .docx).
+"""Render every document in a multi-document source JSON (HTML and/or editable .docx).
+
+Both formats are final deliverables chosen by the teacher; neither is a preview of the other
+(see SKILL.md 输出契约).
 
 The material source declares ONE `shared` block (content that appears in more than one
 document) plus a `documents` array, so the deliverables of one lesson — 教学设计 /
@@ -31,7 +34,7 @@ Material source shape:
 overrides the top-level one.
 
 Usage:
-    python render_documents.py lesson.json --format html             # all docs -> HTML previews
+    python render_documents.py lesson.json --format html             # all docs -> HTML
     python render_documents.py lesson.json --format docx             # all docs -> editable .docx
     python render_documents.py lesson.json --only 学生学习材料 --format docx
 """
@@ -86,17 +89,22 @@ def main() -> int:
         if args.only and doc_id_raw not in args.only and doc_id not in args.only:
             continue
         full = build_doc(source, doc)
-        # The HTML twin always ships — docx is the teacher deliverable, html is its
-        # always-available preview. Rendering docx alone leaves the twin missing, so
-        # "docx" implies both.
+        # HTML and DOCX are both final deliverables (see SKILL.md 输出契约): HTML suits
+        # screen reading, projection and browser printing; DOCX suits re-editing and
+        # school templates. Neither is a preview of the other. The HTML twin is always
+        # written so a DOCX-only request still leaves a readable copy of the same source —
+        # it is a consistency reference, not a downgrade.
         from render_lesson_html import render as render_html
         path = outdir / f"{doc_id}.html"
-        path.write_text(render_html(full), encoding="utf-8")
+        # source_dir lets a figure block's relative path resolve from the lesson folder
+        # (…/lesson.json + assets/…) instead of the shell's working directory.
+        path.write_text(render_html(full, source_dir=Path(args.input).parent),
+                        encoding="utf-8")
         written.append(str(path))
         if args.format in ("docx", "both"):
             from render_lesson_docx import render as render_docx
             path = outdir / f"{doc_id}.docx"
-            render_docx(full, str(path))
+            render_docx(full, str(path), source_dir=Path(args.input).parent)
             written.append(str(path))
 
     if not written:

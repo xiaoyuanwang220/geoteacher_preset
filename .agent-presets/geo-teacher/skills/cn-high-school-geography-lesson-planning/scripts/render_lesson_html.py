@@ -3,26 +3,34 @@
 # Copyright 2026 Learning Commons
 # SPDX-License-Identifier: Apache-2.0
 
-"""Render lesson JSON -> a styled, self-contained HTML preview (the teacher-facing view).
+"""Render lesson JSON -> a styled, self-contained HTML page (a final deliverable in its own right).
 
-Visual design principles:
-  - Minimal color. Callouts are distinguished by an icon prefix, not background fill, so they
-    survive B+W printing. Student worksheets avoid color entirely.
-  - Horizontal rule above each H1 section; no colored section bars.
-  - Bullets over paragraphs wherever possible.
-  - Shorter student tasks may use a 2-column layout to save pages.
-  - Student worksheets follow: task -> instructions -> reminders -> workspace.
+HTML and DOCX are peers, not preview and final: teachers pick whichever suits the
+occasion (screen/projector/browser print vs. re-editing in Word). The output is one
+file with inline CSS and base64 images, so it can be sent, opened and printed without
+any sidecar assets.
+
+Visual design:
+  - Real document structure: one <h1>, <section> per heading with an <h2>, <h3>/<h4>
+    below. That gives the browser outline, find-in-page, screen readers and the
+    in-page table of contents something to work with.
+  - Clear hierarchy with restrained colour: a colour band plus a border, never colour
+    alone, so a greyscale photocopy keeps every distinction.
+  - Figures: data charts render as inline SVG (vector, prints without needing
+    background-colour support); images are inlined as base64.
 
 Block types (canonical names; legacy aliases accepted, see ALIASES in lesson_common):
   paragraph, labeled, list, h2, h3, callout, table, cards, columns, group, page_break,
-  phase_header, fill_in, instructions, workspace, checklist
+  phase_header, fill_in, instructions, workspace, checklist, source_card, fill_table,
+  number_line, chart, figure
 
 Usage:
-    python render_lesson_html.py lesson.json -o lesson_preview.html
+    python render_lesson_html.py lesson.json -o lesson.html
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import re
 import sys
@@ -39,6 +47,98 @@ from lesson_common import (  # noqa: E402
 )
 
 FILL_IN_SIZES = {"short": "6em", "med": "14em", "long": "100%"}
+
+# Figures. Two block types, one job each:
+#   chart  — data the lesson owns: geometry is computed once in chart_bars.compute_layout
+#            and drawn here as inline SVG (vector, prints without background colour).
+#   figure — an existing raster image (a scanned textbook map, an exam figure): inlined
+#            as base64 so the HTML stays one self-contained file.
+FIGURE_MAX_WIDTH_PT = 460.8  # 6.4in — A4 width minus the 0.7in margins, with slack
+
+# Directory of the lesson JSON currently being rendered. Relative figure paths resolve
+# from here first, so a lesson folder can carry its own assets/ next to lesson.json.
+# Module-level rather than a parameter: render_block is called from eight places and a
+# 9th argument threaded through all of them buys nothing.
+_SOURCE_DIR: Path | None = None
+
+
+def _asset_dirs(source_dir: Path | None) -> list[Path]:
+    """Where a relative `src`/`path` in a figure block may be resolved from."""
+    dirs = [Path.cwd()]
+    if source_dir is not None:
+        dirs.insert(0, source_dir)
+    dirs.append(Path(__file__).resolve().parent)
+    return dirs
+
+
+def _resolve_asset(raw: str, source_dir: Path | None) -> Path | None:
+    if not raw:
+        return None
+    p = Path(raw)
+    if p.is_absolute():
+        return p if p.is_file() else None
+    for base in _asset_dirs(source_dir):
+        cand = (base / p).resolve()
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _image_data_uri(path: Path) -> str | None:
+    ext = path.suffix.lower().lstrip(".")
+    mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+            "gif": "image/gif", "webp": "image/webp", "svg": "image/svg+xml"}.get(ext)
+    if mime is None:
+        return None
+    try:
+        blob = path.read_bytes()
+    except OSError:
+        return None
+    return f"data:{mime};base64," + base64.b64encode(blob).decode("ascii")
+
+
+def render_figure_block(blk: dict, source_dir: Path | None = None) -> str:
+    """An existing image, inlined. Missing assets are reported, never silently dropped."""
+    source_dir = source_dir if source_dir is not None else _SOURCE_DIR
+    raw = str(blk.get("src") or blk.get("path") or "").strip()
+    caption = str(blk.get("caption") or "").strip()
+    alt = str(blk.get("alt") or caption or "插图").strip()
+    cap_html = f"<div class=\"figure-caption\">{md(caption)}</div>" if caption else ""
+    if not raw:
+        return (f"<div class=\"figure missing\"><p class=\"figure-caption\">"
+                f"图片块缺少 src 字段（alt：{md(alt)}）</p></div>")
+    path = _resolve_asset(raw, source_dir)
+    uri = _image_data_uri(path) if path else None
+    if uri is None:
+        # A placeholder that says what is missing, rather than an empty box that looks
+        # like a styling bug once printed.
+        return ("<div class=\"figure missing\"><div class=\"figure-missing-box\">"
+                f"图片未能嵌入：{md(raw)}</div>"
+                f"<p class=\"figure-caption\">{md(alt)}</p></div>")
+    try:
+        width_in = float(blk.get("width_in") or 5.6)
+    except (TypeError, ValueError):
+        width_in = 5.6
+    width_pt = max(60.0, min(width_in * 72.0, FIGURE_MAX_WIDTH_PT))
+    return (f"<figure class=\"figure\"><img src=\"{uri}\" alt=\"{escape(alt, quote=True)}\""
+            f" style=\"max-width:{width_pt:.1f}pt\">{cap_html}</figure>")
+
+
+def render_chart_block(blk: dict) -> str:
+    """A data chart: geometry from chart_bars, markup as inline SVG."""
+    try:
+        import chart_bars
+    except ImportError as exc:  # pragma: no cover - packaging failure, not a user error
+        return (f"<div class=\"chart\"><p class=\"chart-note\">图表组件不可用："
+                f"{md(str(exc))}</p></div>")
+    layout = chart_bars.compute_layout(blk, width_pt=FIGURE_MAX_WIDTH_PT)
+    if not layout.get("ok"):
+        return (f"<div class=\"chart\"><p class=\"chart-note\">图表数据有误："
+                f"{md(str(layout.get('error', '未知原因')))}</p></div>")
+    # render_svg already draws the title, legend, axis labels and the source note at the
+    # foot of the figure — do NOT emit them again around it, that doubles the note.
+    svg = chart_bars.render_svg(layout)
+    return f"<figure class=\"chart\">{svg}</figure>"
 
 
 def md(text) -> str:
@@ -96,9 +196,11 @@ def render_block(blk: dict, theme: Theme) -> str:
         lbl = label_text(blk)
         return f"<p><b>{md(lbl)}{label_sep(lbl)}</b> {md(blk.get('text', ''))}</p>"
     if t == "h2":
-        return f"<div class=\"h2\">{md(blk.get('text', ''))}</div>"
+        # Semantic tag + legacy class: the tag builds a real document outline (browser
+        # TOC, screen readers, find-in-page); the class keeps existing styling intact.
+        return f"<h3 class=\"h2\">{md(blk.get('text', ''))}</h3>"
     if t == "h3":
-        return f"<div class=\"h3\">{md(blk.get('text', ''))}</div>"
+        return f"<h4 class=\"h3\">{md(blk.get('text', ''))}</h4>"
     if t == "instructions":
         return f"<p class=\"instr\">{md(blk.get('text', ''))}</p>"
     if t in ("list", "checklist"):
@@ -138,8 +240,8 @@ def render_block(blk: dict, theme: Theme) -> str:
     if t == "phase_header":
         mins = blk.get("minutes")
         right = f"<span class=\"mins\">{md(mins)} 分钟</span>" if mins is not None else ""
-        return (f"<div class=\"h2 phase\"><span>{md(blk.get('name', ''))}</span>"
-                f"{right}</div>")
+        return (f"<h3 class=\"h2 phase\"><span>{md(blk.get('name', ''))}</span>"
+                f"{right}</h3>")
     if t == "group":
         inner = "".join(render_block(b, theme) for b in blk.get("blocks", []))
         return f"<div style=\"page-break-inside:avoid\">{inner}</div>"
@@ -155,8 +257,12 @@ def render_block(blk: dict, theme: Theme) -> str:
         headers = coerce_headers(blk.get("headers"))
         head = ""
         if headers:
-            head = ("<tr>" + "".join(f"<th>{md(str(h).rstrip(': '))}</th>" for h in headers)
-                    + "</tr>")
+            # scope="col" lets a screen reader announce the column when reading a cell;
+            # without it every cell is read as unlabelled data.
+            head = ("<thead><tr>"
+                    + "".join(f"<th scope=\"col\">{md(str(h).rstrip(': '))}</th>"
+                              for h in headers)
+                    + "</tr></thead>")
         rows = []
         for r in coerce_rows(blk.get("rows")):
             # An underscore run is the model writing "blank to fill in" — render it as a
@@ -175,7 +281,8 @@ def render_block(blk: dict, theme: Theme) -> str:
         if blk.get("display") == "large":
             classes.append("display-large")
         klass = f" class=\"{' '.join(classes)}\"" if classes else ""
-        return f"<table{klass}>{head}{''.join(rows)}</table>"
+        body = ("<tbody>" + "".join(rows) + "</tbody>") if rows else ""
+        return f"<table{klass}>{head}{body}</table>"
     if t == "columns":
         left = "".join(render_block(b, theme) for b in blk.get("left", []))
         right = "".join(render_block(b, theme) for b in blk.get("right", []))
@@ -262,6 +369,10 @@ def render_block(blk: dict, theme: Theme) -> str:
             for v, lab in marks)
         return (f"<div class=\"numberline\"><div class=\"nl-bar\">{tick_html}{mark_html}"
                 f"</div></div>")
+    if t == "chart":
+        return render_chart_block(blk)
+    if t == "figure":
+        return render_figure_block(blk)
     # NEVER dump raw JSON into the page — a printed worksheet with {"type": ...} on it is a
     # blocking print-safety failure (seen in real model output: "list" and "labeled_box").
     if blk.get("text"):
@@ -273,20 +384,51 @@ def render_block(blk: dict, theme: Theme) -> str:
     return ""
 
 
-def render(data: dict) -> str:
+def _section_ids(sections: list) -> list[str]:
+    """Deterministic anchor ids, one per section, in document order.
+
+    Index-based on purpose: no hashing (which varies per process), no transliteration
+    of Chinese headings, and stable across re-renders so a teacher's bookmark or a
+    shared link keeps working after the source is edited.
+    """
+    return [f"sec{i + 1}" for i in range(len(sections))]
+
+
+def _toc(sections: list, ids: list[str]) -> list[str]:
+    """Screen-only table of contents. A 12-section plan is unscannable without one.
+
+    Only rendered when the document has enough sections to need navigation; a
+    three-section worksheet does not.
+    """
+    if len(sections) < 5:
+        return []
+    items = []
+    for section, sid in zip(sections, ids):
+        heading = str(section.get("heading", "")).rstrip(": ")
+        if heading:
+            items.append(f"<li><a href=\"#{sid}\">{md(heading)}</a></li>")
+    if not items:
+        return []
+    return ["<nav class=\"toc\"><div class=\"toc-title\">本页内容</div><ol>"
+            + "".join(items) + "</ol></nav>"]
+
+
+def render(data: dict, source_dir: Path | str | None = None) -> str:
+    global _SOURCE_DIR
+    _SOURCE_DIR = Path(source_dir).resolve() if source_dir is not None else None
     data = expand_document(data, data.get("audience", "teacher"))
     theme = Theme(data.get("theme"))
     (theme.answer_height, theme.answer_gap,
      theme.answer_row, theme.ruled_default) = answer_profile(data)
     theme.student_doc = data.get("audience") == "student"
     hdr = build_header(data)
-    out = ["<div class=\"hdr\">"]
+    out = ["<header class=\"hdr\">"]
     if hdr["eyebrow"]:
         out.append(f"<div class=\"eyebrow\">{md(hdr['eyebrow'])}</div>")
-    out.append(f"<div class=\"title\">{md(hdr['title'])}</div>")
+    out.append(f"<h1 class=\"title\">{md(hdr['title'])}</h1>")
     if hdr["meta"]:
         out.append(f"<div class=\"meta\">{md(hdr['meta'])}</div>")
-    out.append("</div>")
+    out.append("</header>")
     if hdr["name_line"]:
         out.append(f"<p style=\"margin:6pt 0 22pt\">{md(hdr['name_line'])}</p>")
 
@@ -296,9 +438,14 @@ def render(data: dict) -> str:
     LIGHT_TYPES = {"paragraph", "labeled", "list", "checklist", "h2", "h3", "callout",
                    "instructions"}
     HEAVY_TYPES = {"group", "workspace", "labeled_box"}
-    for section in data.get("sections", []):
-        h1 = (f"<div class=\"h1\"><span>{md(str(section.get('heading', '')).rstrip(': '))}"
-              "</span></div>")
+    sections = data.get("sections", [])
+    ids = _section_ids(sections)
+    out.extend(_toc(sections, ids))
+    for section, sid in zip(sections, ids):
+        # h2, not h1: the document title in the header is the only h1, so the outline
+        # reads "title -> section -> sub-section" as an author would expect.
+        heading = str(section.get("heading", "")).rstrip(": ")
+        h1 = (f"<h2 class=\"h1\" id=\"{sid}\"><span>{md(heading)}</span></h2>")
         # The section heading + leading light blocks + the first atomic item
         # (group/workspace) print as one unbreakable unit, so an instructions box never
         # strands above a page break while its first problem starts the next page.
@@ -311,28 +458,37 @@ def render(data: dict) -> str:
         if blocks and _btype(blocks[0]) in HEAVY_TYPES:
             unit.append(render_block(blocks.pop(0), theme))
         if len(unit) > 1:
-            out.append("<div style=\"page-break-inside:avoid\">" + "".join(unit) + "</div>")
+            out.append("<section><div style=\"page-break-inside:avoid\">"
+                       + "".join(unit) + "</div>")
         else:
-            out.append(h1)
+            out.append("<section>" + h1)
         for blk in blocks:
             out.append(render_block(blk, theme))
+        out.append("</section>")
 
     if data.get("footer_note"):
         out.append(f"<div class=\"footer\">{md(data['footer_note'])}</div>")
 
     title = escape(str(data.get("title", "Lesson Plan")), quote=True)
-    return ("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" + title
-            + "</title><style>" + css(theme) + "</style></head><body><div class=\"page\">"
-            + "".join(out) + "</div></body></html>")
+    # lang + viewport: without lang the browser picks Western line-breaking and font
+    # fallbacks for Chinese, and screen readers use the wrong voice profile. Without
+    # viewport the fixed 7.1in column forces horizontal scrolling on a tablet.
+    return ("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+            "<meta name=\"generator\" content=\"geo-teacher lesson renderer\">"
+            "<title>" + title
+            + "</title><style>" + css(theme) + "</style></head><body><main class=\"page\">"
+            + "".join(out) + "</main></body></html>")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("input", help="lesson JSON file")
-    ap.add_argument("-o", "--output", default="lesson_preview.html")
+    ap.add_argument("-o", "--output", default="lesson.html")
     args = ap.parse_args()
-    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
-    Path(args.output).write_text(render(data), encoding="utf-8")
+    src = Path(args.input)
+    data = json.loads(src.read_text(encoding="utf-8"))
+    Path(args.output).write_text(render(data, source_dir=src.parent), encoding="utf-8")
     print(f"wrote {args.output}")
     return 0
 

@@ -3,91 +3,187 @@
    SPDX-License-Identifier: Apache-2.0 */
 
 /* Lesson artifact stylesheet — designer-editable.
+
+   Two jobs, one stylesheet:
+     1. SCREEN  — a readable web page: clear hierarchy, scannable sections, no
+                  horizontal scrolling on a tablet or a projector.
+     2. PRINT   — an A4 worksheet: real page margins, background tints preserved,
+                  and every colour-coded distinction also carried by a border so it
+                  survives a black-and-white photocopier.
+
+   Sizes stay in pt on purpose. The DOCX renderer sets every size through Pt(), so
+   keeping pt here is what makes "same source, two formats, same text" hold. Screen
+   scaling is handled per media query instead of by switching to relative units.
+
    :root vars (--primary, --text, --muted, --rule, --border, --title-size, --body-size)
    are injected by render_lesson_html.css(). Everything else lives here. */
 
-body{font-family:'Helvetica Neue',Arial,sans-serif;color:var(--text);margin:0;background:#fff}
-.page{max-width:7.1in;margin:0 auto;padding:36pt 24pt;font-size:var(--body-size);line-height:1.55}
+/* --- page & print setup ------------------------------------------------- */
+@page{size:A4;margin:18mm 18mm 16mm}
+
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+html{background:#F4F6F8}
+body{font-family:'Helvetica Neue',Arial,'Microsoft YaHei','PingFang SC',sans-serif;
+     color:var(--text);margin:0;font-size:var(--body-size);line-height:1.62}
+
+.page{max-width:7.4in;margin:0 auto;padding:34pt 30pt 44pt;background:#fff;
+      box-shadow:0 1pt 4pt rgba(0,0,0,0.10);font-size:var(--body-size);line-height:1.62}
 
 /* --- header ------------------------------------------------------------ */
-.hdr{margin-bottom:12pt}
-.eyebrow{color:var(--primary);font-size:9pt;font-weight:700;letter-spacing:1.2pt;text-transform:uppercase}
-.title{color:var(--text);font-size:var(--title-size);font-weight:700;line-height:1.2;letter-spacing:-0.3pt;margin-top:6pt}
-.meta{color:var(--muted);font-size:9pt;margin-top:7pt;line-height:1.5}
+.hdr{margin-bottom:14pt;padding-bottom:12pt;border-bottom:2pt solid var(--primary)}
+.eyebrow{color:var(--primary);font-size:9pt;font-weight:700;letter-spacing:1.2pt;
+         text-transform:uppercase}
+.title{color:var(--text);font-size:var(--title-size);font-weight:700;line-height:1.22;
+       letter-spacing:-0.3pt;margin:5pt 0 0}
+.meta{color:var(--muted);font-size:9pt;margin-top:6pt;line-height:1.5}
 
-/* --- headings ---------------------------------------------------------- */
-.h1{font-size:14pt;font-weight:700;letter-spacing:-0.1pt;border-top:1pt solid var(--rule);
-    padding-top:18pt;margin:24pt 0 12pt;page-break-after:avoid}
-.h2{font-size:12pt;font-weight:700;color:var(--primary);margin:16pt 0 8pt;page-break-after:avoid}
-.h2.phase{display:flex;justify-content:space-between;align-items:baseline}
-.h2 .mins{font-weight:400;font-size:9pt;color:var(--muted)}
-.h3{font-size:10.5pt;font-weight:700;margin:12pt 0 6pt;page-break-after:avoid}
+/* --- table of contents (screen aid; printed only when it fits one page) -- */
+.toc{border:1pt solid var(--border);border-left:4pt solid var(--primary);
+     border-radius:5pt;background:#FAFCFD;padding:9pt 14pt 10pt;margin:0 0 20pt}
+.toc-title{font-size:9pt;font-weight:700;letter-spacing:1pt;color:var(--primary);
+           text-transform:uppercase;margin-bottom:4pt}
+.toc ol{margin:0;padding-left:15pt;font-size:9pt;line-height:1.45;
+        columns:2;column-gap:22pt}
+.toc a{color:var(--text);text-decoration:none;border-bottom:0.5pt dotted var(--muted)}
+.toc li{page-break-inside:avoid;break-inside:avoid;margin-bottom:1pt}
+
+/* --- headings: the outline -------------------------------------------- */
+.h1,.page h2{font-size:15pt;font-weight:700;letter-spacing:-0.1pt;color:var(--text);
+     border-top:2pt solid var(--primary);padding-top:14pt;margin:30pt 0 12pt;
+     page-break-after:avoid;scroll-margin-top:12pt}
+.h1:first-child,.page > h2:first-child{margin-top:6pt}
+
+.h2,.page h3{font-size:12.5pt;font-weight:700;color:var(--primary);margin:20pt 0 8pt;
+     padding-left:8pt;border-left:3pt solid var(--primary);page-break-after:avoid}
+.h2.phase{display:flex;justify-content:space-between;align-items:baseline;
+     font-size:13pt;background:#F1F6FA;border-left-width:5pt;padding:8pt 12pt;
+     margin:18pt 0 10pt;border-radius:0 4pt 4pt 0}
+.h2 .mins{font-weight:400;font-size:9.5pt;color:var(--muted);white-space:nowrap}
+
+.h3,.page h4{font-size:10.5pt;font-weight:700;margin:14pt 0 6pt;page-break-after:avoid}
 
 /* --- body -------------------------------------------------------------- */
 p{margin:0 0 8pt}
-.listlabel{margin:10pt 0 2pt}
+.listlabel{margin:10pt 0 3pt}
 ul,ol{margin:0 0 10pt;padding-left:20pt}li{margin:0 0 5pt}
 ul.check{list-style:none;padding-left:4pt}ul.check li:before{content:"\2610  "}
-.instr{color:var(--text);margin:8pt 0 10pt}
+.instr{color:var(--text);margin:8pt 0 10pt;background:#FBFCFC;border-left:3pt solid #C9D6E2;
+       padding:7pt 10pt;border-radius:0 4pt 4pt 0}
 
-/* --- callouts (icon-differentiated, B+W-safe) -------------------------- */
-.co{border:1pt solid var(--border);border-radius:6pt;padding:10pt 12pt;margin:6pt 0 12pt;
-    page-break-inside:avoid}
+/* --- callouts: colour + border, so B+W keeps the distinction ----------- */
+.co{border:1pt solid var(--border);border-left-width:4pt;border-radius:5pt;
+    padding:10pt 13pt;margin:10pt 0 14pt;background:#FCFDFD;page-break-inside:avoid}
 .co-label{font-size:9.5pt;margin-bottom:4pt;display:flex;gap:6pt;align-items:baseline}
 .co-icon{font-size:11pt;line-height:1}
-.co.special{border-color:#5BB088}
-.co.task{border-color:#9FB8D8}
-.co.tnote{border-color:#E8C98A}
-.co.snote{border-color:#E8C98A}
+.co.special{border-left-color:#3E8E63;background:#F4FAF7}
+.co.task{border-left-color:#5A82B4;background:#F5F8FC}
+.co.tnote,.co.snote{border-left-color:#C08A2E;background:#FDFAF2}
 
 /* --- tables ------------------------------------------------------------ */
-table{width:100%;border-collapse:separate;border-spacing:0;margin:4pt 0 14pt;
-      font-size:9pt;line-height:1.45;border:0.6pt solid var(--border);border-radius:6pt;
+table{width:100%;border-collapse:separate;border-spacing:0;margin:6pt 0 16pt;
+      font-size:9pt;line-height:1.5;border:0.7pt solid var(--border);border-radius:5pt;
       overflow:hidden}
 th,td{border-bottom:0.6pt solid var(--border);border-right:0.6pt solid var(--border);
       padding:7pt 9pt;text-align:left;vertical-align:top}
 th:last-child,td:last-child{border-right:none}
-tr:last-child td{border-bottom:none}
-tr{page-break-inside:avoid}
-th{background:#F6F8F9;font-weight:700}
-table.headless td:first-child{font-weight:600}
+tbody tr:last-child td{border-bottom:none}
+/* Rows never split across a page; the table itself may, otherwise a long table gets
+   pushed whole onto the next page and leaves half a page blank. */
+tr{page-break-inside:avoid;break-inside:avoid}
+thead{display:table-header-group}
+/* Two-character headers such as 「分钟」 were wrapping to one character per line. */
+th{background:#EDF2F6;font-weight:700;border-bottom:1.2pt solid #B8C6D2;
+   white-space:nowrap;overflow-wrap:normal}
+table.headless td:first-child{font-weight:600;background:#FAFCFD}
+table tbody tr:nth-child(even) td{background:#FBFCFD}
+td{overflow-wrap:anywhere}
 
 /* --- cards ------------------------------------------------------------- */
 .cards{display:flex;gap:12pt;margin:6pt 0 14pt}
-.card{flex:1;border:0.8pt solid var(--border);border-radius:6pt;padding:10pt 12pt;
-      background:#FAFBFB;page-break-inside:avoid}
+.card{flex:1;border:0.8pt solid var(--border);border-top:3pt solid var(--primary);
+      border-radius:5pt;padding:10pt 12pt;background:#FCFDFD;page-break-inside:avoid}
 .card-title{font-weight:700;font-size:9.5pt;margin-bottom:4pt}
 .card-body{font-size:9pt}
 
 /* --- worksheet primitives --------------------------------------------- */
 .fillin-row{margin:0 0 10pt}
-.fillin{display:inline-block;border-bottom:0.8pt solid var(--text);height:1.1em;vertical-align:baseline}
+.fillin{display:inline-block;border-bottom:0.8pt solid var(--text);height:1.1em;
+        vertical-align:baseline}
 .ans{margin:0 0 14pt}
 .ansline{border-bottom:0.7pt solid #C9CFD4}
 .cols{display:flex;gap:24pt}.cols>div{flex:1;min-width:0}
 
+/* --- figures ----------------------------------------------------------- */
+.chart{margin:8pt 0 16pt;page-break-inside:avoid}
+.chart svg{display:block;width:100%;height:auto}
+.chart-note{color:var(--muted);font-size:8.5pt;line-height:1.5;margin-top:4pt}
+.figure{margin:8pt 0 16pt;page-break-inside:avoid;text-align:center}
+.figure img{max-width:100%;height:auto}
+.figure-caption{color:var(--muted);font-size:8.5pt;margin-top:5pt;text-align:left}
+
 /* --- registry block types (source_card, number_line) -------------------- */
 .sourcecard{border:0.8pt solid var(--border);border-left:3pt solid var(--primary);
-            border-radius:4pt;padding:9pt 12pt;margin:6pt 0 14pt;page-break-inside:avoid}
+            border-radius:4pt;padding:9pt 12pt;margin:8pt 0 14pt;
+            page-break-inside:avoid;background:#FCFDFD}
 .sourcecard .sc-head{font-size:9.5pt;margin-bottom:5pt}
 .sourcecard .sc-meta{color:var(--muted);font-weight:400}
-.sourcecard .sc-body{font-size:9.5pt;line-height:1.55;white-space:pre-wrap}
+.sourcecard .sc-body{font-size:9.5pt;line-height:1.6;white-space:pre-wrap}
+.sourcecard .sc-link{font-size:8pt;color:var(--muted);margin-top:5pt;
+                     word-break:break-all}
+.sourcecard .sc-link a{color:var(--primary)}
+
 .numberline{margin:10pt 0 18pt;padding:0 8pt}
-.numberline .nl-bar{position:relative;height:28pt;border-top:1.5pt solid var(--text);margin-top:14pt}
-.numberline .nl-tick{position:absolute;top:-6pt;width:0;border-left:1pt solid var(--text);height:10pt}
+.numberline .nl-bar{position:relative;height:28pt;border-top:1.5pt solid var(--text);
+                    margin-top:14pt}
+.numberline .nl-tick{position:absolute;top:-6pt;width:0;border-left:1pt solid var(--text);
+                     height:10pt}
 .numberline .nl-lab{position:absolute;top:11pt;left:0;transform:translateX(-50%);
                     font-size:8.5pt;white-space:nowrap}
-.numberline .nl-mark{position:absolute;top:-10pt;width:0;height:0;border-left:5pt solid transparent;
-                     border-right:5pt solid transparent;border-top:8pt solid var(--primary);
-                     transform:translateX(-5pt)}
+.numberline .nl-mark{position:absolute;top:-10pt;width:0;height:0;
+                     border-left:5pt solid transparent;border-right:5pt solid transparent;
+                     border-top:8pt solid var(--primary);transform:translateX(-5pt)}
 .numberline .nl-mlab{position:absolute;top:-22pt;left:0;transform:translateX(-50%);
-                     font-size:8.5pt;font-weight:600;white-space:nowrap;color:var(--primary)}
+                     font-size:8.5pt;font-weight:600;white-space:nowrap;
+                     color:var(--primary)}
 
 /* --- misc -------------------------------------------------------------- */
 .pagebreak{page-break-after:always;border:none;margin:0;height:0}
-.footer{color:var(--muted);font-size:8pt;margin-top:20pt}
+.footer{color:var(--muted);font-size:8pt;margin-top:24pt;border-top:0.6pt solid var(--rule);
+        padding-top:8pt}
 
-@media print{.page{padding:0}body{background:#fff}}
+/* --- large display tables --------------------------------------------- */
+table.display-large td{font-size:18pt;font-weight:600;text-align:center;padding:10pt 12pt;
+                       letter-spacing:0.5pt}
 
-/* --- large display tables (K-2 word grids, sort cards) ------------------ */
-table.display-large td{font-size:18pt;font-weight:600;text-align:center;padding:10pt 12pt;letter-spacing:0.5pt}
+/* --- screen: let the column breathe on wide displays ------------------- */
+@media screen and (min-width:1100px){
+  .page{max-width:8.4in;padding:40pt 44pt 52pt}
+}
+@media screen and (max-width:760px){
+  .page{max-width:none;padding:18pt 14pt 28pt;box-shadow:none}
+  html{background:#fff}
+  .cards,.cols{display:block}
+  .card{margin-bottom:10pt}
+  table{font-size:8.5pt}
+}
+
+/* --- print: paper, not screen ----------------------------------------- */
+@media print{
+  html{background:#fff}
+  .page{max-width:none;margin:0;padding:0;box-shadow:none}
+  /* Anchor links are useless on paper, but the section list still helps a teacher
+     find their place — so keep it and pack it into two columns instead of dropping it. */
+  .toc{page-break-inside:avoid;page-break-after:avoid;padding:8pt 12pt;margin-bottom:14pt}
+  .toc ol{column-count:2;column-gap:20pt;font-size:8.5pt;line-height:1.4}
+  .toc a{border-bottom:none}
+  /* Keep every tint that carries meaning, and make sure a greyscale photocopy
+     still separates the bands: the borders do that work, not the colour. */
+  th{background:#EDF2F6 !important}
+  table tbody tr:nth-child(even) td{background:#FBFCFD !important}
+  .co.special,.co.task,.co.tnote,.co.snote,.sourcecard,.h2.phase,.instr{
+    background:#fff !important}
+  .h2.phase{border-top:1pt solid var(--border);border-bottom:1pt solid var(--border)}
+  a{color:inherit;text-decoration:none}
+  a[href^="http"]:after{content:" (" attr(href) ")";font-size:7.5pt;color:var(--muted)}
+}
