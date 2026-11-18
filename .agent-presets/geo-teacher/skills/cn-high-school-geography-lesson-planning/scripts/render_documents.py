@@ -102,9 +102,15 @@ def main() -> int:
                         encoding="utf-8")
         written.append(str(path))
         if args.format in ("docx", "both"):
-            from render_lesson_docx import render as render_docx
+            from render_lesson_docx import FigureEmbedError, render as render_docx
             path = outdir / f"{doc_id}.docx"
-            render_docx(full, str(path), source_dir=Path(args.input).parent)
+            try:
+                render_docx(full, str(path), source_dir=Path(args.input).parent)
+            except FigureEmbedError as exc:
+                # Never report success when an image the HTML product shows could not make
+                # it into the DOCX: the two products would then disagree about content.
+                print(f"error: {doc_id}.docx: {exc}", file=sys.stderr)
+                return 1
             written.append(str(path))
 
     if not written:

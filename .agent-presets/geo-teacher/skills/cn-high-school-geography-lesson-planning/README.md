@@ -47,7 +47,10 @@ HTML 渲染只需要 Python 3。生成 DOCX 还需要：
 
 ```text
 python-docx>=1.1.2
+Pillow>=9.0        # 图表绘制；也用于把 WebP 等 Word 不认的位图格式转成 PNG
 ```
+
+**图片格式**：HTML 能直接显示 PNG/JPEG/GIF/WebP/SVG；**DOCX 只支持位图**（PNG/JPEG/GIF/BMP/TIFF）。WebP 会在嵌入前自动转成 PNG，两种产物显示同一张图。**SVG 不支持输出到 DOCX**：需要向量图时请交付 `--format html`，或在材料源中改用 PNG。图片无法嵌入时渲染会**报错退出**，不会丢掉图片后仍返回成功——否则 HTML 有图、DOCX 无图，两种产物就不再是同一份内容。
 
 （实测环境：Python 3.9 / 3.12 + python-docx 1.2.0。DOCX 输出为 A4 页面，中文行文用宋体、标题用黑体，西文用 Arial。）
 
