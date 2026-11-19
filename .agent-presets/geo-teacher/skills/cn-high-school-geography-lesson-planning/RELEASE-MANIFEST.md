@@ -10,7 +10,7 @@
 | 项 | 值 |
 |---|---|
 | 主入口 | `SKILL.md`（五阶段生成路径） |
-| `references/` | 原有来源、学科判断、格式、自查与示例；另含 `disciplinary-foundations.md`、`textbooks/index.md` 与选必2概述、四章解读、来源表；保持子目录随技能分发 |
+| `references/` | 原有来源、学科判断、格式、自查与示例；另含 `disciplinary-foundations.md`、`disciplinary-examples.md`、`textbooks/index.md` 与选必2概述和四章解读；保持子目录随技能分发 |
 | `scripts/` | `render_documents.py` 及渲染依赖 |
 | 交付前自查 | `references/delivery-checklist.md`（阶段 5，渲染之前，由主流程执行） |
 | 独立审查专家 | 已于 2026-09-12 停用，不再参与流程 |

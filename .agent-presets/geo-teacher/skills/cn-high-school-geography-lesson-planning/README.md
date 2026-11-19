@@ -28,9 +28,10 @@
 |---|---|---|
 | `source-and-map-policy.md` | 来源优先级、联网核验、数据与案例规则、中国地图合规 | 阶段 2 涉及现实材料、地图或高考真题时 |
 | `subject-notes.md` | 课标定位与解读、地理学科判断、认知深度判据、借角度看问题、灵感索引 | 阶段 1、3 按需 |
-| `disciplinary-foundations.md` | 共用思想命题、适用边界及理论来源 | 匹配教材后，只读本课涉及小节 |
+| `disciplinary-foundations.md` | 各思想的简明含义、适用条件与备课判断 | 匹配教材后，只读本课涉及小节 |
 | `textbooks/index.md` | 教材身份匹配、回退与读取规则 | 阶段1教材明确时 |
-| `textbooks/rj-xb2-regional-development/` | 选必2概述、四章解读及来源定位 | 命中人教版《区域发展》后按课题取用 |
+| `disciplinary-examples.md` | 选必2的三则备课取舍及其理由 | 阶段 3 需要参照时选读 |
+| `textbooks/rj-xb2-regional-development/` | 选必2概述、四章教材分析与证据定位 | 命中人教版《区域发展》后按课题取用 |
 | `lesson-format.md` | `lesson.json` 结构、三件套写作要求、展开边界 | 阶段 4 写材料源时 |
 | `delivery-checklist.md` | 渲染前的交付自查清单 | 阶段 5 |
 | `example_lesson.json` | 渲染契约样例（内容为占位），只用于比对结构，不作教学内容参考 | 验证渲染链、核对块字段时 |
