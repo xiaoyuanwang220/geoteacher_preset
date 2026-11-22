@@ -659,13 +659,13 @@ test('geo_solve：在内部预设的隔离子会话中解题，作答回写服�
   const activation = harness.calls.activations[0];
   assert.equal(activation.provider, 'spawn');
   assert.equal(activation.delivery, 'caller');
-  assert.equal(activation.request.agentPreset, INTERNAL_SOLVER_PRESET_ID);
-  assert.equal(activation.request.parent, exec.agent);
+  assert.equal(activation.agentPreset, INTERNAL_SOLVER_PRESET_ID);
+  assert.equal(activation.parent, exec.agent);
   assert.equal(activation.signal, exec.signal);
   assert.equal(activation.label, '独立解题');
 
   // prompt 只含题面：材料/题干/选项/图注，不含答案、解析、知识点、qid、runId、指纹、路径。
-  const promptBlocks = activation.request.prompt;
+  const promptBlocks = activation.prompt;
   const textBlock = promptBlocks.find((block) => block.type === 'text');
   assert.ok(textBlock, '子会话 prompt 应含文本题面');
   const promptText = textBlock.text;

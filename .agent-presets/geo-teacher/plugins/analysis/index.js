@@ -305,10 +305,15 @@ async function runIsolatedSolve(ctx, exec, qid, options) {
   const subagents = ctx.get('subagents');
   let activation = null;
   try {
+    // startActivation 的 spec 是扁平的（prompt/parent/agentPreset 与 provider 同级）；
+    // 早前把这几项塞进 request 子对象，运行时读到 spec.parent === undefined，
+    // 在 `spec.parent.id` 处抛 TypeError，整条隔离解题链路失效。
     activation = await subagents.startActivation({
       provider: 'spawn',
       label: '独立解题',
-      request: { prompt: promptBlocks, parent: exec.agent, agentPreset: preset.presetId },
+      prompt: promptBlocks,
+      parent: exec.agent,
+      agentPreset: preset.presetId,
       signal: exec.signal,
       delivery: 'caller'
     });
