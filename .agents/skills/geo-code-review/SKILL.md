@@ -62,7 +62,7 @@ description: >-
 - 工具输入输出 schema 与 render 函数；
 - HTTP 路由及 UI 消费方（`page.html` 的 fetch 端点）；
 - 相关 Skill（教师技能如何描述与调用工具）；
-- 决策记录和设计文档（`docs/决策记录.md`、`docs/*修复方案.md`）；
+- 决策记录与模块规范文档（`docs/engineering/决策记录.md`、`docs/modules/*.md`）；
 - 缓存、索引、磁盘数据和运行时副本关系（双副本、`outputs/question-index.json`、`outputs/visionCache`）。
 
 **审查重点是当前改动是否破坏既有契约**（返回值结构、字段名、路由、服务名、工具名、行为顺序），而不是罗列风格问题。

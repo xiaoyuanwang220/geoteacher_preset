@@ -9,7 +9,7 @@
  *   node scripts/setup.mjs --uninstall --yes  卸载（移除本项目的依赖与 bundle 项）
  *   node scripts/setup.mjs --profile <name>   目标 profile（默认 desktop）
  *
- * 设计约束（见 docs/工作台聚合与一键安装方案.md）：
+ * 设计约束（见 docs/engineering/本地安装与数据接线契约.md）：
  *   - Desktop profile 由 Electron 应用独占，外部 `dsh plugin --profile desktop` 会被拒绝，
  *     因此这里直接操作 profile 目录（与桌面插件管理器底层一致）。
  *   - 只写清单不会加载：必须用运行时自带 pnpm 在 profile 目录安装一次，生成 node_modules 链接。

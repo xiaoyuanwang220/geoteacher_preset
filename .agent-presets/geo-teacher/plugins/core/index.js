@@ -1683,7 +1683,7 @@ export default {
     // ── 数据路径解析 ────────────────────────────────────────────────────────────
     // 单一解析逻辑（knowledgeBase / questionBank 共用同一函数）：
     //   插件 config 或用户配置文件显式路径 ＞ 仓库 data/ 默认路径 ＞ missing。
-    // 仓库 data/ 与教师的 Obsidian 数据同源（见 docs/工作台聚合与一键安装方案.md）：
+    // 仓库 data/ 与教师的 Obsidian 数据同源（见 docs/engineering/本地安装与数据接线契约.md）：
     //   knowledgeBase → <repo>/data/config
     //   questionBank  → <repo>/data/obsidian_vault/04_题目
     // 不写死作者机器路径；仓库根不可判定或 data/ 缺失时按 missing 处理，不静默回退。

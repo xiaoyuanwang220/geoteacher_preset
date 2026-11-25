@@ -1,6 +1,6 @@
 // GeoTeacher Agent — 命题包校验 / 投影 / 渲染核心（纯函数，无 DSH 生命周期副作用）
 //
-// 归属：`docs/geography-question-generation-execution-plan.md` §7.2 的 `plugins/question/package.js`。
+// 归属：`docs/modules/出题-技术与执行规范.md` §4.2 的 `plugins/question/package.js`。
 //
 // 边界（重要，不要把职责扩大）：
 //   - 本文件**不读写文件、不接触任何 DSH 服务**。IO 由两个调用方负责：

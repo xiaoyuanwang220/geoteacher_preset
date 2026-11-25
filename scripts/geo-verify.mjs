@@ -453,7 +453,7 @@ function checkPatch(view) {
   const retired = ['agent.cordis.yml', 'preset.yml'].filter(n => existsSync(join(PRESET_SRC, n)));
   if (retired.length > 0) {
     addWarn('retired-form', '已退役预设形态文件',
-      `预设包内仍有 ${retired.join('、')}——rc.2 不读取它们，应归档到 .backups（见 docs/geography-question-generation-m0-baseline.md §3.2）`);
+      `预设包内仍有 ${retired.join('、')}——现行版本不再读取它们，应归档到 .backups（见 docs/engineering/DSH-运行基线.md）`);
   } else {
     add('retired-form', '已退役预设形态文件已归档', true, '预设包内无 agent.cordis.yml / preset.yml');
   }
@@ -560,6 +560,7 @@ const SKILL_TIER = {
   'geo-code-review': 'normative',
   'geo-dev-checklist': 'normative',
   'geo-doc-writing': 'normative',
+  'geo-textbook-reverse': 'normative',
 };
 
 const SKILL_ROOTS = [

@@ -82,4 +82,4 @@ geoTaxonomy ×4、geo_style_profile、geo_search_questions、web_search/web_fetc
 错误 3 项：read FS_NOT_FOUND / edit FS_AMBIGUOUS_EDIT / present UNKNOWN_TOOL
 ```
 
-审计结论（当时挖出的三个缺陷）见 `docs/决策记录.md` 2026-10-21 行。**这份读数是「一条正常的轨迹长什么样」的参照**：调用序列合理、校验器被反复调用、错误项都是模型侧小失误——评审者的注意力应该放在「产物结论与模型宣称是否一致」上，而不是只看有没有报错。
+审计结论（当时挖出的三个缺陷）见 `docs/engineering/决策记录.md` 2026-10-21 行。**这份读数是「一条正常的轨迹长什么样」的参照**：调用序列合理、校验器被反复调用、错误项都是模型侧小失误——评审者的注意力应该放在「产物结论与模型宣称是否一致」上，而不是只看有没有报错。

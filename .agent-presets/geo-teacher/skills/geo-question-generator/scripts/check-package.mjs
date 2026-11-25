@@ -2,7 +2,7 @@
 /**
  * check-package.mjs — 命题包确定性校验 / 渲染 CLI
  *
- * 归属：`docs/geography-question-generation-execution-plan.md` §7.2 的
+ * 归属：`docs/modules/出题-技术与执行规范.md` §4.2 的
  * `skills/geo-question-generator/scripts/check-package.mjs`（CLI 包装）。
  * 实现只有一份：`plugins/question/package.js`（插件工具 `geo_question_validate` 复用同一实现）。
  *

@@ -60,7 +60,7 @@ test('缺配置时使用随仓库 data/（与 Obsidian 同源），健康检查�
   const { mount } = fixture(t);
   const { api, search } = mount();
   const health = await api.health();
-  // 仓库 data/ 随附（见 docs/工作台聚合与一键安装方案.md）；若在裁剪过的检出里运行，本用例应显式失败。
+  // 仓库 data/ 随附（见 docs/engineering/本地安装与数据接线契约.md）；若在裁剪过的检出里运行，本用例应显式失败。
   assert.equal(health.status, 'success');
   assert.equal(health.config.knowledgeSource, 'packaged');
   assert.equal(health.config.questionBankSource, 'packaged');

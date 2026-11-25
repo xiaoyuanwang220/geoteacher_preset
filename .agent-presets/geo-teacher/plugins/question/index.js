@@ -1,7 +1,7 @@
 // GeoTeacher Agent — 命题包校验工具插件（geo-question）
 // 模型工具：geo_question_validate
 //
-// 归属：`docs/geography-question-generation-execution-plan.md` §8.2。
+// 归属：`docs/modules/出题-技术与执行规范.md` §4.2。
 // 实现只有一份：`plugins/question/package.js`（与 CLI `skills/geo-question-generator/scripts/check-package.mjs` 同源）。
 // 本插件只做两件事：解析任务目录、调用实现、把报告交给模型。**不下载来源、不生成图、不自动改稿。**
 //

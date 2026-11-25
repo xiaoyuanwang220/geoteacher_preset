@@ -42,7 +42,7 @@ description: Use when writing, reviewing, or editing geo-teacher documentation, 
 
 **不适用于**：
 - 教师技能内容（已内嵌各自规范）
-- 已归档的历史文档（`legacy/`、`docs/讲题功能设计.md` 的旧版记录段）
+- 已归档的历史文档（如 Git 历史或 `.backups/` 中的旧版记录）
 - 代码注释中的实现说明（非地理术语，不在此规范范围）
 
 ## 术语引用

@@ -2,7 +2,7 @@
 
 > **何时读这份文件**：进入阶段 0「输入归一与依据检查」时；填写或复核 `package.json` 的 `sources[]`、`design.curriculumBasis[]`、`design.textbookBasis[]` 时；判断热点是否符合时间规则、论文 `accessScope` 该填哪一级时；以及在证据缺失、渠道不可用时决定降级口径与交付声明时。纯题面润色不必读本文件。
 >
-> **事实来源**：`docs/geography-question-generation-m0-baseline.md` §2.1—§2.5 的**实测记录**，字段以 `plugins/question/package.schema.json`（schemaVersion 2）为准，术语以 `docs/术语表.md` 为准。本文件不把"通道存在"写成"内容已读到"，不把失败美化为成功。
+> **事实来源**：`docs/modules/出题-技术与执行规范.md` §2.2 的**证据渠道实测边界**，字段以 `plugins/question/package.schema.json`（schemaVersion 2）为准，术语以 `docs/术语表.md` 为准。本文件不把"通道存在"写成"内容已读到"，不把失败美化为成功。
 
 ## 1. 来源不等于证据
 

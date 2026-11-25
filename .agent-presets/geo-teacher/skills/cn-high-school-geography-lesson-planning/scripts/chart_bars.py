@@ -3,7 +3,7 @@
 Geometry is computed ONCE here so the HTML and DOCX products show the same chart.
 No third-party plotting library: SVG is string-built, PNG is drawn with Pillow.
 
-Why one module for both products (P-20 / P-10 in docs/课程方案问题记录.md): the failure the
+Why one module for both products (P-20 / P-10 in docs/modules/课程方案-问题记录.md): the failure the
 chart block exists to kill is a bar whose length does not match its number — hand-typed `█`
 blocks drew 6.1% and 6.8% at the same length and turned a 0.17-point gap into 1.5. If HTML and
 DOCX each computed their own scale, the two products would disagree the same way. So this
