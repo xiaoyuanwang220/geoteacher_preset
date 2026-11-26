@@ -1,4 +1,4 @@
-# 地理教师辅助 Agent preset —— 声明行形态（DSH ≥ 0.2.1-rc.2；本机实测/已验证版本 0.2.2-rc.1，见 docs/engineering/DSH-运行基线.md）。
+# 地理教师辅助 Agent preset —— 声明行形态（DSH ≥ 0.2.1-rc.2；本机实测/已验证版本 0.2.2-rc.5，见 docs/engineering/DSH-运行基线.md）。
 #
 # 旧形态 `$DSH_HOME/.agent-presets/<id>/{preset.yml,agent.cordis.yml}` 已被移除：
 # 当前版本只认由 bundle patch 插入的 `@deepseek-ai/dsh-agent-preset` Loader 行。
@@ -8,9 +8,11 @@
 #
 # 本目录自身即 bundle（package.json 的 dsh.bundle.patch 指向本文件）。
 #
-# 0.2.2-rc.1 适配（2026-11-07）：删除 `@deepseek-ai/dsh-tool-subagent-control/list-agents`
-# 声明行——该子路径在新版已移除、list_agents 并入主入口；照旧声明会让整条 preset
-# 挂载失败（新建会话报 agent-preset/invalid）。详见 delegation 组注释。
+# 0.2.2 系列适配（rc.1 → rc.5）：
+#   - 删除已移除的 `@deepseek-ai/dsh-tool-subagent-control/list-agents` 子路径；
+#   - 对齐 0.2.2-rc.5 标准预设：接入 `time-context`（热点时效与日期上下文）、`present`（成品文件交付）、
+#     `command-goal`（/goal 命令）、`tool-subagent-control` 默认 `interrupt: false`，以及
+#     `tool-subagent` 开启 `modelSelection`/`modelDiscovery`（消费 profile 子代理模型白名单）。
 #
 # ⚠ 模块名解析基准：声明行由 profile 补丁层插入，registry 用
 #    `mountPreset(scope.ctx.extend({ baseUrl: record.context.baseUrl }), ...)`
@@ -28,8 +30,8 @@
         id: geo-teacher
         name: 地理教师辅助
         description: >-
-          基于 cordis 模式并内置「地理教师辅助 Agent」：本地真题库考点树浏览、真题分析（为什么这样考）、
-          命题蓝图（下一道题怎么设计）、真题风格出题。
+          基于 cordis 模式并内置「地理教师辅助 Agent」：本地真题库与考点树检索、隔离盲做与三对象讲题、
+          学科思想驱动课程方案、模拟题高考化润色与快测出题。
         order: 10
         plugins:
           # ── identity ────────────────────────────────────────────────────────────────
@@ -53,12 +55,16 @@
                 - 答案隔离底线：解题只在隔离解题会话内完成；主会话不得自己解题、不得直读题库 md 或图片、不得把答案提前交给解题侧。
                 - 题源边界：题库题（有 qid）一律走 geo_solve；教师上传的图片题不在本轮隔离讲题流程内，需要时按普通答疑处理，不得冒充讲题流水线产物。
                 - 状态与核验口径：服务端状态为 题面就绪 → 作答已提交 → 核验完成；标准答案与解析只在作答提交后由 geo_judge 开放，核验结论归档后才生成讲稿，讲稿只读服务端核验记录；缺前置状态时如实报告缺什么，不得自称已核验；"核验完成"不等于内容正确。
+                - 输入区选项联动：当运行时上下文包含 `[地理教师辅助 · 会话输入区当前选项]` 时，将其中的功能、讲解对象、授课年级（学段）与授课时间（课时）视为教师已在界面确认的参数直接采用（课程方案不得再重复询问年级或授课时间/课时，讲题不得再重复询问讲解对象）；仅当教师本轮消息正文明确写了不同要求时，以消息正文为准。
                 - 执行细则见技能 geo-solver 与 geo-question-explainer，三对象写法见技能 references。
 
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
               maxBytes: 65536
+
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
 
           # ── shell ───────────────────────────────────────────────────────────────────
 
@@ -83,6 +89,8 @@
           # they need no realm. The `fs` service and its policy stay in the host.
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: false
 
           - id: tool-fs-search
             name: '@deepseek-ai/dsh-tool-fs-search'
@@ -142,8 +150,11 @@
 
           # ── goals ───────────────────────────────────────────────────────────────────
 
-          # Only the model-facing tool. The goal SERVICE, its session driver, and the
-          # `/goal` command stay on the host plane.
+          # The goal SERVICE and its session driver stay on the host plane; preset
+          # contributes the `/goal` command and model-facing tool.
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+
           - id: tool-goal
             name: '@deepseek-ai/dsh-tool-goal'
 
@@ -161,7 +172,7 @@
                 name: '@deepseek-ai/dsh-plan-mode'
                 config:
                   section: |
-                        You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+                        You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 
                         Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
 
@@ -226,14 +237,18 @@
             config:
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
+                config:
+                  interrupt: false
 
-              # 委派一律 continuable；`backgroundMode` 已不在 Config（0.2.1-rc.5 起即无此键），
-              # 旧写法会被静默忽略，故不再保留。
+              # 委派一律 continuable；开启 modelSelection/modelDiscovery 以消费 profile
+              # 中的 `@deepseek-ai/dsh-tool-subagent/model-selection-settings`。
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
+                  modelSelection: true
+                  modelDiscovery: true
 
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
@@ -295,6 +310,10 @@
             config:
               fetch: true
               searchTimeoutMs: 60000
+
+          # 成品文件声明交付（HTML/DOCX 课程方案三件套、导出命题包/分析报告等），对齐 0.2.2 标准预设。
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
 
     # ── 内部解题预设（隔离解题会话，供 geo_solve 自动调用）────────────────────────────
     #

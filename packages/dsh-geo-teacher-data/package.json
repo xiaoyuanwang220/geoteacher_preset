@@ -1,0 +1,28 @@
+{
+  "name": "@geo-edu/dsh-geo-teacher-data",
+  "version": "0.1.0",
+  "description": "GeoSparkAI 高中地理高考真题与配图数据包（纯数据依赖包，供 @geo-edu/dsh-geo-teacher-preset 读取，不含 dsh.bundle 层）",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "obsidian_vault/04_题目/",
+    "obsidian_vault/90_附件/"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "geography",
+    "education",
+    "exam-bank"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

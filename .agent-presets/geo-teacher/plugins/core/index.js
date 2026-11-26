@@ -6,11 +6,14 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const MODULE_REQUIRE = createRequire(import.meta.url);
+const DATA_PACKAGE_SPEC = '@geo-edu/dsh-geo-teacher-data/package.json';
 
 // ========== taxonomy 解析 ==========
 // 优先使用“预设包自身声明的 YAML 解析依赖”（package.json → dependencies.yaml）；
@@ -1682,11 +1685,11 @@ export default {
     const cfg = config || {};
     // ── 数据路径解析 ────────────────────────────────────────────────────────────
     // 单一解析逻辑（knowledgeBase / questionBank 共用同一函数）：
-    //   插件 config 或用户配置文件显式路径 ＞ 仓库 data/ 默认路径 ＞ missing。
-    // 仓库 data/ 与教师的 Obsidian 数据同源（见 docs/engineering/本地安装与数据接线契约.md）：
-    //   knowledgeBase → <repo>/data/config
-    //   questionBank  → <repo>/data/obsidian_vault/04_题目
-    // 不写死作者机器路径；仓库根不可判定或 data/ 缺失时按 missing 处理，不静默回退。
+    //   插件 config 或用户配置文件显式路径 ＞ 随附数据包默认路径 ＞ missing。
+    // 真题库已拆分为独立非 bundle 数据包 @geo-edu/dsh-geo-teacher-data（见 docs/proposals/npm一键安装与数据包拆分方案.md）：
+    //   knowledgeBase → 预设内置 data/config 或仓库 data/config
+    //   questionBank  → @geo-edu/dsh-geo-teacher-data（DSH runtime resolution / profile node_modules / 仓库 packages/）下的 obsidian_vault/04_题目
+    // 不写死作者机器路径；数据包未安装且仓库目录缺失时按 missing 处理，不静默回退。
     //
     // 用户配置文件：<DSH_HOME>/geo-teacher/config.json
     //   DSH_HOME = process.env.DSH_HOME || <用户目录>/.dsh
@@ -1694,16 +1697,56 @@ export default {
     //   相对路径以该配置文件所在目录为基准。
     const PKG_ROOT = join(HERE, '..', '..');
     const REPO_ROOT = join(PKG_ROOT, '..', '..');
+    const EFFECTIVE_DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh');
     const DATA_ROOT = join(REPO_ROOT, 'data');
-    const PACKAGED_KNOWLEDGE_DIR = join(DATA_ROOT, 'config');
-    const PACKAGED_QUESTION_BANK_DIR = join(DATA_ROOT, 'obsidian_vault', '04_题目');
+
+    function firstExistingDir(candidates) {
+      for (const dir of candidates) {
+        if (!dir) continue;
+        try {
+          if (existsSync(dir) && statSync(dir).isDirectory()) return dir;
+        } catch {
+          // 忽略不可读候选，继续尝试下一级
+        }
+      }
+      return candidates.find(Boolean) || '';
+    }
+
+    function resolveDataPackageRoot() {
+      // 1) DSH runtime resolution / 标准 node_modules 解析（预设 optionalDependencies）
+      try {
+        return dirname(MODULE_REQUIRE.resolve(DATA_PACKAGE_SPEC));
+      } catch { /* fallthrough */ }
+      // 2) DSH 显式 profile 路径原生查询（链接预设 + profile 安装数据包混合态，见 DSH publish 文档显式 paths 规则）
+      const profileDirs = [
+        process.env.DSH_PROFILE_DIR || '',
+        join(EFFECTIVE_DSH_HOME, 'profiles', process.env.DSH_PROFILE || 'desktop')
+      ].filter(Boolean);
+      for (const profileDir of profileDirs) {
+        try {
+          return dirname(MODULE_REQUIRE.resolve(DATA_PACKAGE_SPEC, { paths: [profileDir] }));
+        } catch { /* fallthrough */ }
+      }
+      return '';
+    }
+
+    const DATA_PKG_ROOT = resolveDataPackageRoot();
+    const PACKAGED_KNOWLEDGE_DIR = firstExistingDir([
+      join(PKG_ROOT, 'data', 'config'),
+      join(DATA_ROOT, 'config')
+    ]);
+    const PACKAGED_QUESTION_BANK_DIR = firstExistingDir([
+      DATA_PKG_ROOT ? join(DATA_PKG_ROOT, 'obsidian_vault', '04_题目') : '',
+      join(REPO_ROOT, 'packages', 'dsh-geo-teacher-data', 'obsidian_vault', '04_题目'),
+      join(DATA_ROOT, 'obsidian_vault', '04_题目')
+    ]);
     const CONFIG_PATH = join(
-      process.env.DSH_HOME || join(homedir(), '.dsh'),
+      EFFECTIVE_DSH_HOME,
       'geo-teacher',
       'config.json'
     );
     const CONFIG_DIR = dirname(CONFIG_PATH);
-    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键；未配置时使用随仓库的 data/ 默认数据（见项目 README「配置数据路径」一节）';
+    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键，或安装默认数据包 @geo-edu/dsh-geo-teacher-data（见项目 README「配置数据路径」一节）';
 
     function readUserConfig() {
       try {
@@ -1789,9 +1832,11 @@ export default {
         const idxTarget = await fsService.resolve(INDEX_PATH);
         const raw = await fsService.readText(idxTarget);
         const idx = JSON.parse(raw);
-        // 新鲜度检查：version 代际（须与 INDEX_VERSION 一致）+ 文件数 + mtime（任一文件晚于 builtAt 即重建）
+        // 新鲜度检查：version 代际 + 题库根目录一致（防拆包/迁移/切换目录后复用旧 filePath 导致题图失效）+ 文件数 + mtime
         const builtAt = Date.parse(idx && idx.builtAt) || 0;
-        let fresh = !!(idx && idx.version === INDEX_VERSION && idx.fileCount === currentFileCount && Array.isArray(idx.items));
+        const sameBankRoot = Boolean(idx && idx.bankRoot)
+          && resolve(String(idx.bankRoot)).toLowerCase() === resolve(QUESTION_BANK_PATH).toLowerCase();
+        let fresh = !!(idx && idx.version === INDEX_VERSION && sameBankRoot && idx.fileCount === currentFileCount && Array.isArray(idx.items));
         if (fresh) {
           const maxMtime = files.reduce((mx, f) => (f.mtime && f.mtime > mx ? f.mtime : mx), 0);
           if (maxMtime > 0 && maxMtime > builtAt) fresh = false; // stat 不可用时 maxMtime=0 → 跳过 mtime 判断
@@ -1851,7 +1896,8 @@ export default {
       // 4. 写磁盘索引
       try {
         const indexData = {
-          version: INDEX_VERSION, // v3：索引持久化完整题目信息（answer/analysis），修复磁盘加载后 judge 标准答案丢失（方案 A）
+          version: INDEX_VERSION, // v4：持久化题答分离字段与 bankRoot，防路径迁移后缓存陈旧
+          bankRoot: resolve(QUESTION_BANK_PATH),
           builtAt: _bankCache.builtAt,
           fileCount: currentFileCount,
           questionCount: all.length,
@@ -1949,10 +1995,10 @@ export default {
       return solvePersistChain;
     }
 
-    // 题目所在 md 的磁盘路径：优先索引 filePath；旧索引缺失时遍历题库定位。
+    // 题目所在 md 的磁盘路径：优先索引 filePath（须实际存在）；旧索引缺失或已迁移时遍历题库定位。
     async function resolveQuestionFilePath(bank, q, questionId) {
       const direct = q && q.filePath ? String(q.filePath) : '';
-      if (direct) return direct;
+      if (direct && existsSync(direct)) return direct;
       try {
         const bankDir = await fsService.resolve(requirePath(QUESTION_BANK_PATH, '真题库', 'questionBankPath'));
         const files = [];
@@ -2736,8 +2782,8 @@ export default {
           questionBankPathExists: QUESTION_BANK_PATH ? existsSync(QUESTION_BANK_PATH) : false
         };
         const missing = [];
-        if (!KNOWLEDGE_BASE_PATH) missing.push('考点库（knowledgeBasePath 未配置，且随仓库 data/config 缺失）');
-        if (!QUESTION_BANK_PATH) missing.push('真题库（questionBankPath 未配置，且随仓库 data/obsidian_vault/04_题目 缺失）');
+        if (!KNOWLEDGE_BASE_PATH) missing.push('考点库（knowledgeBasePath 未配置，且随附 data/config 缺失）');
+        if (!QUESTION_BANK_PATH) missing.push('真题库（questionBankPath 未配置，且数据包 @geo-edu/dsh-geo-teacher-data 未安装或缺失）');
         if (missing.length) {
           return {
             status: 'error',

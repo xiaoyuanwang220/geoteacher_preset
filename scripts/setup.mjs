@@ -14,7 +14,7 @@
  *     因此这里直接操作 profile 目录（与桌面插件管理器底层一致）。
  *   - 只写清单不会加载：必须用运行时自带 pnpm 在 profile 目录安装一次，生成 node_modules 链接。
  *   - DSH 启动不会自动安装依赖，安装动作必须显式完成。
- *   - 只增/删本项目的两个依赖与两个 bundle 项；不重排既有顺序，不覆盖用户配置与数据。
+ *   - 只增/删本项目的三个依赖与两个 bundle 项（真题数据包为非 bundle 依赖）；不重排既有顺序，不覆盖用户配置与数据。
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, copyFileSync } from 'node:fs';
@@ -28,20 +28,29 @@ const REPO_ROOT = resolve(join(HERE, '..'));
 const PROJECTS = [
   {
     name: '@geo-edu/dsh-geo-teacher-preset',
-    dir: join(REPO_ROOT, '.agent-presets', 'geo-teacher')
+    dir: join(REPO_ROOT, '.agent-presets', 'geo-teacher'),
+    bundle: true
   },
   {
     name: '@geo-edu/dsh-geo-teacher-ui',
-    dir: join(REPO_ROOT, 'packages', 'dsh-geo-teacher-ui')
+    dir: join(REPO_ROOT, 'packages', 'dsh-geo-teacher-ui'),
+    bundle: true
+  },
+  {
+    name: '@geo-edu/dsh-geo-teacher-data',
+    dir: join(REPO_ROOT, 'packages', 'dsh-geo-teacher-data'),
+    bundle: false
   }
 ];
 const DATA_DIR = join(REPO_ROOT, 'data');
-const BANK_DIR = join(DATA_DIR, 'obsidian_vault', '04_题目');
+const DATA_PKG_DIR = join(REPO_ROOT, 'packages', 'dsh-geo-teacher-data');
+const BANK_DIR = join(DATA_PKG_DIR, 'obsidian_vault', '04_题目');
+const ATTACHMENTS_DIR = join(DATA_PKG_DIR, 'obsidian_vault', '90_附件');
 const CONFIG_DIR = join(DATA_DIR, 'config');
 const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh');
 const LEGACY_RUNTIME_ROOT = join(DSH_HOME, 'dsh-runtimes');
 const RUNTIME_DIR = join(LEGACY_RUNTIME_ROOT, 'dsh-primary-runtime');
-const VERIFIED_VERSION = '0.2.2-rc.1';
+const VERIFIED_VERSION = '0.2.2-rc.5';
 const MINIMUM_VERSION = '0.2.1';
 
 const args = process.argv.slice(2);
@@ -236,7 +245,7 @@ function dataSummary() {
   return {
     knowledgeYaml: countFiles(CONFIG_DIR, (file) => file.endsWith('.yaml') || file.endsWith('.yml')),
     bankMarkdown: countFiles(BANK_DIR, (file) => file.endsWith('.md')),
-    bankImages: countFiles(join(DATA_DIR, 'obsidian_vault', '90_附件'), (file) => /\.(png|jpe?g|webp|gif)$/i.test(file))
+    bankImages: countFiles(ATTACHMENTS_DIR, (file) => /\.(png|jpe?g|webp|gif)$/i.test(file))
   };
 }
 
@@ -248,9 +257,11 @@ function desiredManifest(manifest) {
   }
   next.dsh = { ...(next.dsh || {}) };
   next.dsh.profile = { ...(next.dsh.profile || {}) };
-  const bundles = Array.isArray(next.dsh.profile.bundles) ? [...next.dsh.profile.bundles] : [];
+  // DSH 规范：仅声明 dsh.bundle 的组合包入 bundles；纯数据包只挂 dependencies，否则触发 skippedBundles / not-bundle。
+  const bundles = (Array.isArray(next.dsh.profile.bundles) ? [...next.dsh.profile.bundles] : [])
+    .filter((name) => !PROJECTS.some((project) => project.name === name && !project.bundle));
   for (const project of PROJECTS) {
-    if (!bundles.includes(project.name)) bundles.push(project.name);
+    if (project.bundle && !bundles.includes(project.name)) bundles.push(project.name);
   }
   next.dsh.profile.bundles = bundles;
   return next;
@@ -268,7 +279,7 @@ function manifestDiff(before, after) {
   const beforeBundles = (((before || {}).dsh || {}).profile || {}).bundles || [];
   const afterBundles = (((after || {}).dsh || {}).profile || {}).bundles || [];
   for (const project of PROJECTS) {
-    if (!beforeBundles.includes(project.name) && afterBundles.includes(project.name)) {
+    if (project.bundle && !beforeBundles.includes(project.name) && afterBundles.includes(project.name)) {
       lines.push(`  + dsh.profile.bundles += "${project.name}"`);
     }
   }
@@ -297,8 +308,9 @@ function verifyStatic(profileDir) {
     const dep = (manifest.dependencies || {})[project.name];
     if (!dep) problems.push(`依赖缺失：${project.name}`);
     else if (!String(dep).startsWith('link:')) problems.push(`依赖不是 link：${project.name} = ${dep}`);
-    if (!bundles.includes(project.name)) problems.push(`bundles 未列入：${project.name}`);
-    if (!existsSync(join(project.dir, 'cordis.patch.yml'))) problems.push(`包目录或 cordis.patch.yml 不存在：${project.dir}`);
+    if (project.bundle && !bundles.includes(project.name)) problems.push(`bundles 未列入：${project.name}`);
+    if (!project.bundle && bundles.includes(project.name)) problems.push(`非 bundle 数据包误列入 bundles：${project.name}`);
+    if (project.bundle && !existsSync(join(project.dir, 'cordis.patch.yml'))) problems.push(`包目录或 cordis.patch.yml 不存在：${project.dir}`);
     if (!existsSync(join(project.dir, 'package.json'))) problems.push(`包目录或 package.json 不存在：${project.dir}`);
   }
   // 链接与模块解析：只写清单不安装时，这里会失败。
@@ -341,8 +353,8 @@ function dataCheck() {
   let missing = false;
   if (summary.knowledgeYaml === 0) { missing = true; lines.push(warn(`data/config 未找到考点库 YAML：${CONFIG_DIR}`)); }
   else lines.push(ok(`随仓库考点库：${summary.knowledgeYaml} 个 YAML（${CONFIG_DIR}）`));
-  if (summary.bankMarkdown === 0) { missing = true; lines.push(warn(`data/obsidian_vault/04_题目 未找到题库 Markdown：${BANK_DIR}`)); }
-  else lines.push(ok(`随仓库题库：${summary.bankMarkdown} 份 Markdown、${summary.bankImages} 张图片（${BANK_DIR}）`));
+  if (summary.bankMarkdown === 0) { missing = true; lines.push(warn(`数据包未找到题库 Markdown：${BANK_DIR}`)); }
+  else lines.push(ok(`独立真题数据包：${summary.bankMarkdown} 份 Markdown、${summary.bankImages} 张图片（${BANK_DIR}）`));
   return { missing, lines, summary };
 }
 
@@ -458,7 +470,7 @@ function install(profileDir) {
   say(ok('profile 清单、bundles、node_modules 链接与包导出均已校验'));
   const data = dataCheck();
   if (data.missing) {
-    throw new Error('随仓库数据缺失（data/config 或 data/obsidian_vault/04_题目）。请确认仓库完整后重试。');
+    throw new Error('随附数据缺失（data/config 或 packages/dsh-geo-teacher-data/obsidian_vault/04_题目）。请确认仓库完整后重试。');
   }
   say();
   say(ok(`已安装：${PROJECTS.map((project) => project.name).join('、')}`));
@@ -547,7 +559,7 @@ function uninstall(profileDir) {
     throw new Error('卸载后仍有残留，请检查 profile 的 node_modules 与 package.json。');
   }
   say();
-  say(ok('已移除本项目的两个包与 bundle 项。'));
+  say(ok('已移除本项目的三个包与对应 bundle 项。'));
   say('保留（未删除）：');
   say(`  - 数据与配置：${join(DSH_HOME, 'geo-teacher', 'config.json')}（若存在）`);
   say(`  - 仓库数据：${DATA_DIR}`);
@@ -576,8 +588,13 @@ function checkOnly(profileDir) {
   const bundles = (((manifest.dsh || {}).profile || {}).bundles) || [];
   for (const project of PROJECTS) {
     const dep = (manifest.dependencies || {})[project.name];
-    const listed = bundles.includes(project.name);
-    say(`${dep && listed ? ok('已接线') : warn('未接线')} ${project.name}${dep ? `（${dep}）` : ''}${listed ? '' : ' — bundles 未列入'}`);
+    if (project.bundle) {
+      const listed = bundles.includes(project.name);
+      say(`${dep && listed ? ok('已接线') : warn('未接线')} ${project.name}${dep ? `（${dep}）` : ''}${listed ? '' : ' — bundles 未列入'}`);
+    } else {
+      const notInBundles = !bundles.includes(project.name);
+      say(`${dep && notInBundles ? ok('已接线（数据包）') : warn('未接线（数据包）')} ${project.name}${dep ? `（${dep}）` : ''}${notInBundles ? '' : ' — 不应列入 bundles'}`);
+    }
   }
   say(problems.length === 0
     ? ok('静态接线、node_modules 链接与包解析均正常')

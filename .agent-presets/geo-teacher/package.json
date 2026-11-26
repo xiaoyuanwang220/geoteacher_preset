@@ -27,5 +27,8 @@
   "license": "MIT",
   "dependencies": {
     "yaml": "^2.7.0"
+  },
+  "optionalDependencies": {
+    "@geo-edu/dsh-geo-teacher-data": "^0.1.0"
   }
 }

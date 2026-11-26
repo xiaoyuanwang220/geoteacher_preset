@@ -119,7 +119,7 @@ test('版本读数优先安装包内置 runtime，其次旧版 dsh-runtimes 副�
     const install = join(root, 'install');
     const runtimeDir = join(install, 'resources', 'runtime', 'primary-runtime');
     mkdirSync(runtimeDir, { recursive: true });
-    writeFileSync(join(runtimeDir, 'runtime.json'), JSON.stringify({ desktopVersion: '0.2.2-rc.1' }));
+    writeFileSync(join(runtimeDir, 'runtime.json'), JSON.stringify({ desktopVersion: '0.2.2-rc.5' }));
     const home = join(root, 'home');
     const legacy = join(home, 'dsh-runtimes', 'dsh-primary-runtime');
     mkdirSync(legacy, { recursive: true });
@@ -127,12 +127,12 @@ test('版本读数优先安装包内置 runtime，其次旧版 dsh-runtimes 副�
 
     assert.equal(
       readDshVersion({ execPath: join(install, 'DeepSeek Harness.exe'), resourcesPath: '', dshHome: home }),
-      '0.2.2-rc.1',
+      '0.2.2-rc.5',
       '安装包内置 runtime 应优先于旧副本'
     );
     assert.equal(
       readDshVersion({ execPath: join(runtimeDir, 'dependencies', 'node', 'bin', 'node.exe'), resourcesPath: '', dshHome: join(root, 'empty-home') }),
-      '0.2.2-rc.1',
+      '0.2.2-rc.5',
       'execPath 位于安装目录 resources 下时也能定位'
     );
     assert.equal(

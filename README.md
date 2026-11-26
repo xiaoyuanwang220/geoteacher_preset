@@ -22,11 +22,11 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 
 | 项 | 要求 |
 | :-- | :-- |
-| DSH | Desktop **`0.2.2-rc.1`**（现行已验证版本；`< 0.2.1` 不支持，桌面端端口由系统动态分配，以 `DSH_WEB_URL` 为准） |
+| DSH | Desktop **`0.2.2-rc.5`**（现行已验证基线；`< 0.2.1` 不支持，桌面端端口由系统动态分配，以 `DSH_WEB_URL` 为准） |
 | 平台 | Windows（本机实测平台）；核心逻辑为纯 Node ESM，其他平台未完整验证 |
 | Node | 随 DSH 桌面端附带（实测 `v24.21.0`）；仓库脚本只用 ESM 与 `node:test` |
 | Python | `3.12`（仅课程方案 HTML/DOCX 渲染与复核脚本需要，DOCX 依赖 `python-docx`） |
-| 数据 | **随仓库提供**：考点库 `data/config/`、真题库 `data/obsidian_vault/04_题目/`（含题图）；支持在配置中替换为自有目录 |
+| 数据 | **随附提供**：考点库 `data/config/`、独立真题数据包 `@geo-edu/dsh-geo-teacher-data`（`packages/dsh-geo-teacher-data/obsidian_vault/04_题目/`，含题图）；支持在配置中替换为自有目录 |
 
 ## 安装与启动
 
@@ -56,7 +56,7 @@ node --test "test/*.test.mjs"              # 行为与边界回归测试
 | 配置键 | 用途 | 缺省值 |
 | :-- | :-- | :-- |
 | `knowledgeBasePath` | 考点库目录（含 `knowledge_taxonomy_*.yaml`） | `data/config/` |
-| `questionBankPath` | 真题 Markdown 根目录（保留子目录与题图相对位置） | `data/obsidian_vault/04_题目/` |
+| `questionBankPath` | 真题 Markdown 根目录（保留子目录与题图相对位置） | `@geo-edu/dsh-geo-teacher-data`（`obsidian_vault/04_题目/`） |
 | `outputPath` | 分析导出、讲题运行记录等产物目录 | `<DSH_HOME>/geo-teacher/outputs/` |
 | `workspaceRoot` | 允许写入产物的沙箱根目录 | `<DSH_HOME>/geo-teacher/` |
 
@@ -68,7 +68,7 @@ node --test "test/*.test.mjs"              # 行为与边界回归测试
 
 ## 怎么用
 
-1. **会话输入区**：选中「地理教师辅助」预设后，在输入框上方点选「讲题／出题／课程方案」及对应参数，自动把结构化指令填入输入框。
+1. **会话输入区**：选中「地理教师辅助」预设后，在输入框工具栏点选「讲题／课程方案」及对应参数（讲解对象，或年级＋授课时间），选定参数会自动通过宿主运行时上下文同步给模型（不污染输入框正文，也不会重复追问课时或年级；模拟题润色与快测出题直接走对话输入）。
 2. **自然语言对话**：
    - **讲题**：「这道题怎么做」只调用 `geo_solve` 独立作答；「把这道题讲给学生听」自动连续完成 `geo_solve` → `geo_judge`（开放答案并逐问归档）→ `geo_explain`（输出纯净讲题稿）。
    - **课程方案**：「设计一节人教版选必二《资源枯竭型城市的转型发展》45 分钟教案」加载 `cn-high-school-geography-lesson-planning`，先核实课标教材写入 `依据-<课标编号>.md`，给出 ≤5 行「构思卡」停等你确认后再成稿并渲染 HTML / DOCX 三件套。
@@ -79,14 +79,15 @@ node --test "test/*.test.mjs"              # 行为与边界回归测试
 ## 仓库结构
 
 ```text
-.agent-presets/geo-teacher/   预设 Bundle（@geo-edu/dsh-geo-teacher-preset）：7 个功能插件 + 4 个教师技能 + cordis.patch.yml
-packages/dsh-geo-teacher-ui/  输入区原生 UI 插件（@geo-edu/dsh-geo-teacher-ui）
-.agents/skills/               开发维护技能（代码审查、开发自检、文档写作规范、教材结构化与思想逆向；不进教师预设）
-data/                         随附数据：config/（考点库）+ obsidian_vault/（真题、题图与图谱笔记）
-docs/                         四层文档体系：全局入口与使用指南 / engineering 工程台账 / modules 模块规范 / proposals 待实施方案
-课本与课标/                    本地维护参考的课标与教材文本（对外再分发请自行确认出版方授权）
-scripts/                      setup 安装器与 geo-verify 确定性检查脚本
-test/                         行为与边界测试套件
+.agent-presets/geo-teacher/      预设 Bundle（@geo-edu/dsh-geo-teacher-preset）：7 个功能插件 + 4 个教师技能 + cordis.patch.yml
+packages/dsh-geo-teacher-ui/     输入区原生 UI 插件（@geo-edu/dsh-geo-teacher-ui）
+packages/dsh-geo-teacher-data/   独立真题数据包（@geo-edu/dsh-geo-teacher-data）：高考真题 Markdown、题图与图谱笔记
+.agents/skills/                  开发维护技能（代码审查、开发自检、文档写作规范、教材结构化与思想逆向；不进教师预设）
+data/config/                     随附考点库（4 份 knowledge_taxonomy_*.yaml）
+docs/                            四层文档体系：全局入口与使用指南 / engineering 工程台账 / modules 模块规范 / proposals 待实施方案
+课本与课标/                       本地维护参考的课标与教材文本（对外再分发请自行确认出版方授权）
+scripts/                         setup 安装器与 geo-verify 确定性检查脚本
+test/                            行为与边界测试套件
 ```
 
 ## 文档导航

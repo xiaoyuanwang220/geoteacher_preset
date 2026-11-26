@@ -31,8 +31,8 @@ const PKG_FILE = join(PRESET_SRC, 'package.json');
 const SKILLS_DIR = join(PRESET_SRC, 'skills');
 const PRESET_PKG_NAME = '@geo-edu/dsh-geo-teacher-preset';
 const DSH_HOME = process.env.DSH_HOME || join(process.env.USERPROFILE || process.env.HOME || '', '.dsh');
-// 桌面 Host 默认端口参数 19387（DSH Desktop rc.2）；可用 DSH_WEB_URL 覆盖。
-const DSH_WEB = process.env.DSH_WEB_URL || 'http://127.0.0.1:19387';
+// DSH Desktop ≥ 0.2.1 采用系统动态端口，运行时探测由环境变量 DSH_WEB_URL 提供。
+const DSH_WEB = (process.env.DSH_WEB_URL || '').trim().replace(/\/+$/, '');
 
 // ── 参数解析 ─────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -1003,7 +1003,33 @@ async function checkPipelineDiscipline() {
       sparseOk ? 'insufficient=true + gap 指明缺口' : `insufficient=${sparse.insufficient}, gap=${sparse.gap || '(空)'}`);
   }
 
-  // (m2) 工作台聚合：安装器、随仓库数据、/geo-status
+  // (m2) 工作台聚合：安装器、随仓库数据、/geo-status、输入区 UI 联动
+  const uiDir = join(PROJECT_ROOT, 'packages', 'dsh-geo-teacher-ui');
+  const uiHostFile = join(uiDir, 'index.js');
+  const uiClientFile = join(uiDir, 'client.js');
+  let uiOk = false;
+  let uiDetail = '缺少 packages/dsh-geo-teacher-ui/{index.js,client.js}';
+  if (existsSync(uiHostFile) && existsSync(uiClientFile)) {
+    try {
+      execFileSync(process.execPath, ['--check', uiHostFile], { stdio: 'ignore', timeout: 15000 });
+      execFileSync(process.execPath, ['--check', uiClientFile], { stdio: 'ignore', timeout: 15000 });
+      const uiHostSrc = readFileSync(uiHostFile, 'utf8');
+      const uiClientSrc = readFileSync(uiClientFile, 'utf8');
+      const noQuestionsMode = !/id:\s*['"]questions['"]/.test(uiClientSrc);
+      const noSetDraft = !/\.setDraft\s*\(/.test(uiClientSrc);
+      const hasStateSync = uiClientSrc.includes('/geo-teacher-ui/state')
+        && uiHostSrc.includes('/geo-teacher-ui/state')
+        && uiHostSrc.includes('systemPrompt.context');
+      uiOk = noQuestionsMode && noSetDraft && hasStateSync;
+      uiDetail = uiOk
+        ? '仅保留讲题/课程方案双模式，经 /geo-teacher-ui/state + systemPrompt.context 实时同步（零 setDraft 污染）'
+        : `noQuestionsMode=${noQuestionsMode}, noSetDraft=${noSetDraft}, hasStateSync=${hasStateSync}`;
+    } catch (e) {
+      uiDetail = 'UI 插件语法检查失败：' + ((e && e.message) || String(e));
+    }
+  }
+  add('ui-plugin-sync', '输入区 UI 插件（无出题入口 + 宿主动态上下文同步）', uiOk, uiDetail);
+
   const setupFile = join(PROJECT_ROOT, 'scripts', 'setup.mjs');
   add('setup-script', '一键安装器存在（scripts/setup.mjs）', existsSync(setupFile),
     existsSync(setupFile) ? '安装/卸载/静态校验入口就位' : '缺少 scripts/setup.mjs');
@@ -1016,15 +1042,37 @@ async function checkPipelineDiscipline() {
   const dataYaml = existsSync(join(dataRoot, 'config'))
     ? readdirSync(join(dataRoot, 'config')).filter((name) => /\.ya?ml$/i.test(name)).length
     : 0;
-  const dataBankDir = join(dataRoot, 'obsidian_vault', '04_题目');
+  const dataPkgRoot = join(PROJECT_ROOT, 'packages', 'dsh-geo-teacher-data');
+  const dataPkgJsonFile = join(dataPkgRoot, 'package.json');
+  let dataPkgManifestOk = false;
+  let dataPkgDetail = '缺少 packages/dsh-geo-teacher-data/package.json';
+  if (existsSync(dataPkgJsonFile)) {
+    try {
+      const dp = JSON.parse(readFileSync(dataPkgJsonFile, 'utf8'));
+      const noBundle = !(dp.dsh && dp.dsh.bundle);
+      const hasExports = Boolean(dp.exports && dp.exports['.'] && dp.exports['./package.json']);
+      dataPkgManifestOk = dp.name === '@geo-edu/dsh-geo-teacher-data' && noBundle && hasExports;
+      dataPkgDetail = dataPkgManifestOk
+        ? `${dp.name} v${dp.version}（非 bundle 数据依赖，导出 . 与 ./package.json）`
+        : `数据包清单不合规：noBundle=${noBundle}, hasExports=${hasExports}`;
+    } catch (e) {
+      dataPkgDetail = '数据包 package.json 解析失败：' + e.message;
+    }
+  }
+  add('data-package-manifest', '独立真题数据包清单符合 DSH 非 bundle 依赖规范', dataPkgManifestOk, dataPkgDetail);
+  const dataBankDir = join(dataPkgRoot, 'obsidian_vault', '04_题目');
   const dataBankMd = existsSync(dataBankDir)
     ? walkFiles(dataBankDir).filter((file) => file.endsWith('.md')).length
     : 0;
-  add('packaged-data', `随仓库数据（考点库 ${dataYaml} YAML / 题库 ${dataBankMd} md）`,
-    dataYaml > 0 && dataBankMd > 0,
-    dataYaml > 0 && dataBankMd > 0
-      ? `${dataRoot}：knowledge=packaged、questionBank=packaged`
-      : `缺失：请检查 data/config 与 data/obsidian_vault/04_题目（当前 ${dataYaml} / ${dataBankMd}）`);
+  const dataImgDir = join(dataPkgRoot, 'obsidian_vault', '90_附件');
+  const dataBankImg = existsSync(dataImgDir)
+    ? walkFiles(dataImgDir).filter((file) => /\.(?:png|jpe?g|webp|gif)$/i.test(file)).length
+    : 0;
+  add('packaged-data', `随附数据（考点库 ${dataYaml} YAML / 真题数据包 ${dataBankMd} md · ${dataBankImg} 图）`,
+    dataYaml > 0 && dataBankMd > 0 && dataBankImg > 0,
+    dataYaml > 0 && dataBankMd > 0 && dataBankImg > 0
+      ? `考点库=${join(dataRoot, 'config')}、真题包=${dataPkgRoot}`
+      : `缺失：请检查 data/config 与 packages/dsh-geo-teacher-data/obsidian_vault（当前 YAML=${dataYaml} / md=${dataBankMd} / img=${dataBankImg}）`);
 
   // (n) 数据/解析层修复断言（会话复盘-20260817 §五 1-4 / 修复方案-20260817 P0-P1，防回归）
   const qidQuoteOk = coreSrc.includes('question_id:\\s*["`]?([^"`]+)');
@@ -1140,6 +1188,11 @@ function httpGet(url, timeoutMs = 10000, collectBody = false) {
 }
 
 async function checkRuntime() {
+  if (!DSH_WEB) {
+    add('runtime', '运行时冒烟 /geo/core/health', false,
+      '未设置环境变量 DSH_WEB_URL（DSH 桌面端采用系统动态端口；请在 DSH 会话终端内运行，或显式传入 DSH_WEB_URL=http://127.0.0.1:<port>）');
+    return false;
+  }
   const endpoints = [
     { path: '/geo/core/health', expect: 200, checkJson: true },
   ];
@@ -1216,7 +1269,7 @@ if (flags.source) {
 
 let runtimeOk = true;
 if (flags.runtime) {
-  console.log(`── 运行时冒烟（${DSH_WEB}；需确认桌面已完整重启） ──`);
+  console.log(`── 运行时冒烟（${DSH_WEB || '未传入 DSH_WEB_URL'}；需确认桌面已完整重启） ──`);
   runtimeOk = await checkRuntime();
   console.log();
 }
