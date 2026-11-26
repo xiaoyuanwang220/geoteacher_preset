@@ -1,6 +1,6 @@
 # npm 一键安装更新与独立真题数据包方案
 
-> 状态：**部分已实施（独立真题数据包已拆分，CLI 与预设包收尾待推进）** ｜ 立项日期：2026-11-24（2026-11-25 完成 `@geo-edu/dsh-geo-teacher-data` 拆包与 `geo-core` 解析解耦）
+> 状态：**已实施（待执行首次 `npm publish` 发布上线）** ｜ 立项日期：2026-11-24（2026-11-26 完成四包 `geospark-ai*` 改造、内置考点库、默认输出目录修复与 `release:dry-run` 门禁）
 > 关联：[本地安装与数据接线契约](../engineering/本地安装与数据接线契约.md)、[DSH 运行基线](../engineering/DSH-运行基线.md)、[决策记录](../engineering/决策记录.md)
 
 ---
@@ -19,12 +19,12 @@
 
 采用 npm 公共仓库（完美兼容 `npmmirror.com` 国内镜像加速），按职责拆分为四个包：
 
-| 包名（暂定 `@geo-edu/*`，以实际注册组织名为准） | 角色 | 包含内容与体积量级 | 更新频率 |
+| 包名（无组织作用域，个人账号可直接发布） | 角色 | 包含内容与体积量级 | 更新频率 |
 | :-- | :-- | :-- | :-- |
-| `geospark-ai`（或 `@geo-edu/setup`） | **一键安装/更新 CLI**（带 `bin`） | 升级版 `setup.mjs`：环境与 DSH 版本检查、备份 profile、写入版本依赖与 `bundles`、调用 DSH 内置 pnpm 安装/更新/卸载 | 低频 |
-| `@geo-edu/dsh-geo-teacher-preset` | **核心预设 Bundle** | 7 个功能插件 + 4 个教师技能 + `cordis.patch.yml` + **内置轻量考点库 `data/config/`（~160 KB）** + 可选内置课标原文（不含教材正文） | 高频（几百 KB） |
-| `@geo-edu/dsh-geo-teacher-ui` | **输入区原生 UI Bundle** | 桌面端会话输入区功能与参数选择器（零构建客户端 + 素材，~50 KB） | 中低频 |
-| `@geo-edu/dsh-geo-teacher-data` | **独立真题数据包** | `obsidian_vault/04_题目`（115 份 md）+ `90_附件/题目图片`（120 张图），保留相对路径不变（~16 MB） | 按题库扩充节奏独立发版 |
+| `geospark-ai` | **一键安装/更新 CLI**（带 `bin`） | 环境与 DSH 版本检查、备份 profile、自动迁移旧包名、写入依赖与 `bundles`、调用内置 pnpm 安装/升级/卸载 | 低频 |
+| `geospark-ai-preset` | **核心预设 Bundle** | 7 个功能插件 + 4 个教师技能 + `cordis.patch.yml` + **内置轻量考点库 `data/config/`（~40 KB）** | 高频（几百 KB） |
+| `geospark-ai-ui` | **输入区原生 UI Bundle** | 桌面端会话输入区功能与参数选择器（零构建客户端 + 动态上下文同步） | 中低频 |
+| `geospark-ai-data` | **独立真题数据包** | `obsidian_vault/04_题目`（115 份 md）+ `90_附件/题目图片`（120 张图），保留相对路径不变（~15 MB） | 按题库扩充节奏独立发版 |
 
 > **版权隔离收益**：仓库根目录下的 `课本与课标/`（含人教版教材原文）及 `.agents/`、`docs/`、`outputs/` 均不在任何 npm 包的 `files` 白名单中，不会随公网包分发。
 

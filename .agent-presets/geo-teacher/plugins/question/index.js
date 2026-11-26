@@ -72,9 +72,9 @@ export default {
   apply(ctx, config) {
     const fsService = ctx.fs;
     const cfg = config || {};
-    // ── 输出根解析（与 core 同一优先级链，键名 questionOutputRoot） ──────────
-    // 插件 config ＞ 用户配置 <DSH_HOME>/geo-teacher/config.json ＞ 明确报错。
-    // 不写死作者机器路径；相对路径以配置文件的目录为基准。
+    // ── 输出根解析（与 core 对齐默认用户目录，键名 questionOutputRoot） ──────────
+    // 插件 config ＞ 用户配置 <DSH_HOME>/geo-teacher/config.json ＞ 默认 <DSH_HOME>/geo-teacher/outputs/出题。
+    // 绝不回退到 node_modules 上级目录，保证 npm 安装与后续升级不会清空或污染教师产物。
     const CONFIG_PATH = join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'geo-teacher', 'config.json');
     const CONFIG_DIR = dirname(CONFIG_PATH);
 
@@ -91,8 +91,8 @@ export default {
       return null;
     };
     const toAbs = (p) => (isAbsolute(p) ? p : join(CONFIG_DIR, p));
-    let OUTPUT_ROOT = null;
-    let OUTPUT_ROOT_FROM = null;
+    let OUTPUT_ROOT = join(CONFIG_DIR, 'outputs', '出题');
+    let OUTPUT_ROOT_FROM = 'default <DSH_HOME>/geo-teacher/outputs/出题';
     if (pick('questionOutputRoot')) { OUTPUT_ROOT = toAbs(pick('questionOutputRoot')); OUTPUT_ROOT_FROM = 'questionOutputRoot'; }
     else if (pick('outputPath')) { OUTPUT_ROOT = join(toAbs(pick('outputPath')), '出题'); OUTPUT_ROOT_FROM = 'outputPath + /出题'; }
     else if (pick('workspaceRoot')) { OUTPUT_ROOT = join(toAbs(pick('workspaceRoot')), 'outputs', '出题'); OUTPUT_ROOT_FROM = 'workspaceRoot + /outputs/出题'; }

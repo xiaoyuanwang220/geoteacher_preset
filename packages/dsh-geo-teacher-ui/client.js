@@ -17,7 +17,7 @@
 // 样式：手工注入 <style>，类名 geo- 前缀，颜色只走 --dsw-alias-* 令牌。
 
 window.__ModuleLoader__.load({
-  id: '@geo-edu/dsh-geo-teacher-ui',
+  id: 'geospark-ai-ui',
   factory: (require) => {
     const React = require('react');
     const h = React.createElement;

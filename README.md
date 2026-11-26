@@ -26,43 +26,54 @@ GeoSparkAI 是运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 | 平台 | Windows（本机实测平台）；核心逻辑为纯 Node ESM，其他平台未完整验证 |
 | Node | 随 DSH 桌面端附带（实测 `v24.21.0`）；仓库脚本只用 ESM 与 `node:test` |
 | Python | `3.12`（仅课程方案 HTML/DOCX 渲染与复核脚本需要，DOCX 依赖 `python-docx`） |
-| 数据 | **随附提供**：考点库 `data/config/`、独立真题数据包 `@geo-edu/dsh-geo-teacher-data`（`packages/dsh-geo-teacher-data/obsidian_vault/04_题目/`，含题图）；支持在配置中替换为自有目录 |
+| 数据 | **随包内置**：考点库随核心预设包 `geospark-ai-preset` 内置（`.agent-presets/geo-teacher/data/config/`），真题库由独立数据包 `geospark-ai-data` 提供（含题图）；支持在配置中替换为自有目录 |
 
-## 安装与启动
+## 安装与更新
 
-> 面向无 Git 环境的 **npm 一键安装更新与独立数据包拆分** 正在推进（见 [方案说明](docs/proposals/npm一键安装与数据包拆分方案.md)）；当前仓库检出安装步骤如下：
+无需安装 Git 或克隆源码仓库，在已安装 DSH Desktop 的电脑上执行一行命令即可完成安装或升级：
 
 ```sh
-git clone https://github.com/xiaoyuanwang220/geoteacher_preset.git geo_edu_agent
-cd geo_edu_agent
-node scripts/setup.mjs --check   # 只读检查：DSH 版本、profile、包与数据
-node scripts/setup.mjs --yes     # 备份清单 → 写入 link 依赖 → pnpm 安装 → 静态校验
+# 首次一键安装（自动挂载 geospark-ai-preset + geospark-ai-ui + geospark-ai-data）
+npx geospark-ai@latest install --yes
+
+# 国内网络可使用 npmmirror 镜像加速安装
+npx geospark-ai@latest --registry=https://registry.npmmirror.com install --mirror --yes
+
+# 后续一键升级到最新版
+npx geospark-ai@latest update --yes
+
+# 只读自检版本、接线与题库状态
+npx geospark-ai@latest check
 ```
 
-安装完成后**完全退出并重新启动 DSH Desktop**（关闭窗口可能只是最小化到托盘，请确认进程已退出），新建「地理教师辅助」会话，输入 `/geo-status`（或直接发消息说「查看状态」）确认版本、数据来源与题库题数。
+> **本地源码开发模式**：克隆本仓库后运行 `node scripts/setup.mjs --yes`（默认以 `link:` 符号链接直连工作区）。
 
-### 卸载与自检
+安装或升级完成后**完全退出并重新启动 DSH Desktop**（关闭窗口可能只是最小化到托盘，请确认进程已退出），新建「地理教师辅助」会话，输入 `/geo-status`（或直接发消息说「查看状态」）确认版本、数据来源与题库题数。
+
+### 卸载与开发自检
 
 ```sh
-node scripts/setup.mjs --uninstall --yes   # 卸载（保留个人配置、数据与产物）
-npm run verify:geo -- --source             # 确定性源码静态检查
-node --test "test/*.test.mjs"              # 行为与边界回归测试
+npx geospark-ai@latest uninstall --yes     # 卸载组件（保留 ~/.dsh/geo-teacher 下的个人配置与产物）
+npm run verify:geo -- --source             # 确定性源码静态检查（仓库开发）
+npm run release:dry-run                    # 四包发布白名单与体积演练检查（仓库开发）
+node --test "test/*.test.mjs"              # 行为与边界回归测试（仓库开发）
 ```
 
 ## 配置数据路径（可选）
 
-默认直接使用 `data/` 数据，**零配置即可运行**。如需换用自建题库或考点目录，在 `<DSH_HOME>/geo-teacher/config.json`（`DSH_HOME` 默认 `~/.dsh`）中按需填写，同名键覆盖默认路径：
+默认直接使用随包内置考点库与 `geospark-ai-data` 真题包，**零配置即可运行**。如需换用自建题库或考点目录，在 `<DSH_HOME>/geo-teacher/config.json`（`DSH_HOME` 默认 `~/.dsh`）中按需填写，同名键覆盖默认路径：
 
 | 配置键 | 用途 | 缺省值 |
 | :-- | :-- | :-- |
-| `knowledgeBasePath` | 考点库目录（含 `knowledge_taxonomy_*.yaml`） | `data/config/` |
-| `questionBankPath` | 真题 Markdown 根目录（保留子目录与题图相对位置） | `@geo-edu/dsh-geo-teacher-data`（`obsidian_vault/04_题目/`） |
+| `knowledgeBasePath` | 考点库目录（含 `knowledge_taxonomy_*.yaml`） | `geospark-ai-preset` 内置 `data/config/` |
+| `questionBankPath` | 真题 Markdown 根目录（保留子目录与题图相对位置） | `geospark-ai-data`（`obsidian_vault/04_题目/`） |
 | `outputPath` | 分析导出、讲题运行记录等产物目录 | `<DSH_HOME>/geo-teacher/outputs/` |
+| `questionOutputRoot` | 出题命题包（`<taskId>/package.json`）存放目录 | `<DSH_HOME>/geo-teacher/outputs/出题/` |
 | `workspaceRoot` | 允许写入产物的沙箱根目录 | `<DSH_HOME>/geo-teacher/` |
 
 ## 考点库说明与声明
 
-`data/config/` 下的 4 个 `knowledge_taxonomy_*.yaml` 按 `领域（DM-）→ 主题（TH-）→ 知识单元（KU-）` 三级组织（当前 4 领域、26 主题、132 知识单元，共 162 节点，`meta.version: v0.2-draft`），用于考点检索、定位与分类，库内 `needs_review` 节点在使用时会主动提示「待复核」。
+预设包内置的 4 个 `knowledge_taxonomy_*.yaml` 按 `领域（DM-）→ 主题（TH-）→ 知识单元（KU-）` 三级组织（当前 4 领域、26 主题、132 知识单元，共 162 节点，`meta.version: v0.2-draft`），用于考点检索、定位与分类，库内 `needs_review` 节点在使用时会主动提示「待复核」。
 
 **声明**：考点库的划分、命名与边界均为**维护者个人对高中地理课程内容的理解与教学整理，仅代表个人观点**，不代表教育部、课标编写组或任何机构的官方意见，也不替代课标与教材原文。使用者可随时修改或替换为自建考点库。
 
@@ -79,14 +90,14 @@ node --test "test/*.test.mjs"              # 行为与边界回归测试
 ## 仓库结构
 
 ```text
-.agent-presets/geo-teacher/      预设 Bundle（@geo-edu/dsh-geo-teacher-preset）：7 个功能插件 + 4 个教师技能 + cordis.patch.yml
-packages/dsh-geo-teacher-ui/     输入区原生 UI 插件（@geo-edu/dsh-geo-teacher-ui）
-packages/dsh-geo-teacher-data/   独立真题数据包（@geo-edu/dsh-geo-teacher-data）：高考真题 Markdown、题图与图谱笔记
+packages/geospark-ai/            一键安装/升级/卸载 CLI 包（geospark-ai）
+.agent-presets/geo-teacher/      核心预设 Bundle（geospark-ai-preset）：7 个功能插件 + 4 个教师技能 + 内置三级考点库 data/config/
+packages/dsh-geo-teacher-ui/     输入区原生 UI 插件（geospark-ai-ui）
+packages/dsh-geo-teacher-data/   独立真题数据包（geospark-ai-data）：高考真题 Markdown、题图与图谱笔记
 .agents/skills/                  开发维护技能（代码审查、开发自检、文档写作规范、教材结构化与思想逆向；不进教师预设）
-data/config/                     随附考点库（4 份 knowledge_taxonomy_*.yaml）
-docs/                            四层文档体系：全局入口与使用指南 / engineering 工程台账 / modules 模块规范 / proposals 待实施方案
-课本与课标/                       本地维护参考的课标与教材文本（对外再分发请自行确认出版方授权）
-scripts/                         setup 安装器与 geo-verify 确定性检查脚本
+docs/                            四层文档体系：全局入口与使用指南 / engineering 工程台账 / modules 模块规范 / proposals 演进方案
+课本与课标/                       本地维护参考的课标与教材文本（不随 npm 包发布）
+scripts/                         本地 setup 开发委托入口、geo-verify 静态检查与 release-dry-run 发布演练脚本
 test/                            行为与边界测试套件
 ```
 

@@ -8,6 +8,7 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "verify:geo": "node scripts/geo-verify.mjs",
+    "release:dry-run": "node scripts/release-dry-run.mjs",
     "test:explainer": "node --test test/explainer-audience.test.mjs"
   },
   "dependencies": {

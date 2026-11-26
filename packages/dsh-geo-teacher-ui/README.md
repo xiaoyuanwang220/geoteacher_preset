@@ -1,6 +1,6 @@
-# @geo-edu/dsh-geo-teacher-ui
+# geospark-ai-ui
 
-geo-teacher 预设的桌面端原生 UI 插件。它在 DSH 的会话输入区就地接管两处零遮蔽槽位，提供「讲题／课程方案」的功能选择与参数设置，并通过宿主动态运行时上下文（`systemPrompt.context`）实时送达模型。
+GeoSparkAI（`geo-teacher` 预设）的桌面端原生 UI 插件。它在 DSH 的会话输入区就地接管两处零遮蔽槽位，提供「讲题／课程方案」的功能选择与参数设置，并通过宿主动态运行时上下文（`systemPrompt.context`）实时送达模型。
 
 > 说明：出题模块正围绕「模拟题高考化润色与快测出题」调整交互方向，输入区暂不展示旧版出题按钮（仍可通过自然语言对话调用）。
 
@@ -27,12 +27,12 @@ geo-teacher 预设的桌面端原生 UI 插件。它在 DSH 的会话输入区�
 ```json
 {
   "dependencies": {
-    "@geo-edu/dsh-geo-teacher-ui": "^0.1.0"
+    "geospark-ai-ui": "^0.1.0"
   },
   "dsh": {
     "profile": {
       "bundles": [
-        "@geo-edu/dsh-geo-teacher-ui"
+        "geospark-ai-ui"
       ]
     }
   }

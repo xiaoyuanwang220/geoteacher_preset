@@ -13,7 +13,10 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MODULE_REQUIRE = createRequire(import.meta.url);
-const DATA_PACKAGE_SPEC = '@geo-edu/dsh-geo-teacher-data/package.json';
+const DATA_PACKAGE_SPECS = [
+  'geospark-ai-data/package.json',
+  '@geo-edu/dsh-geo-teacher-data/package.json'
+];
 
 // ========== taxonomy 解析 ==========
 // 优先使用“预设包自身声明的 YAML 解析依赖”（package.json → dependencies.yaml）；
@@ -1686,9 +1689,9 @@ export default {
     // ── 数据路径解析 ────────────────────────────────────────────────────────────
     // 单一解析逻辑（knowledgeBase / questionBank 共用同一函数）：
     //   插件 config 或用户配置文件显式路径 ＞ 随附数据包默认路径 ＞ missing。
-    // 真题库已拆分为独立非 bundle 数据包 @geo-edu/dsh-geo-teacher-data（见 docs/proposals/npm一键安装与数据包拆分方案.md）：
-    //   knowledgeBase → 预设内置 data/config 或仓库 data/config
-    //   questionBank  → @geo-edu/dsh-geo-teacher-data（DSH runtime resolution / profile node_modules / 仓库 packages/）下的 obsidian_vault/04_题目
+    // 真题库已拆分为独立非 bundle 数据包 geospark-ai-data：
+    //   knowledgeBase → 预设包内置 data/config（回退仓库 data/config）
+    //   questionBank  → geospark-ai-data（DSH runtime resolution / profile node_modules / 仓库 packages/）下的 obsidian_vault/04_题目
     // 不写死作者机器路径；数据包未安装且仓库目录缺失时按 missing 处理，不静默回退。
     //
     // 用户配置文件：<DSH_HOME>/geo-teacher/config.json
@@ -1714,18 +1717,22 @@ export default {
 
     function resolveDataPackageRoot() {
       // 1) DSH runtime resolution / 标准 node_modules 解析（预设 optionalDependencies）
-      try {
-        return dirname(MODULE_REQUIRE.resolve(DATA_PACKAGE_SPEC));
-      } catch { /* fallthrough */ }
+      for (const spec of DATA_PACKAGE_SPECS) {
+        try {
+          return dirname(MODULE_REQUIRE.resolve(spec));
+        } catch { /* fallthrough */ }
+      }
       // 2) DSH 显式 profile 路径原生查询（链接预设 + profile 安装数据包混合态，见 DSH publish 文档显式 paths 规则）
       const profileDirs = [
         process.env.DSH_PROFILE_DIR || '',
         join(EFFECTIVE_DSH_HOME, 'profiles', process.env.DSH_PROFILE || 'desktop')
       ].filter(Boolean);
       for (const profileDir of profileDirs) {
-        try {
-          return dirname(MODULE_REQUIRE.resolve(DATA_PACKAGE_SPEC, { paths: [profileDir] }));
-        } catch { /* fallthrough */ }
+        for (const spec of DATA_PACKAGE_SPECS) {
+          try {
+            return dirname(MODULE_REQUIRE.resolve(spec, { paths: [profileDir] }));
+          } catch { /* fallthrough */ }
+        }
       }
       return '';
     }
@@ -1746,7 +1753,7 @@ export default {
       'config.json'
     );
     const CONFIG_DIR = dirname(CONFIG_PATH);
-    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键，或安装默认数据包 @geo-edu/dsh-geo-teacher-data（见项目 README「配置数据路径」一节）';
+    const CONFIG_HINT = '请在 ' + CONFIG_PATH + ' 写入该键，或运行 npx geospark-ai@latest install --yes 安装默认数据包 geospark-ai-data';
 
     function readUserConfig() {
       try {

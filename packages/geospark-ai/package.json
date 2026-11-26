@@ -1,0 +1,35 @@
+{
+  "name": "geospark-ai",
+  "version": "0.1.0",
+  "description": "GeoSparkAI 高中地理教师辅助 Agent 一键安装、升级、自检与卸载工具（面向 DeepSeek Harness Desktop）",
+  "type": "module",
+  "bin": {
+    "geospark-ai": "./bin/cli.mjs"
+  },
+  "exports": {
+    ".": "./bin/cli.mjs",
+    "./cli": "./bin/cli.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin/",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiaoyuanwang220/geoteacher_preset.git",
+    "directory": "packages/geospark-ai"
+  },
+  "license": "MIT",
+  "keywords": [
+    "geospark-ai",
+    "dsh",
+    "deepseek-harness",
+    "geography",
+    "education",
+    "installer"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

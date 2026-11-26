@@ -10,4 +10,4 @@
 # 与预设内的 /geo-teacher、/geo-teacher/assets 不冲突：同一路径重复注册会让 preset 挂载失败。
 - insert:
     - id: geo-teacher-ui
-      name: '@geo-edu/dsh-geo-teacher-ui'
+      name: 'geospark-ai-ui'

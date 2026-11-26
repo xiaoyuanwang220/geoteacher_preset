@@ -66,8 +66,8 @@ test('/geo-status 注册为宿主命令，返回安装/数据/题库/最近讲�
   assert.equal(result.kind, 'success');
   for (const token of [
     'DSH：',
-    '考点库：随仓库 data/',
-    '题库：随仓库 data/',
+    '考点库：随包默认数据',
+    '题库：随包默认数据',
     '279 小问 / 115 文件',
     '考点节点：162',
     '核验完成',
@@ -94,7 +94,7 @@ test('geo_status 工具与命令同源，返回同样的只读状态文本', asy
   assert.match(tool.description, /状态/);
   const value = await tool.execute({});
   assert.equal(value.status, 'success');
-  for (const token of ['DSH：', '考点库：随仓库 data/', '279 小问 / 115 文件', '内部解题预设：可用']) {
+  for (const token of ['DSH：', '考点库：随包默认数据', '279 小问 / 115 文件', '内部解题预设：可用']) {
     assert.ok(value.text.includes(token), `缺少：${token}`);
   }
   const rendered = tool.output.render({}, value);

@@ -136,7 +136,7 @@ test('插件配置继续优先于配置文件', async t => {
 
 test('独立真题数据包符合 DSH 非 bundle 规范，且涉图题相对路径可解析到真实图片', async t => {
   const pkgJson = JSON.parse(fs.readFileSync(new URL('../packages/dsh-geo-teacher-data/package.json', import.meta.url), 'utf8'));
-  assert.equal(pkgJson.name, '@geo-edu/dsh-geo-teacher-data');
+  assert.equal(pkgJson.name, 'geospark-ai-data');
   assert.equal(Boolean(pkgJson.dsh && pkgJson.dsh.bundle), false, '纯数据包不得声明 dsh.bundle');
   assert.equal(pkgJson.exports['.'], './index.js');
   assert.equal(pkgJson.exports['./package.json'], './package.json');
@@ -155,15 +155,15 @@ test('独立真题数据包符合 DSH 非 bundle 规范，且涉图题相对路�
   }
 });
 
-test('profile node_modules 安装独立真题数据包时，core 优先从 profile 解析该包', async t => {
+test('profile node_modules 安装独立真题数据包 geospark-ai-data 时，core 优先从 profile 解析该包', async t => {
   const f = fixture(t);
   const profileDir = join(f.root, 'profiles', 'desktop');
-  const installedDataPkg = join(profileDir, 'node_modules', '@geo-edu', 'dsh-geo-teacher-data');
+  const installedDataPkg = join(profileDir, 'node_modules', 'geospark-ai-data');
   const installedBank = join(installedDataPkg, 'obsidian_vault', '04_题目');
   fs.mkdirSync(installedBank, { recursive: true });
   fs.writeFileSync(join(profileDir, 'package.json'), JSON.stringify({ name: 'dsh-profile-desktop', private: true }));
   fs.writeFileSync(join(installedDataPkg, 'package.json'), JSON.stringify({
-    name: '@geo-edu/dsh-geo-teacher-data',
+    name: 'geospark-ai-data',
     version: '0.1.0',
     type: 'module',
     exports: { '.': './index.js', './package.json': './package.json' }

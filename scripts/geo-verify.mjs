@@ -29,7 +29,7 @@ const PRESET_SRC = join(PROJECT_ROOT, '.agent-presets', 'geo-teacher');
 const PATCH_FILE = join(PRESET_SRC, 'cordis.patch.yml');
 const PKG_FILE = join(PRESET_SRC, 'package.json');
 const SKILLS_DIR = join(PRESET_SRC, 'skills');
-const PRESET_PKG_NAME = '@geo-edu/dsh-geo-teacher-preset';
+const PRESET_PKG_NAME = 'geospark-ai-preset';
 const DSH_HOME = process.env.DSH_HOME || join(process.env.USERPROFILE || process.env.HOME || '', '.dsh');
 // DSH Desktop ≥ 0.2.1 采用系统动态端口，运行时探测由环境变量 DSH_WEB_URL 提供。
 const DSH_WEB = (process.env.DSH_WEB_URL || '').trim().replace(/\/+$/, '');
@@ -786,7 +786,7 @@ async function checkPipelineDiscipline() {
     && !/id:\s*geo-solver-internal[\s\S]{0,4000}name:\s*'@deepseek-ai\/dsh-persona'/.test(patchSrc);
   add('solver-preset', '内部解题预设：bundle 声明且插件行只有 solver-isolation（无静态 persona/工具）', internalPresetOk,
     internalPresetOk
-      ? 'cordis.patch.yml → id=geo-solver-internal，plugins=[@geo-edu/.../plugins/solver-isolation]'
+      ? 'cordis.patch.yml → id=geo-solver-internal，plugins=[geospark-ai-preset/plugins/solver-isolation]'
       : '缺少内部预设声明，或仍引用静态 persona 行（persona 只应来自 skills/geo-solver.md）');
 
   // (g) 隔离插件：persona 来自技能（单一来源）+ 工具锁（restrict 隐藏 + guard 兜底）
@@ -1031,16 +1031,32 @@ async function checkPipelineDiscipline() {
   add('ui-plugin-sync', '输入区 UI 插件（无出题入口 + 宿主动态上下文同步）', uiOk, uiDetail);
 
   const setupFile = join(PROJECT_ROOT, 'scripts', 'setup.mjs');
-  add('setup-script', '一键安装器存在（scripts/setup.mjs）', existsSync(setupFile),
-    existsSync(setupFile) ? '安装/卸载/静态校验入口就位' : '缺少 scripts/setup.mjs');
+  const cliFile = join(PROJECT_ROOT, 'packages', 'geospark-ai', 'bin', 'cli.mjs');
+  const cliPkgFile = join(PROJECT_ROOT, 'packages', 'geospark-ai', 'package.json');
+  let cliOk = false;
+  let cliDetail = '缺少 packages/geospark-ai/{package.json,bin/cli.mjs}';
+  if (existsSync(setupFile) && existsSync(cliFile) && existsSync(cliPkgFile)) {
+    try {
+      execFileSync(process.execPath, ['--check', setupFile], { stdio: 'ignore', timeout: 15000 });
+      execFileSync(process.execPath, ['--check', cliFile], { stdio: 'ignore', timeout: 15000 });
+      const cliPkg = JSON.parse(readFileSync(cliPkgFile, 'utf8'));
+      cliOk = cliPkg.name === 'geospark-ai' && Boolean(cliPkg.bin && cliPkg.bin['geospark-ai']);
+      cliDetail = cliOk
+        ? `geospark-ai v${cliPkg.version}（npx 一键安装/升级/卸载 CLI + scripts/setup.mjs 本地开发入口）`
+        : `geospark-ai package.json 异常：name=${cliPkg.name}`;
+    } catch (e) {
+      cliDetail = 'CLI 语法或清单检查失败：' + ((e && e.message) || String(e));
+    }
+  }
+  add('setup-script', '一键安装/升级 CLI 就位（geospark-ai + scripts/setup.mjs）', cliOk, cliDetail);
   const statusRegistered = analysisSrc.includes("name: 'geo-status'")
     && analysisSrc.includes('commands.register')
     && analysisSrc.includes("name: 'geo_status'");
   add('status-command', '/geo-status 命令与 geo_status 工具已注册（只读，不调模型）', statusRegistered,
     statusRegistered ? 'analysis 注册 geo-status 命令与 geo_status 工具' : 'analysis 未同时注册 /geo-status 与 geo_status');
-  const dataRoot = join(PROJECT_ROOT, 'data');
-  const dataYaml = existsSync(join(dataRoot, 'config'))
-    ? readdirSync(join(dataRoot, 'config')).filter((name) => /\.ya?ml$/i.test(name)).length
+  const presetConfigDir = join(PRESET_SRC, 'data', 'config');
+  const dataYaml = existsSync(presetConfigDir)
+    ? readdirSync(presetConfigDir).filter((name) => /\.ya?ml$/i.test(name)).length
     : 0;
   const dataPkgRoot = join(PROJECT_ROOT, 'packages', 'dsh-geo-teacher-data');
   const dataPkgJsonFile = join(dataPkgRoot, 'package.json');
@@ -1051,10 +1067,10 @@ async function checkPipelineDiscipline() {
       const dp = JSON.parse(readFileSync(dataPkgJsonFile, 'utf8'));
       const noBundle = !(dp.dsh && dp.dsh.bundle);
       const hasExports = Boolean(dp.exports && dp.exports['.'] && dp.exports['./package.json']);
-      dataPkgManifestOk = dp.name === '@geo-edu/dsh-geo-teacher-data' && noBundle && hasExports;
+      dataPkgManifestOk = dp.name === 'geospark-ai-data' && noBundle && hasExports;
       dataPkgDetail = dataPkgManifestOk
         ? `${dp.name} v${dp.version}（非 bundle 数据依赖，导出 . 与 ./package.json）`
-        : `数据包清单不合规：noBundle=${noBundle}, hasExports=${hasExports}`;
+        : `数据包清单不合规：name=${dp.name}, noBundle=${noBundle}, hasExports=${hasExports}`;
     } catch (e) {
       dataPkgDetail = '数据包 package.json 解析失败：' + e.message;
     }
@@ -1068,11 +1084,11 @@ async function checkPipelineDiscipline() {
   const dataBankImg = existsSync(dataImgDir)
     ? walkFiles(dataImgDir).filter((file) => /\.(?:png|jpe?g|webp|gif)$/i.test(file)).length
     : 0;
-  add('packaged-data', `随附数据（考点库 ${dataYaml} YAML / 真题数据包 ${dataBankMd} md · ${dataBankImg} 图）`,
+  add('packaged-data', `随包数据（预设内置考点库 ${dataYaml} YAML / 真题数据包 ${dataBankMd} md · ${dataBankImg} 图）`,
     dataYaml > 0 && dataBankMd > 0 && dataBankImg > 0,
     dataYaml > 0 && dataBankMd > 0 && dataBankImg > 0
-      ? `考点库=${join(dataRoot, 'config')}、真题包=${dataPkgRoot}`
-      : `缺失：请检查 data/config 与 packages/dsh-geo-teacher-data/obsidian_vault（当前 YAML=${dataYaml} / md=${dataBankMd} / img=${dataBankImg}）`);
+      ? `考点库=${presetConfigDir}、真题包=${dataPkgRoot}`
+      : `缺失：请检查 .agent-presets/geo-teacher/data/config 与 packages/dsh-geo-teacher-data/obsidian_vault（当前 YAML=${dataYaml} / md=${dataBankMd} / img=${dataBankImg}）`);
 
   // (n) 数据/解析层修复断言（会话复盘-20260817 §五 1-4 / 修复方案-20260817 P0-P1，防回归）
   const qidQuoteOk = coreSrc.includes('question_id:\\s*["`]?([^"`]+)');

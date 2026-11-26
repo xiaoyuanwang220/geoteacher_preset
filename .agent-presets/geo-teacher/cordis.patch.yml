@@ -115,7 +115,7 @@
             config:
               customSkillDirs:
                 # 预设包自身的技能根：出题/解题/讲题/课程方案四个教师技能。
-                - !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@geo-edu/dsh-geo-teacher-preset/package.json')), 'skills')"
+                - !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('geospark-ai-preset/package.json')), 'skills')"
 
           - id: tool-skill
             name: '@deepseek-ai/dsh-tool-skill'
@@ -131,22 +131,22 @@
               geoKernel: true
             config:
               - id: geo-core
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/core'
+                name: 'geospark-ai-preset/plugins/core'
                 # 数据路径不在组合文件里写死（写死会让每个用户的安装都指向作者机器）。
                 # 由用户配置文件 <DSH_HOME>/geo-teacher/config.json 提供；考点库随包时零配置。
                 # 解析优先级与键名见 README「配置数据路径」；/geo/core/health 会回显解析结果。
               - id: geo-taxonomy
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/taxonomy'
+                name: 'geospark-ai-preset/plugins/taxonomy'
               - id: geo-bank
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/bank'
+                name: 'geospark-ai-preset/plugins/bank'
               - id: geo-analysis
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/analysis'
+                name: 'geospark-ai-preset/plugins/analysis'
               - id: geo-generator
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/generator'
+                name: 'geospark-ai-preset/plugins/generator'
               # 出题确定性检查：命题包校验/渲染的唯一实现在 plugins/question/package.js，
               # 本插件只注册 geo_question_validate 工具（无 HTTP 路由，故不注入 webServer、不增 isolate 项）。
               - id: geo-question
-                name: '@geo-edu/dsh-geo-teacher-preset/plugins/question'
+                name: 'geospark-ai-preset/plugins/question'
 
           # ── goals ───────────────────────────────────────────────────────────────────
 
@@ -334,5 +334,5 @@
         order: 999
         plugins:
           - id: solver-isolation
-            name: '@geo-edu/dsh-geo-teacher-preset/plugins/solver-isolation'
+            name: 'geospark-ai-preset/plugins/solver-isolation'
 

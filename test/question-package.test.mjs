@@ -449,6 +449,37 @@ describe('DSH 工具边界：返回值必须是无损 JSON', () => {
     assert.ok(!JSON.stringify(stu).includes('distractorMap'));
     rmSync(tmp, { recursive: true, force: true });
   });
+
+  test('零配置安装态：未创建 config.json 时默认落到 <DSH_HOME>/geo-teacher/outputs/出题，绝不写 node_modules', async () => {
+    const plugin = (await import('../.agent-presets/geo-teacher/plugins/question/index.js')).default;
+    const fakeHome = mkdtempSync(join(tmpdir(), 'geo-question-zerocfg-'));
+    const tid = '2026-1126-zerocfg-check';
+    const expectedTaskDir = join(fakeHome, 'geo-teacher', 'outputs', '出题', tid);
+    mkdirSync(expectedTaskDir, { recursive: true });
+    writeFileSync(join(expectedTaskDir, 'package.json'), JSON.stringify(loadChoice(), null, 2), 'utf8');
+
+    const prevHome = process.env.DSH_HOME;
+    let def = null;
+    try {
+      process.env.DSH_HOME = fakeHome;
+      plugin.apply({
+        fs: {
+          resolve: async (p) => ({ path: p }),
+          readText: async (t) => readFileSync(t.path, 'utf8'),
+          writeText: async () => {}
+        },
+        tools: { register(d) { def = d; return () => {}; } }
+      }, {});
+      const res = await def.execute({ taskId: tid });
+      assert.equal(res.status, 'success');
+      assert.equal(res.outputRoot.replace(/\\/g, '/'), join(fakeHome, 'geo-teacher', 'outputs', '出题').replace(/\\/g, '/'));
+      assert.equal(res.taskDir.replace(/\\/g, '/'), expectedTaskDir.replace(/\\/g, '/'));
+    } finally {
+      if (prevHome === undefined) delete process.env.DSH_HOME;
+      else process.env.DSH_HOME = prevHome;
+      rmSync(fakeHome, { recursive: true, force: true });
+    }
+  });
 });
 
 // ── 阶段感知与完成度上限 ────────────────────────────────────────────────

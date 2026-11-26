@@ -26,20 +26,20 @@
 3. 在 profile 目录执行一次 `pnpm install` 生成 `node_modules` 解析条目（DSH 启动不会自动安装依赖）。
 
 ```jsonc
-// <DSH_HOME>/profiles/desktop/package.json（开发态 link 示例；发布态为 semver 版本号）
+// <DSH_HOME>/profiles/desktop/package.json（npm 发布态示例；本地开发态为 link:<仓库路径>/...）
 {
   "dependencies": {
-    "@geo-edu/dsh-geo-teacher-preset": "link:<仓库路径>/.agent-presets/geo-teacher",
-    "@geo-edu/dsh-geo-teacher-ui":     "link:<仓库路径>/packages/dsh-geo-teacher-ui",
-    "@geo-edu/dsh-geo-teacher-data":   "link:<仓库路径>/packages/dsh-geo-teacher-data"
+    "geospark-ai-preset": "latest",
+    "geospark-ai-ui":     "latest",
+    "geospark-ai-data":   "latest"
   },
   "dsh": {
     "profile": {
       "bundles": [
         "@deepseek-ai/dsh-base",
         "@deepseek-ai/dsh-web-app",
-        "@geo-edu/dsh-geo-teacher-preset",
-        "@geo-edu/dsh-geo-teacher-ui"
+        "geospark-ai-preset",
+        "geospark-ai-ui"
       ]
     }
   }
@@ -48,7 +48,7 @@
 
 ### 关键装配约束
 
-- **禁止相对路径插件名**：预设声明行由 profile 补丁层插入，`baseUrl` 是 profile 目录而非预设包目录。本地插件一律通过 `@geo-edu/dsh-geo-teacher-preset/plugins/<name>` 子路径导出；技能根通过 `createRequire(baseUrl).resolve('@geo-edu/dsh-geo-teacher-preset/package.json')` 定位。
+- **禁止相对路径插件名**：预设声明行由 profile 补丁层插入，`baseUrl` 是 profile 目录而非预设包目录。本地插件一律通过 `geospark-ai-preset/plugins/<name>` 子路径导出；技能根通过 `createRequire(baseUrl).resolve('geospark-ai-preset/package.json')` 定位。
 - **服务隔离白名单**：预设内所有 `ctx.provide('X')` 必须在 `cordis.patch.yml` 对应 group 的 `isolate` 中声明 `X: true`（如 `geoKernel: true`），否则宿主会因发布进程级全局服务报错。
 - **路由与全局命令回收**：`webServer.register` 对重复 `(kind, path)` 抛错，插件必须通过 `ctx.effect` 注册路由清理函数；`commands.register` 位于全局层，重挂载时须做幂等兜底，防止打挂预设激活。
 

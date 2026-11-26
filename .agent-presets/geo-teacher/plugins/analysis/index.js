@@ -408,7 +408,7 @@ export function readDshVersion(options = {}) {
   return 'unknown';
 }
 
-const DATA_SOURCE_LABELS = { user: '教师配置', packaged: '随仓库 data/', missing: '缺失' };
+const DATA_SOURCE_LABELS = { user: '教师配置', packaged: '随包默认数据', missing: '缺失' };
 const RUN_STATE_LABELS = { question_ready: '题面就绪', submitted: '作答已提交', verified: '核验完成', none: '未开始' };
 
 async function buildStatusText(ctx, kernel) {
@@ -419,7 +419,7 @@ async function buildStatusText(ctx, kernel) {
   if (data) {
     lines.push(`- 考点库：${DATA_SOURCE_LABELS[data.knowledgeSource] || data.knowledgeSource}${data.knowledgeBasePath ? '（' + data.knowledgeBasePath + '）' : ''}`);
     lines.push(`- 题库：${DATA_SOURCE_LABELS[data.questionBankSource] || data.questionBankSource}${data.questionBankPath ? '（' + data.questionBankPath + '）' : ''}`);
-    lines.push(`- 配置：${data.configFileFound ? data.configPath : '未创建（使用随仓库 data/）'}`);
+    lines.push(`- 配置：${data.configFileFound ? data.configPath : '未创建（使用随包默认数据）'}`);
   }
   const counts = summary.counts || {};
   lines.push(`- 题库题数：${counts.bankQuestions ?? '—'} 小问 / ${counts.bankFiles ?? '—'} 文件｜考点节点：${counts.taxonomyNodes ?? '—'}`);

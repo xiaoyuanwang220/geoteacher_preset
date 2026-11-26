@@ -1,9 +1,24 @@
 {
-  "name": "@geo-edu/dsh-geo-teacher-preset",
+  "name": "geospark-ai-preset",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "地理教师辅助 Agent preset bundle: declares the geo-teacher agent preset",
+  "description": "GeoSparkAI 高中地理教师辅助 Agent 核心预设 Bundle（含讲题隔离盲做、学科思想课程方案、模拟题润色与随附考点库）",
+  "keywords": [
+    "geospark-ai",
+    "dsh",
+    "deepseek-harness",
+    "agent-preset",
+    "geography",
+    "education"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiaoyuanwang220/geoteacher_preset.git",
+    "directory": ".agent-presets/geo-teacher"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     "./package.json": "./package.json",
     "./plugins/core": "./plugins/core/index.js",
@@ -20,15 +35,17 @@
     }
   },
   "files": [
+    "README.md",
     "cordis.patch.yml",
+    "data/config/",
     "plugins/",
     "skills/"
   ],
-  "license": "MIT",
+  "license": "MIT AND Apache-2.0",
   "dependencies": {
     "yaml": "^2.7.0"
   },
   "optionalDependencies": {
-    "@geo-edu/dsh-geo-teacher-data": "^0.1.0"
+    "geospark-ai-data": "^0.1.0"
   }
 }

@@ -24,7 +24,7 @@
  *   3) 用户配置 <DSH_HOME>/geo-teacher/config.json 的 questionOutputRoot
  *   4) 同文件 outputPath + '/出题'
  *   5) 同文件 workspaceRoot + '/outputs/出题'
- *   6) 仓库内 <repo>/outputs/出题（预设包就在仓库里时的兜底）
+ *   6) 默认用户目录 <DSH_HOME>/geo-teacher/outputs/出题（不写 node_modules）
  *
  * 退出码：0=结构通过  1=结构失败  2=用法错误  3=环境/读取错误
  *
@@ -40,7 +40,6 @@ import { homedir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PRESET_ROOT = resolvePath(HERE, '..', '..', '..');           // <preset>/skills/<skill>/scripts → <preset>
-const REPO_ROOT = resolvePath(PRESET_ROOT, '..', '..');
 const QDIR = join(PRESET_ROOT, 'plugins', 'question');
 const SCHEMA_FILE = join(QDIR, 'package.schema.json');
 const MODULE_FILE = join(QDIR, 'package.js');
@@ -90,7 +89,7 @@ function resolveOutputRoot() {
   if (cfg.questionOutputRoot) return { root: abs(cfg.questionOutputRoot), from: 'config.json:questionOutputRoot' };
   if (cfg.outputPath) return { root: join(abs(cfg.outputPath), '出题'), from: 'config.json:outputPath + /出题' };
   if (cfg.workspaceRoot) return { root: join(abs(cfg.workspaceRoot), 'outputs', '出题'), from: 'config.json:workspaceRoot + /outputs/出题' };
-  return { root: join(REPO_ROOT, 'outputs', '出题'), from: '仓库兜底 <repo>/outputs/出题' };
+  return { root: join(cfgDir, 'outputs', '出题'), from: '默认 <DSH_HOME>/geo-teacher/outputs/出题' };
 }
 
 // ── 载入实现（唯一实现，插件侧同源） ────────────────────────────────────
